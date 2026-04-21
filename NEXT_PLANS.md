@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-20
+**Последнее обновление:** 2026-04-20 (итерация 1 частично)
 
 ---
 
@@ -11,18 +11,28 @@
 
 Цель итерации 1 — **залогировать свою первую тренировку через мини-апп в зале**. ~2–3 недели вечерами.
 
-- [ ] Решить: JavaScript или TypeScript (открытый вопрос, см. [ARCHITECTURE.md #7](ARCHITECTURE.md#7-технические-решения-decision-log))
-- [ ] Создать GitHub-репозиторий + скелет (React+Vite в корне, `/server` с Express+Telegraf+Prisma)
-- [ ] Накидать первый вариант `prisma/schema.prisma` — минимум: `User`, `Exercise`, `Workout`, `WorkoutSet`
-- [ ] Подключить Neon (создать проект, включить PITR, получить `DATABASE_URL`)
-- [ ] Зарегистрировать бота у BotFather (`BOT_TOKEN`, Menu Button)
-- [ ] Настроить Vercel (автодеплой фронта)
-- [ ] Настроить Railway (автодеплой `/server`)
-- [ ] Скопировать `telegramAuth` middleware из daily balancer, адаптировать
-- [ ] Реализовать dev-bypass (`Authorization: tma dev_bypass` в dev-окружении)
-- [ ] Healthcheck `/api/health`
-- [ ] Первая команда бота: `/start` с кнопкой на мини-апп
-- [ ] Мини-апп: один экран "Тренировка" — выбрать упражнение, ввести вес × повторы, сохранить
+### ✅ Сделано
+- [x] Решено: JavaScript (ESM) — матчим daily balancer
+- [x] Скелет репозитория: React+Vite в корне, `/server` с Express+Telegraf+Prisma
+- [x] Первый вариант `prisma/schema.prisma` — 9 моделей v1
+- [x] `telegramAuth` middleware с HMAC-SHA256 + dev-bypass
+- [x] Healthcheck `/api/health`
+- [x] Первая команда бота: `/start` с кнопкой на мини-апп (`/workout`, `/help` тоже)
+- [x] git init + первый коммит
+
+### 🚧 Осталось до критерия готовности
+- [ ] Локально: `npm install` в корне и в `server/`, убедиться, что `npm run dev` поднимается без ошибок
+- [ ] Завести **GitHub-репозиторий**, запушить
+- [ ] **Neon:** создать проект, включить PITR, скопировать `DATABASE_URL` в `server/.env`
+- [ ] **`prisma db push`** — применить схему в Neon
+- [ ] **BotFather:** создать бота, `BOT_TOKEN` → `server/.env`, `/setcommands` из `server/src/bot/commands.txt`, `/setmenubutton`
+- [ ] **Vercel:** подключить репо, `VITE_API_URL` в env
+- [ ] **Railway:** подключить репо (root directory = `/server`), заполнить env-переменные
+- [ ] **Anthropic API key:** завести и добавить в Railway (`ANTHROPIC_API_KEY`)
+- [ ] **Cloudflare R2:** создать бакет, ключи → Railway env
+- [ ] Мини-апп: реальный экран "Тренировка" — выбор упражнения, ввод веса × повторов, сохранение через `POST /api/v1/workouts/:id/sets`
+- [ ] Бэкенд: роуты `workouts`, `exercises` с контроллерами и Zod-валидацией
+- [ ] Минимальный seed упражнений (например, 10 базовых — присед/жим/тяга/и т.д.) — чтобы можно было логировать
 - [ ] Критерий готовности: **открываю бота в зале → жму кнопку → залогирую реальный подход → данные в Neon**
 
 ---
@@ -86,7 +96,7 @@
 
 | # | Вопрос | Когда решаем |
 |---|--------|-------------|
-| 1 | JavaScript vs TypeScript | Перед созданием скелета репо (итерация 1) |
+| ~~1~~ | ~~JavaScript vs TypeScript~~ | ✅ 2026-04-20: JavaScript |
 | 2 | Нужен ли Redis | Когда появится реальная проблема с кэшем (вряд ли в MVP) |
 | 3 | Схема биллинга (Stars vs Stripe) | Итерация 7 (коммерческий запуск) |
 | 4 | Источник видео в v2: своя библиотека или только YouTube | После теста на друзьях — по фидбеку |

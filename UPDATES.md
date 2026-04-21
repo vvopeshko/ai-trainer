@@ -52,5 +52,41 @@
 - **Exercise глобальная, не per-user** — общая библиотека для всех.
 - **`String[]` для мышц/оборудования**, не enum — гибкость без миграций; валидация в Zod.
 
+### Скелет репозитория
+
+Развернули работающий скелет проекта, первый коммит в git (`chore: bootstrap AI Trainer project skeleton`).
+
+**Frontend (корень):**
+- `package.json` — React 19, Vite 7, Tailwind 4 (как Vite-плагин), React Router 7, Lucide, Recharts.
+- `vite.config.js`, `vercel.json` (SPA rewrites), `eslint.config.js`.
+- `index.html` — Telegram WebApp SDK + splash loader на чистом CSS.
+- `src/main.jsx` + `App.jsx` + `/workout` роут.
+- `src/i18n/` — `TranslationProvider`, `useTranslation`, `translations.js` с ru-словарём.
+- `src/components/TelegramProvider.jsx` — обёртка над `window.Telegram.WebApp` с dev-fallback.
+- `src/utils/api.js` — fetch-wrapper с авто-атачем `Authorization: tma <initData>`.
+- `src/pages/Main/WorkoutPage.jsx` — плейсхолдер первого экрана.
+
+**Backend (`server/`):**
+- `package.json` — Express 5, Telegraf, Prisma 6, Zod, node-cron, `@anthropic-ai/sdk`.
+- `prisma/schema.prisma` — v1 схема из ARCHITECTURE.md (9 моделей + 6 enum).
+- `src/index.js` — Express + `bot.launch()` параллельно, health-check, CORS, graceful shutdown, BigInt.toJSON для сериализации telegramId.
+- `src/middleware/telegramAuth.js` — HMAC-SHA256 валидация initData + dev_bypass.
+- `src/middleware/errorHandler.js` — централизованный error-handler с обработкой ZodError.
+- `src/utils/prisma.js` — Prisma singleton (защита от утечек в dev).
+- `src/utils/llm.js` — абстракция `chat()` + `vision()` над Anthropic SDK.
+- `src/utils/analytics.js` — fire-and-forget `track()`.
+- `src/bot/index.js` — `/start`, `/workout`, `/help` с кнопкой на мини-апп.
+- `src/bot/commands.txt` — список для `setMyCommands` в BotFather.
+- `src/routes/index.js` + `auth.js` — каркас `/api/v1/` и роута `/auth/init`.
+- `.env.example` и `.gitignore` на обоих уровнях.
+
+### Зафиксированное решение
+- **Язык:** JavaScript (ESM, `"type": "module"`) — матчим daily balancer, минимум тулинга для соло-разработки. При появлении сложной AI-логики с JSON-схемами — локально добавим TypeScript в `server/src/services/aiTrainer/`.
+
+### Что работает из коробки
+- `npm install && npm run dev` в корне — Vite dev-сервер на :5173, мини-апп открывается в обычном браузере (dev-режим TelegramProvider).
+- `cd server && npm install && npm run dev` (при заполненном `.env`) — Express на :3001, бот в long-polling при наличии `BOT_TOKEN`.
+- `Authorization: tma dev_bypass` работает в dev для тестов API без Telegram.
+
 ### Следующий шаг
-Готовимся к итерации 1 — цель "залогировать свою первую тренировку через мини-апп". См. чеклист в [NEXT_PLANS.md](NEXT_PLANS.md#-прямо-сейчас-подготовка-к-итерации-1).
+Оставшийся чеклист итерации 1: подключить Neon (создать проект, включить PITR, скопировать `DATABASE_URL` в `server/.env`), зарегистрировать бота у BotFather, настроить Vercel и Railway. Детали — в [NEXT_PLANS.md](NEXT_PLANS.md#-прямо-сейчас-подготовка-к-итерации-1).
