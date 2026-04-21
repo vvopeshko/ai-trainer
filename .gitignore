@@ -35,3 +35,6 @@ src/pages/Draft/
 *.tgz
 coverage/
 .cache/
+
+# Claude Code local working directory (per-user)
+.claude/
