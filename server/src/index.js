@@ -37,10 +37,16 @@ const server = app.listen(PORT, () => {
 
 // Telegram-бот запускается параллельно Express при наличии BOT_TOKEN.
 // В dev без токена сервер всё равно работает — можно тестировать API по dev-bypass.
+// Nota bene: в Telegraf v4 bot.launch() резолвится только при остановке бота,
+// поэтому факт запуска подтверждаем через getMe() до вызова launch().
 let bot = null
 if (process.env.BOT_TOKEN) {
   bot = createBot(process.env.BOT_TOKEN)
-  bot.launch().then(() => console.log('[bot] launched'))
+  bot.telegram
+    .getMe()
+    .then((me) => console.log(`[bot] launched as @${me.username}`))
+    .catch((err) => console.error('[bot] failed to connect:', err.message))
+  bot.launch().catch((err) => console.error('[bot] crashed:', err))
 } else {
   console.warn('[bot] BOT_TOKEN not set — bot is disabled')
 }

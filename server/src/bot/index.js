@@ -6,26 +6,39 @@ import { Telegraf } from 'telegraf'
 export function createBot(token) {
   const bot = new Telegraf(token)
   const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:5173'
+  // Telegram разрешает web_app кнопки только с https://. В dev с localhost
+  // отдаём просто ссылку текстом — кнопка заработает после деплоя на Vercel.
+  const canUseWebAppButton = webAppUrl.startsWith('https://')
 
   bot.start(async (ctx) => {
-    await ctx.reply(
+    const base =
       `Привет, ${ctx.from.first_name}! 👋\n\n` +
-        'Я AI-тренер. Помогу составить программу, отвечу на вопросы про технику и подберу упражнение, если сфоткаешь тренажёр в зале.\n\n' +
-        'Открой мини-апп, чтобы начать тренировку:',
-      {
+      'Я AI-тренер. Помогу составить программу, отвечу на вопросы про технику и подберу упражнение, если сфоткаешь тренажёр в зале.'
+
+    if (canUseWebAppButton) {
+      await ctx.reply(`${base}\n\nОткрой мини-апп, чтобы начать тренировку:`, {
         reply_markup: {
           inline_keyboard: [[{ text: '🏋️‍♂️ Открыть AI Trainer', web_app: { url: webAppUrl } }]],
         },
-      },
-    )
+      })
+    } else {
+      await ctx.reply(
+        `${base}\n\n(dev) открой мини-апп в браузере: ${webAppUrl}\n` +
+          'Кнопка запуска из чата появится после деплоя на Vercel.',
+      )
+    }
   })
 
   bot.command('workout', async (ctx) => {
-    await ctx.reply('Открываю тренировку…', {
-      reply_markup: {
-        inline_keyboard: [[{ text: '🏋️‍♂️ Открыть тренировку', web_app: { url: webAppUrl } }]],
-      },
-    })
+    if (canUseWebAppButton) {
+      await ctx.reply('Открываю тренировку…', {
+        reply_markup: {
+          inline_keyboard: [[{ text: '🏋️‍♂️ Открыть тренировку', web_app: { url: webAppUrl } }]],
+        },
+      })
+    } else {
+      await ctx.reply(`(dev) открой в браузере: ${webAppUrl}/workout`)
+    }
   })
 
   bot.command('help', async (ctx) => {
