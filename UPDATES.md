@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-04-21 — Подключение инфраструктуры
+
+### Neon Postgres
+- Создан проект `ai-trainer` на Neon (Free tier).
+- `DATABASE_URL` в `server/.env`.
+- `npx prisma db push` отработал — все 9 таблиц созданы в схеме.
+- PITR на Free-плане 24 часа, включён по умолчанию (отдельного тумблера нет).
+
+### Telegram bot
+- Создан бот через @BotFather (`/newbot`), `BOT_TOKEN` в `server/.env`.
+- Зарегистрированы команды через `/setcommands` из `server/src/bot/commands.txt`.
+- Бот успешно запускается локально, отвечает на `/start`, `/workout`, `/help`.
+- Menu Button у BotFather пока не настроен — ждём HTTPS URL после деплоя на Vercel.
+
+### Багфиксы
+
+**1. Лог запуска бота (`server/src/index.js`):**
+В Telegraf v4 `bot.launch()` возвращает промис, который резолвится при **остановке** бота, а не при запуске. Старый код `bot.launch().then(() => console.log('[bot] launched'))` поэтому никогда не печатал лог. Заменил на проверку через `bot.telegram.getMe()` до `launch()` — теперь логируется `[bot] launched as @username`.
+
+**2. WebApp кнопки требуют HTTPS (`server/src/bot/index.js`):**
+Telegram отказывает: `Bad Request: inline keyboard button Web App URL '...' is invalid: Only HTTPS links are allowed`. На локалке `http://localhost:5173` не подходит. Добавил проверку `webAppUrl.startsWith('https://')`: если HTTPS — даём кнопку, если нет — отдаём ссылку текстом с пометкой (dev). Полноценные кнопки заработают после Vercel.
+
+### Git
+- 3-й коммит: `fix(bot): handle non-https WEBAPP_URL in dev + log on getMe instead of launch`.
+
+### Что осталось до критерия итерации 1
+Anthropic API key, push на GitHub, Vercel, Railway, реальный экран логирования + workouts-роуты. Детали — в [NEXT_PLANS.md](NEXT_PLANS.md).
+
+---
+
 ## 2026-04-20 — Запуск проекта, документация
 
 Первый день. Собрали документную базу проекта.

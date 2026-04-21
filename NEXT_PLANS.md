@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-20 (итерация 1 частично)
+**Последнее обновление:** 2026-04-21 (инфра подключается)
 
 ---
 
@@ -17,22 +17,23 @@
 - [x] Первый вариант `prisma/schema.prisma` — 9 моделей v1
 - [x] `telegramAuth` middleware с HMAC-SHA256 + dev-bypass
 - [x] Healthcheck `/api/health`
-- [x] Первая команда бота: `/start` с кнопкой на мини-апп (`/workout`, `/help` тоже)
-- [x] git init + первый коммит
+- [x] Первая команда бота: `/start`, `/workout`, `/help` (с fallback для http в dev)
+- [x] git init + первые коммиты, удалённый `origin` указан на github.com/vvopeshko/ai-trainer
+- [x] Локально: `npm install` в корне и в `server/`, dev-сервера поднимаются
+- [x] **Neon:** проект создан, `DATABASE_URL` в env, `prisma db push` применил схему
+- [x] **BotFather:** бот создан, `/setcommands` зарегистрированы, локально отвечает
 
 ### 🚧 Осталось до критерия готовности
-- [ ] Локально: `npm install` в корне и в `server/`, убедиться, что `npm run dev` поднимается без ошибок
-- [ ] Завести **GitHub-репозиторий**, запушить
-- [ ] **Neon:** создать проект, включить PITR, скопировать `DATABASE_URL` в `server/.env`
-- [ ] **`prisma db push`** — применить схему в Neon
-- [ ] **BotFather:** создать бота, `BOT_TOKEN` → `server/.env`, `/setcommands` из `server/src/bot/commands.txt`, `/setmenubutton`
-- [ ] **Vercel:** подключить репо, `VITE_API_URL` в env
-- [ ] **Railway:** подключить репо (root directory = `/server`), заполнить env-переменные
-- [ ] **Anthropic API key:** завести и добавить в Railway (`ANTHROPIC_API_KEY`)
-- [ ] **Cloudflare R2:** создать бакет, ключи → Railway env
-- [ ] Мини-апп: реальный экран "Тренировка" — выбор упражнения, ввод веса × повторов, сохранение через `POST /api/v1/workouts/:id/sets`
+- [ ] **Anthropic API key:** завести на console.anthropic.com → `server/.env` (локально) и потом Railway env
+- [ ] **GitHub push:** запушить локальные коммиты на `origin/main`
+- [ ] **Vercel:** подключить репо, `VITE_API_URL` в env, получить https-URL фронта
+- [ ] Обновить `WEBAPP_URL` в локальном `server/.env` на https-URL Vercel — кнопка `web_app` в боте начнёт работать
+- [ ] **Railway:** подключить репо (root directory = `/server`), заполнить env-переменные из `server/.env.example`
+- [ ] BotFather: `/setmenubutton` с https-URL Vercel
+- [ ] **Cloudflare R2:** создать бакет, ключи → Railway env (можно отложить до итерации 4 — фото)
 - [ ] Бэкенд: роуты `workouts`, `exercises` с контроллерами и Zod-валидацией
-- [ ] Минимальный seed упражнений (например, 10 базовых — присед/жим/тяга/и т.д.) — чтобы можно было логировать
+- [ ] Минимальный seed упражнений (10 базовых) для возможности логирования
+- [ ] Мини-апп: реальный экран "Тренировка" — выбор упражнения, ввод веса × повторов, сохранение через `POST /api/v1/workouts/:id/sets`
 - [ ] Критерий готовности: **открываю бота в зале → жму кнопку → залогирую реальный подход → данные в Neon**
 
 ---

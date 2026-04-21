@@ -725,6 +725,12 @@ model AnalyticsEvent {
 - Menu Button в BotFather → URL мини-аппа (см. deploy).
 - Graceful shutdown через SIGINT / SIGTERM.
 
+**⚠️ Выученные грабли:**
+
+- **`bot.launch()` резолвится при остановке, а не при запуске** (особенность Telegraf v4). Поэтому `bot.launch().then(() => console.log('launched'))` никогда не печатает лог во время нормальной работы. Фиксим через `bot.telegram.getMe()` отдельным вызовом до `launch()` — когда `getMe()` успешно отработает, бот подключён к Telegram API.
+- **WebApp-кнопки требуют HTTPS.** `http://localhost:5173` даёт `400: Bad Request: inline keyboard button Web App URL is invalid: Only HTTPS links are allowed`. В dev определяем по префиксу URL и даём текстовое сообщение со ссылкой вместо кнопки. Полноценные кнопки включаются после деплоя фронта на Vercel.
+- **Для HTTPS на локалке** подходят: Vercel preview URL (для быстрой итерации), ngrok (`ngrok http 5173`) или Cloudflare Tunnel.
+
 ### 5.4 API-дизайн
 
 - Все роуты под `/api/v1/`.
