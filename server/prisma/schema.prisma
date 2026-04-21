@@ -1,0 +1,288 @@
+// Prisma schema для AI Trainer.
+// Подробности и обоснование — в /ARCHITECTURE.md §4.
+//
+// ⚠️  ПРАВИЛА РАБОТЫ СО СХЕМОЙ (см. §5.2 ARCHITECTURE.md):
+//    - Только `prisma db push`, без миграций.
+//    - NOT NULL колонки на существующую таблицу — сначала ALTER TABLE ... DEFAULT '...' вручную.
+//    - Rename/delete колонок — только ручным SQL.
+//    - Перед `db push` на проде — зафиксировать timestamp (для PITR-отката).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════
+// User — создаётся через telegramAuth middleware
+// ═══════════════════════════════════════════════
+model User {
+  id            String   @id @default(uuid())
+  telegramId    BigInt   @unique
+  firstName     String
+  lastName      String?
+  username      String?
+  languageCode  String?
+  photoUrl      String?
+  timezone      String?
+
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  sessionsCount Int      @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile                UserProfile?
+  programs               Program[]
+  workouts               Workout[]
+  chatMessages           ChatMessage[]
+  machineIdentifications MachineIdentification[]
+  analyticsEvents        AnalyticsEvent[]
+}
+
+// ═══════════════════════════════════════════════
+// UserProfile — анкета из онбординга
+// ═══════════════════════════════════════════════
+model UserProfile {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  goal            Goal
+  experienceLevel ExperienceLevel
+  gender          Gender?
+  age             Int?
+  weightKg        Float?
+  heightCm        Float?
+
+  // 0=ВС..6=СБ
+  availableDays   Int[]           @default([])
+  sessionsPerWeek Int?
+
+  // Теги: ['lower_back', 'knee', ...] / ['barbell', 'machine', ...]
+  constraints     String[]        @default([])
+  equipment       String[]        @default([])
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+enum Goal {
+  weight_loss
+  muscle_gain
+  strength
+  tone
+  endurance
+  general_fitness
+}
+
+enum ExperienceLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+// ═══════════════════════════════════════════════
+// Exercise — глобальная библиотека (один список для всех)
+// Заполняется через server/scripts/seedExercises.js
+// ═══════════════════════════════════════════════
+model Exercise {
+  id               String             @id @default(uuid())
+  slug             String             @unique // 'barbell-bench-press'
+
+  nameRu           String
+  nameEn           String?
+
+  description      String?            @db.Text
+  instructions     String?            @db.Text
+  typicalMistakes  String?            @db.Text
+
+  primaryMuscles   String[]           @default([]) // ['chest', 'triceps']
+  secondaryMuscles String[]           @default([])
+  equipment        String[]           @default([]) // ['barbell', 'bench']
+
+  difficulty       ExerciseDifficulty @default(beginner)
+  category         ExerciseCategory   @default(compound)
+
+  youtubeUrl       String?
+  imageUrl         String?
+
+  // Синонимы для подбора по распознаванию тренажёра и текстового поиска.
+  aliases          String[]           @default([])
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  workoutSets      WorkoutSet[]
+
+  @@index([category])
+}
+
+enum ExerciseDifficulty {
+  beginner
+  intermediate
+  advanced
+}
+
+enum ExerciseCategory {
+  compound
+  isolation
+  cardio
+  warmup
+  stretch
+  mobility
+}
+
+// ═══════════════════════════════════════════════
+// Program — сгенерированная программа тренировок
+// planJson: { weeks: [{ days: [{ title, exercises: [{ exerciseId, sets, reps, restSec, notes }] }] }] }
+// ═══════════════════════════════════════════════
+model Program {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name             String
+  description      String?
+  durationWeeks    Int       @default(4)
+  isActive         Boolean   @default(false) // одна активная на юзера
+  planJson         Json
+
+  generatedByModel String? // 'claude-*' — для аналитики качества
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workouts         Workout[]
+
+  @@index([userId, isActive])
+}
+
+// ═══════════════════════════════════════════════
+// Workout — реальная тренировка (сессия в зале)
+// ═══════════════════════════════════════════════
+model Workout {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  programId       String?
+  program         Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
+  programDayIndex Int? // индекс дня из planJson
+
+  startedAt       DateTime     @default(now())
+  finishedAt      DateTime?
+
+  feltRating      Int? // 1..5 — как прошла тренировка
+  notes           String?
+
+  sets            WorkoutSet[]
+
+  @@index([userId, startedAt])
+}
+
+// ═══════════════════════════════════════════════
+// WorkoutSet — один подход в упражнении
+// ═══════════════════════════════════════════════
+model WorkoutSet {
+  id            String   @id @default(uuid())
+  workoutId     String
+  workout       Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  exerciseId    String
+  exercise      Exercise @relation(fields: [exerciseId], references: [id])
+
+  exerciseOrder Int      @default(0) // порядок упражнения в тренировке
+  setOrder      Int      @default(0) // порядок подхода в упражнении
+
+  weightKg      Float?
+  reps          Int
+  rpe           Float? // Rate of Perceived Exertion 1..10
+  isWarmup      Boolean  @default(false)
+  notes         String?
+
+  completedAt   DateTime @default(now())
+
+  @@index([workoutId])
+  @@index([exerciseId])
+}
+
+// ═══════════════════════════════════════════════
+// ChatMessage — история диалога с AI-тренером
+// ═══════════════════════════════════════════════
+model ChatMessage {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role         ChatRole
+  content      String   @db.Text
+  imageUrl     String? // если сообщение было с фото
+
+  model        String? // какой LLM ответил
+  tokensInput  Int?
+  tokensOutput Int?
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum ChatRole {
+  user
+  assistant
+  system
+}
+
+// ═══════════════════════════════════════════════
+// MachineIdentification — лог распознаваний тренажёра по фото
+// Нужен для: метрик фичи, улучшения промпта, потенциального датасета.
+// ═══════════════════════════════════════════════
+model MachineIdentification {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  imageUrl            String // R2 URL
+  recognizedName      String?
+  confidence          Float? // 0..1
+
+  // [{ exerciseId, name, reasoning }]
+  suggestedExercises  Json     @default("[]")
+
+  userConfirmed       Boolean? // выбрал ли юзер упражнение
+  confirmedExerciseId String?
+
+  model               String?
+
+  createdAt           DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ═══════════════════════════════════════════════
+// AnalyticsEvent — fire-and-forget события (utils/analytics.js)
+// ═══════════════════════════════════════════════
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  event     String // 'workout_logged', 'exercise_photo_taken', ...
+  payload   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
+}

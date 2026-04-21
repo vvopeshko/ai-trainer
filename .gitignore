@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Env files — секреты никогда в git
+.env
+.env.local
+.env.*.local
+
+# Prisma
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Drafts / scratch — не коммитим черновики
+src/pages/Draft/
+
+# Misc
+*.tgz
+coverage/
+.cache/
