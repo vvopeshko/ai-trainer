@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-04-21 — Деплой инфраструктуры в прод
+
+### End-to-end проверка пройдена ✅
+
+Открываю бота в Telegram → `/start` → жму inline-кнопку → открывается мини-апп → виден экран с приветствием. Цепочка `Telegram → Vercel → Railway → Neon` работает.
+
+### Vercel
+- Подключён репо `vvopeshko/ai-trainer`, framework auto-detect = Vite.
+- `VITE_API_URL` указывает на Railway URL.
+- Прод-URL: `https://ai-trainer-ebon-one.vercel.app`.
+- Автодеплой на каждый push в `main`.
+
+### Railway
+- Подключён тот же репо, root directory = `/server`.
+- Variables: `DATABASE_URL` (Neon), `BOT_TOKEN`, `NODE_ENV=production`, `PORT=8080`, `FRONTEND_URL`/`WEBAPP_URL` (оба = Vercel URL), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`. Anthropic и R2 пропустили — добавим, когда понадобятся (итерации 2 и 4).
+- Прод-URL: `https://ai-trainer-production-fef0.up.railway.app`.
+- `/api/health` отвечает.
+- Бот в long-polling, в логах `[bot] launched as @...`.
+
+### BotFather
+- Menu Button настроен через `/mybots → Bot Settings → Menu Button` на Vercel URL. Команду `/setmenubutton` BotFather убрал из автодополнения, но если набрать руками — работает; через UI `/mybots` тоже работает.
+
+### Маленькие сюрпризы по дороге
+- `WEBAPP_URL` в коде бота читается **один раз при запуске процесса** (`const webAppUrl = process.env.WEBAPP_URL`). При смене переменной нужен redeploy Railway. Дополнительно — **inline-клавиатура в уже отправленных сообщениях не обновляется**: после смены URL надо отправить новый `/start`, иначе старая кнопка ведёт на старый URL.
+- Menu Button и inline-кнопка `/start` — два независимых места: Menu Button задаётся в BotFather, inline — кодом в боте. Если разъезжаются — проверять отдельно.
+
+### Что осталось до критерия итерации 1
+- Бэкенд: роуты `workouts`, `exercises` с контроллерами и Zod-валидацией.
+- Минимальный seed упражнений (10 базовых).
+- Мини-апп: реальный экран "Тренировка" — выбор упражнения, ввод веса × повторов, кнопка сохранить.
+- Сделать первую реальную запись подхода в Neon из мини-аппа.
+
+---
+
 ## 2026-04-21 — Подключение инфраструктуры
 
 ### Neon Postgres

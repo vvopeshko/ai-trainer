@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-21 (инфра подключается)
+**Последнее обновление:** 2026-04-21 (инфра задеплоена в прод)
 
 ---
 
@@ -11,30 +11,31 @@
 
 Цель итерации 1 — **залогировать свою первую тренировку через мини-апп в зале**. ~2–3 недели вечерами.
 
-### ✅ Сделано
+### ✅ Сделано (инфра)
 - [x] Решено: JavaScript (ESM) — матчим daily balancer
 - [x] Скелет репозитория: React+Vite в корне, `/server` с Express+Telegraf+Prisma
 - [x] Первый вариант `prisma/schema.prisma` — 9 моделей v1
 - [x] `telegramAuth` middleware с HMAC-SHA256 + dev-bypass
 - [x] Healthcheck `/api/health`
 - [x] Первая команда бота: `/start`, `/workout`, `/help` (с fallback для http в dev)
-- [x] git init + первые коммиты, удалённый `origin` указан на github.com/vvopeshko/ai-trainer
+- [x] git init + push на `origin/main` (github.com/vvopeshko/ai-trainer)
 - [x] Локально: `npm install` в корне и в `server/`, dev-сервера поднимаются
 - [x] **Neon:** проект создан, `DATABASE_URL` в env, `prisma db push` применил схему
-- [x] **BotFather:** бот создан, `/setcommands` зарегистрированы, локально отвечает
+- [x] **BotFather:** бот создан, `/setcommands` зарегистрированы, Menu Button через `/mybots`
+- [x] **Vercel:** подключён, автодеплой на push в `main`, `VITE_API_URL` → Railway
+- [x] **Railway:** подключён (root=`/server`), env заполнены, бот в проде в long-polling
+- [x] End-to-end: `/start` в боте → inline-кнопка → мини-апп открывается в Telegram
 
-### 🚧 Осталось до критерия готовности
-- [ ] **Anthropic API key:** завести на console.anthropic.com → `server/.env` (локально) и потом Railway env
-- [ ] **GitHub push:** запушить локальные коммиты на `origin/main`
-- [ ] **Vercel:** подключить репо, `VITE_API_URL` в env, получить https-URL фронта
-- [ ] Обновить `WEBAPP_URL` в локальном `server/.env` на https-URL Vercel — кнопка `web_app` в боте начнёт работать
-- [ ] **Railway:** подключить репо (root directory = `/server`), заполнить env-переменные из `server/.env.example`
-- [ ] BotFather: `/setmenubutton` с https-URL Vercel
-- [ ] **Cloudflare R2:** создать бакет, ключи → Railway env (можно отложить до итерации 4 — фото)
-- [ ] Бэкенд: роуты `workouts`, `exercises` с контроллерами и Zod-валидацией
-- [ ] Минимальный seed упражнений (10 базовых) для возможности логирования
-- [ ] Мини-апп: реальный экран "Тренировка" — выбор упражнения, ввод веса × повторов, сохранение через `POST /api/v1/workouts/:id/sets`
+### 🚧 Осталось до критерия готовности итерации 1
+- [ ] Бэкенд: роуты `exercises` и `workouts` с контроллерами + Zod-валидацией
+- [ ] Seed-скрипт: 10 базовых силовых упражнений (присед/жим/тяга и т.д.) в таблицу `Exercise`
+- [ ] Мини-апп: реальный экран "Тренировка" — выбрать упражнение, ввести вес × повторы, сохранить подход через `POST /api/v1/workouts/:id/sets`
+- [ ] Проверить сквозной сценарий: открываю бота → мини-апп → логирую подход → запись появляется в Neon
 - [ ] Критерий готовности: **открываю бота в зале → жму кнопку → залогирую реальный подход → данные в Neon**
+
+### Отложено (разбор по итерациям)
+- Anthropic API key — итерация 2 (AI-чат)
+- Cloudflare R2 — итерация 4 (фото тренажёра)
 
 ---
 
