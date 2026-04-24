@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>AI Trainer — Mockup v1</title>
+    <title>AI Trainer — Mockup v2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -119,7 +119,7 @@
     </style>
   </head>
   <body>
-    <div class="phone-label">AI Trainer · Mockup v1</div>
+    <div class="phone-label">AI Trainer · Mockup v2</div>
     <div class="phone" id="root"></div>
 
     <!-- React + htm (no build step) -->
@@ -479,26 +479,26 @@
           ),
         )
 
-        // Какое упражнение активно, какой подход следующий выполнить
         const [currentExIdx, setCurrentExIdx] = useState(0)
         // Таймер отдыха
         const [restSec, setRestSec] = useState(0)
         const [restActive, setRestActive] = useState(false)
         const [restTotal, setRestTotal] = useState(0)
-        // Модалка завершения
+        // Модалки
         const [confirmFinish, setConfirmFinish] = useState(false)
+        const [menuOpen, setMenuOpen] = useState(false)
+        const [replaceOpen, setReplaceOpen] = useState(false)
+        const [supersetOpen, setSupersetOpen] = useState(false)
+        // Superset-пара для текущего упражнения (mock: просто сохраняем id)
+        const [supersetPair, setSupersetPair] = useState(null)
 
         const currentEx = exercises[currentExIdx]
         const currentLog = log[currentExIdx]
-        // Индекс первого незавершённого подхода в текущем упражнении
         const nextSetIdx = currentLog.findIndex((s) => !s.completed)
         const allSetsDone = nextSetIdx === -1
 
-        // Общий прогресс
         const totalSets = log.reduce((sum, arr) => sum + arr.length, 0)
         const doneSets = log.reduce((sum, arr) => sum + arr.filter((s) => s.completed).length, 0)
-
-        // Все упражнения и подходы сделаны?
         const allDone = doneSets === totalSets
 
         // Tick таймера
@@ -526,11 +526,24 @@
 
         const markSetDone = (exIdx, setIdx) => {
           updateSet(exIdx, setIdx, { completed: true })
-          // Запускаем таймер отдыха
           const rest = exercises[exIdx].restSec
           setRestTotal(rest)
           setRestSec(rest)
           setRestActive(true)
+        }
+
+        const undoSet = (exIdx, setIdx) => {
+          updateSet(exIdx, setIdx, { completed: false })
+        }
+
+        const addExtraSet = (exIdx) => {
+          // Добавляем ещё один подход, скопировав последний
+          setLog((prev) => {
+            const copy = prev.map((arr) => arr.map((s) => ({ ...s })))
+            const last = copy[exIdx][copy[exIdx].length - 1]
+            copy[exIdx].push({ weight: last.weight, reps: last.reps, completed: false })
+            return copy
+          })
         }
 
         // Показать модалку завершения, если все подходы сделаны
@@ -539,6 +552,15 @@
             setTimeout(() => setConfirmFinish(true), 300)
           }
         }, [allDone])
+
+        // Упражнения в очереди для списка "Далее"
+        const upcomingExercises = exercises
+          .map((ex, i) => ({ ex, i }))
+          .filter(({ i }) => i > currentExIdx)
+
+        const doneExercises = exercises
+          .map((ex, i) => ({ ex, i }))
+          .filter(({ i }) => i < currentExIdx && log[i].every((s) => s.completed))
 
         return html`
           <div class="h-full flex flex-col overflow-hidden">
@@ -553,8 +575,13 @@
                 <${Icon} name="chevronLeft" size=${18} />
               </button>
               <div class="text-center">
-                <div class="text-sm font-semibold">${mockProgram.nextWorkout.name}</div>
-                <div class="text-xs text-muted">${doneSets} / ${totalSets} подходов</div>
+                <div class="text-sm font-semibold">
+                  ${mockProgram.nextWorkout.name}
+                </div>
+                <div class="text-xs text-muted">
+                  Упражнение ${currentExIdx + 1} / ${exercises.length} · ${doneSets}/${totalSets}
+                  подходов
+                </div>
               </div>
               <button
                 onClick=${() => setConfirmFinish(true)}
@@ -564,54 +591,69 @@
               </button>
             </div>
 
-            <!-- Exercises chips (mini-map) -->
-            <div class="px-4 py-3 border-b border-border overflow-x-auto scroll-hide">
-              <div class="flex gap-2">
-                ${exercises.map((ex, i) => {
-                  const done = log[i].every((s) => s.completed)
-                  const active = i === currentExIdx
-                  const cls = done
-                    ? 'bg-success/20 text-success border-success/30'
-                    : active
-                      ? 'bg-accent text-white border-accent'
-                      : 'bg-card text-muted border-border'
-                  return html`
-                    <button
-                      key=${ex.id}
-                      onClick=${() => setCurrentExIdx(i)}
-                      class=${`flex-shrink-0 px-3 h-9 rounded-full border text-xs font-medium flex items-center gap-1.5 ${cls}`}
-                    >
-                      <span>${i + 1}</span>
-                      ${done && html`<${Icon} name="check" size=${12} />`}
-                    </button>
-                  `
-                })}
-              </div>
-            </div>
+            <!-- Scrollable content -->
+            <div class="flex-1 overflow-y-auto scroll-hide">
+              <!-- Done exercises (свёрнутая полоска, если есть) -->
+              ${doneExercises.length > 0 &&
+              html`
+                <div class="px-5 pt-3">
+                  <div class="text-xs uppercase tracking-wider text-subtle mb-2">Сделано</div>
+                  <div class="space-y-1.5">
+                    ${doneExercises.map(
+                      ({ ex, i }) => html`
+                        <button
+                          key=${ex.id}
+                          onClick=${() => setCurrentExIdx(i)}
+                          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-success/5 border border-success/15 text-sm text-muted"
+                        >
+                          <div
+                            class="w-6 h-6 rounded-full bg-success/20 text-success flex items-center justify-center flex-shrink-0"
+                          >
+                            <${Icon} name="check" size=${12} />
+                          </div>
+                          <span class="truncate flex-1 text-left">${ex.name}</span>
+                          <span class="text-xs text-subtle">
+                            ${log[i].map((s) => (ex.bodyweight ? `×${s.reps}` : `${s.weight}×${s.reps}`)).join(' · ')}
+                          </span>
+                        </button>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `}
 
-            <!-- Current exercise -->
-            <div class="flex-1 overflow-y-auto scroll-hide px-5 pt-5 pb-24">
-              <div class="fade-up" key=${currentExIdx}>
+              <!-- Current exercise -->
+              <div class="px-5 pt-5 fade-up" key=${currentExIdx}>
                 <div class="flex items-start justify-between">
-                  <div>
-                    <div class="text-xs uppercase tracking-wider text-subtle">
-                      упражнение ${currentExIdx + 1}
-                    </div>
+                  <div class="flex-1 min-w-0 pr-3">
+                    <div class="text-xs uppercase tracking-wider text-subtle">сейчас</div>
                     <div class="text-2xl font-semibold mt-1 leading-tight">${currentEx.name}</div>
                     <div class="text-sm text-muted mt-1">
                       ${currentEx.muscles} · ${currentEx.sets}×${currentEx.targetReps}
                     </div>
+                    ${supersetPair !== null &&
+                    html`
+                      <div
+                        class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-accent/15 text-accent text-[11px] font-medium"
+                      >
+                        <${Icon} name="zap" size=${11} />
+                        <span>
+                          Суперсет с ${exercises[supersetPair]?.name || ''}
+                        </span>
+                      </div>
+                    `}
                   </div>
-                  <div
-                    class="w-16 h-16 rounded-2xl bg-cardAlt flex items-center justify-center text-accent"
+                  <button
+                    onClick=${() => setMenuOpen(true)}
+                    class="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted flex-shrink-0"
                   >
-                    <${Icon} name="dumbbell" size=${26} />
-                  </div>
+                    <${Icon} name="moreHorizontal" size=${18} />
+                  </button>
                 </div>
 
                 <!-- Previous session -->
                 <div class="mt-4 p-3 rounded-xl bg-card border border-border">
-                  <div class="text-xs text-subtle uppercase tracking-wider">прошлая тренировка</div>
+                  <div class="text-[10px] text-subtle uppercase tracking-wider">прошлая тренировка</div>
                   <div class="text-sm font-mono mt-1 text-muted">
                     ${currentEx.prev
                       .map((s) =>
@@ -621,8 +663,8 @@
                   </div>
                 </div>
 
-                <!-- Sets list -->
-                <div class="mt-5 space-y-2">
+                <!-- Sets list (v2) -->
+                <div class="mt-5 space-y-3">
                   ${currentLog.map((set, setIdx) => {
                     const isNext = setIdx === nextSetIdx
                     const isDone = set.completed
@@ -636,48 +678,81 @@
                         isDone=${isDone}
                         onUpdate=${(patch) => updateSet(currentExIdx, setIdx, patch)}
                         onDone=${() => markSetDone(currentExIdx, setIdx)}
+                        onUndo=${() => undoSet(currentExIdx, setIdx)}
                       />
                     `
                   })}
                 </div>
 
-                ${allSetsDone &&
-                html`
-                  <div class="mt-5 space-y-2">
-                    <button
-                      onClick=${() =>
-                        setCurrentExIdx((i) => Math.min(exercises.length - 1, i + 1))}
-                      disabled=${currentExIdx === exercises.length - 1}
-                      class="w-full h-14 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:bg-card"
-                    >
-                      ${currentExIdx === exercises.length - 1
-                        ? 'Это было последнее упражнение'
-                        : html`
-                            <span>Следующее упражнение</span>
-                            <${Icon} name="chevronRight" size=${18} />
-                          `}
-                    </button>
-                    <button
-                      class="w-full h-11 rounded-xl text-sm text-muted flex items-center justify-center gap-1.5 border border-border"
-                    >
-                      <${Icon} name="plus" size=${14} />
-                      <span>Добавить ещё один подход</span>
-                    </button>
-                  </div>
-                `}
-
-                <!-- Secondary actions -->
-                <div class="mt-5 grid grid-cols-2 gap-2">
+                <!-- + подход / след. упражнение -->
+                <div class="mt-4 space-y-2">
                   <button
-                    class="h-12 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5"
+                    onClick=${() => addExtraSet(currentExIdx)}
+                    class="w-full h-11 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
                   >
-                    <${Icon} name="messageCircle" size=${15} />
+                    <${Icon} name="plus" size=${14} />
+                    <span>Добавить подход</span>
+                  </button>
+                  ${allSetsDone &&
+                  currentExIdx < exercises.length - 1 &&
+                  html`
+                    <button
+                      onClick=${() => setCurrentExIdx((i) => i + 1)}
+                      class="w-full h-13 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2"
+                      style=${{ height: '52px' }}
+                    >
+                      <span>К следующему упражнению</span>
+                      <${Icon} name="chevronRight" size=${18} />
+                    </button>
+                  `}
+                </div>
+              </div>
+
+              <!-- Далее: список остальных упражнений -->
+              ${upcomingExercises.length > 0 &&
+              html`
+                <div class="px-5 pt-6 pb-6">
+                  <div class="text-xs uppercase tracking-wider text-subtle mb-3">Далее</div>
+                  <div class="space-y-2">
+                    ${upcomingExercises.map(
+                      ({ ex, i }) => html`
+                        <button
+                          key=${ex.id}
+                          onClick=${() => setCurrentExIdx(i)}
+                          class="w-full flex items-center gap-3 p-3 rounded-2xl bg-card border border-border active:bg-cardAlt transition-colors text-left"
+                        >
+                          <div
+                            class="w-9 h-9 rounded-full bg-cardAlt flex items-center justify-center text-xs text-muted font-medium flex-shrink-0"
+                          >
+                            ${i + 1}
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium truncate">${ex.name}</div>
+                            <div class="text-xs text-muted truncate">
+                              ${ex.sets}×${ex.targetReps} · ${ex.muscles}
+                            </div>
+                          </div>
+                          <${Icon} name="chevronRight" size=${18} cls="text-subtle flex-shrink-0" />
+                        </button>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `}
+
+              <!-- Secondary actions -->
+              <div class="px-5 pb-28">
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    class="h-11 rounded-xl bg-card border border-border text-xs text-muted flex items-center justify-center gap-1.5"
+                  >
+                    <${Icon} name="messageCircle" size=${14} />
                     <span>Спросить тренера</span>
                   </button>
                   <button
-                    class="h-12 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5"
+                    class="h-11 rounded-xl bg-card border border-border text-xs text-muted flex items-center justify-center gap-1.5"
                   >
-                    <${Icon} name="camera" size=${15} />
+                    <${Icon} name="camera" size=${14} />
                     <span>Фото тренажёра</span>
                   </button>
                 </div>
@@ -709,64 +784,357 @@
                 onKeep=${() => setConfirmFinish(false)}
               />
             `}
+
+            <!-- Context menu на упражнении -->
+            ${menuOpen &&
+            html`
+              <${ExerciseMenuModal}
+                onClose=${() => setMenuOpen(false)}
+                onReplace=${() => {
+                  setMenuOpen(false)
+                  setReplaceOpen(true)
+                }}
+                onSuperset=${() => {
+                  setMenuOpen(false)
+                  setSupersetOpen(true)
+                }}
+                onSkip=${() => {
+                  // помечаем все подходы текущего упражнения как отменённые, двигаемся дальше
+                  setMenuOpen(false)
+                  if (currentExIdx < exercises.length - 1) {
+                    setCurrentExIdx((i) => i + 1)
+                  }
+                }}
+                supersetActive=${supersetPair !== null}
+                onUnsuperset=${() => {
+                  setMenuOpen(false)
+                  setSupersetPair(null)
+                }}
+              />
+            `}
+            ${replaceOpen &&
+            html`
+              <${ReplaceExerciseModal}
+                exercise=${currentEx}
+                onClose=${() => setReplaceOpen(false)}
+                onPick=${() => setReplaceOpen(false)}
+              />
+            `}
+            ${supersetOpen &&
+            html`
+              <${SupersetModal}
+                exercises=${exercises}
+                currentIdx=${currentExIdx}
+                onClose=${() => setSupersetOpen(false)}
+                onPick=${(idx) => {
+                  setSupersetPair(idx)
+                  setSupersetOpen(false)
+                }}
+              />
+            `}
           </div>
         `
       }
 
       // ═══════════════════════════════════════════════════════════════
-      // КАРТОЧКА ПОДХОДА
+      // КАРТОЧКА ПОДХОДА (v2: широкая кнопка "Готово" снизу)
       // ═══════════════════════════════════════════════════════════════
 
-      function SetCard({ setIdx, set, bodyweight, isNext, isDone, onUpdate, onDone }) {
-        const cls = isDone
-          ? 'border-success/20 bg-success/5'
-          : isNext
-            ? 'border-accent/40 bg-accent/5'
-            : 'border-border bg-card opacity-60'
-        return html`
-          <div class=${`rounded-2xl border p-4 ${cls} transition-colors`}>
-            <div class="flex items-center gap-3">
+      function SetCard({ setIdx, set, bodyweight, isNext, isDone, onUpdate, onDone, onUndo }) {
+        // Три состояния: done, next (active), future (dimmed)
+        if (isDone) {
+          // Компактная строка с возможностью отменить
+          return html`
+            <div
+              class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-success/5 border border-success/20"
+            >
               <div
-                class=${`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
-                  isDone
-                    ? 'bg-success text-white'
-                    : isNext
-                      ? 'bg-accent text-white'
-                      : 'bg-cardAlt text-muted'
-                }`}
+                class="w-8 h-8 rounded-full bg-success text-white flex items-center justify-center flex-shrink-0"
               >
-                ${isDone ? html`<${Icon} name="check" size=${14} />` : setIdx + 1}
+                <${Icon} name="check" size=${14} />
               </div>
-              <div class="flex-1 flex items-center gap-3">
-                ${!bodyweight &&
-                html`
-                  <${NumberStepper}
-                    label="кг"
-                    value=${set.weight}
-                    step=${2.5}
-                    onChange=${(v) => onUpdate({ weight: v })}
-                    disabled=${isDone}
-                  />
-                `}
-                <${NumberStepper}
-                  label="повт"
-                  value=${set.reps}
-                  step=${1}
-                  onChange=${(v) => onUpdate({ reps: v })}
-                  disabled=${isDone}
-                />
+              <div class="flex-1 min-w-0">
+                <div class="text-xs text-subtle uppercase tracking-wider">подход ${setIdx + 1}</div>
+                <div class="text-base font-mono tabular-nums font-medium mt-0.5">
+                  ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
+                </div>
               </div>
-              ${!isDone &&
-              isNext &&
+              <button
+                onClick=${onUndo}
+                class="w-9 h-9 rounded-full bg-cardAlt/60 flex items-center justify-center text-muted active:scale-95 transition-transform"
+                aria-label="Отменить подход"
+                title="Отменить подход"
+              >
+                <${Icon} name="x" size=${15} />
+              </button>
+            </div>
+          `
+        }
+
+        if (!isNext) {
+          // Будущий подход — компактный, неактивный
+          return html`
+            <div
+              class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border border-border opacity-50"
+            >
+              <div
+                class="w-8 h-8 rounded-full bg-cardAlt flex items-center justify-center text-xs text-muted font-medium flex-shrink-0"
+              >
+                ${setIdx + 1}
+              </div>
+              <div class="text-sm text-muted font-mono">
+                ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
+              </div>
+            </div>
+          `
+        }
+
+        // Активный подход — большая карточка с степперами и широкой кнопкой
+        return html`
+          <div
+            class="rounded-3xl border border-accent/40 bg-accent/5 p-4 shadow-[0_0_24px_-8px_rgba(124,92,252,0.4)]"
+          >
+            <div class="flex items-center gap-2.5 mb-3">
+              <div
+                class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold"
+              >
+                ${setIdx + 1}
+              </div>
+              <div class="text-xs uppercase tracking-wider text-accent font-medium">
+                Текущий подход
+              </div>
+            </div>
+
+            <div class=${`grid gap-3 ${bodyweight ? '' : 'grid-cols-2'}`}>
+              ${!bodyweight &&
               html`
-                <button
-                  onClick=${onDone}
-                  class="w-11 h-11 rounded-full bg-accent text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
-                  aria-label="Готово"
-                >
-                  <${Icon} name="check" size=${18} />
-                </button>
+                <${BigStepper}
+                  label="Вес, кг"
+                  value=${set.weight}
+                  step=${2.5}
+                  onChange=${(v) => onUpdate({ weight: v })}
+                />
               `}
+              <${BigStepper}
+                label="Повторы"
+                value=${set.reps}
+                step=${1}
+                onChange=${(v) => onUpdate({ reps: v })}
+              />
+            </div>
+
+            <button
+              onClick=${onDone}
+              class="mt-4 w-full rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_6px_20px_-8px_rgba(124,92,252,0.8)]"
+              style=${{ height: '56px' }}
+            >
+              <${Icon} name="check" size=${22} />
+              <span class="text-base">
+                Сделал · ${bodyweight ? `×${set.reps}` : `${set.weight} × ${set.reps}`}
+              </span>
+            </button>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Крупный stepper для активного подхода
+      // ═══════════════════════════════════════════════════════════════
+
+      function BigStepper({ label, value, step, onChange }) {
+        return html`
+          <div class="rounded-2xl bg-card p-3">
+            <div class="text-[10px] uppercase tracking-wider text-subtle text-center mb-1.5">
+              ${label}
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <button
+                onClick=${() => onChange(Math.max(0, value - step))}
+                class="stepper-btn w-10 h-10 rounded-full bg-cardAlt flex items-center justify-center text-muted flex-shrink-0"
+              >
+                <${Icon} name="minus" size=${16} />
+              </button>
+              <div class="text-2xl font-semibold font-mono tabular-nums leading-none">
+                ${value}
+              </div>
+              <button
+                onClick=${() => onChange(value + step)}
+                class="stepper-btn w-10 h-10 rounded-full bg-cardAlt flex items-center justify-center text-muted flex-shrink-0"
+              >
+                <${Icon} name="plus" size=${16} />
+              </button>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Меню упражнения (⋯)
+      // ═══════════════════════════════════════════════════════════════
+
+      function ExerciseMenuModal({ onClose, onReplace, onSuperset, onSkip, supersetActive, onUnsuperset }) {
+        const items = [
+          { key: 'replace', label: 'Заменить на похожее', icon: 'zap', onClick: onReplace },
+          supersetActive
+            ? { key: 'unsuperset', label: 'Убрать суперсет', icon: 'x', onClick: onUnsuperset }
+            : { key: 'superset', label: 'Объединить в суперсет', icon: 'zap', onClick: onSuperset },
+          { key: 'skip', label: 'Пропустить упражнение', icon: 'skipForward', onClick: onSkip, danger: true },
+        ]
+        return html`
+          <div
+            class="absolute inset-0 z-30 flex items-end justify-center"
+            style=${{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
+            onClick=${onClose}
+          >
+            <div
+              class="bg-card border border-border rounded-t-3xl p-4 w-full fade-up"
+              onClick=${(e) => e.stopPropagation()}
+            >
+              <div class="w-12 h-1 bg-cardAlt rounded-full mx-auto mb-4"></div>
+              <div class="space-y-1">
+                ${items.map(
+                  (it) => html`
+                    <button
+                      key=${it.key}
+                      onClick=${it.onClick}
+                      class=${`w-full flex items-center gap-3 px-3 py-3.5 rounded-xl text-left active:bg-cardAlt transition-colors ${
+                        it.danger ? 'text-red-400' : 'text-white'
+                      }`}
+                    >
+                      <div
+                        class=${`w-9 h-9 rounded-full flex items-center justify-center ${
+                          it.danger ? 'bg-red-500/10 text-red-400' : 'bg-accent/15 text-accent'
+                        }`}
+                      >
+                        <${Icon} name=${it.icon} size=${16} />
+                      </div>
+                      <span class="text-sm font-medium flex-1">${it.label}</span>
+                    </button>
+                  `,
+                )}
+                <button
+                  onClick=${onClose}
+                  class="w-full h-11 mt-2 rounded-xl text-sm text-muted"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Модалка: заменить на похожее
+      // ═══════════════════════════════════════════════════════════════
+
+      function ReplaceExerciseModal({ exercise, onClose, onPick }) {
+        const alternatives = [
+          {
+            name: 'Тяга гантели к поясу в наклоне',
+            muscles: 'широчайшие, ромбовидные',
+            match: 90,
+          },
+          { name: 'Тяга Т-грифа', muscles: 'широчайшие, ромбовидные', match: 85 },
+          { name: 'Тяга нижнего блока', muscles: 'широчайшие', match: 75 },
+        ]
+        return html`
+          <div
+            class="absolute inset-0 z-30 flex items-end justify-center"
+            style=${{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
+            onClick=${onClose}
+          >
+            <div
+              class="bg-card border border-border rounded-t-3xl p-5 w-full fade-up"
+              onClick=${(e) => e.stopPropagation()}
+            >
+              <div class="w-12 h-1 bg-cardAlt rounded-full mx-auto mb-4"></div>
+              <div class="text-sm font-semibold">Заменить упражнение</div>
+              <div class="text-xs text-muted mt-0.5">
+                Вместо <span class="text-white">${exercise.name}</span>
+              </div>
+              <div class="mt-4 space-y-2">
+                ${alternatives.map(
+                  (alt) => html`
+                    <button
+                      key=${alt.name}
+                      onClick=${() => onPick(alt)}
+                      class="w-full flex items-center gap-3 p-3 rounded-2xl bg-cardAlt border border-border active:bg-card transition-colors text-left"
+                    >
+                      <div
+                        class="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center text-accent flex-shrink-0"
+                      >
+                        <${Icon} name="dumbbell" size=${16} />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate">${alt.name}</div>
+                        <div class="text-xs text-muted truncate">${alt.muscles}</div>
+                      </div>
+                      <div
+                        class="text-[10px] px-2 py-1 rounded-full bg-success/10 text-success font-medium flex-shrink-0"
+                      >
+                        ${alt.match}%
+                      </div>
+                    </button>
+                  `,
+                )}
+              </div>
+              <button onClick=${onClose} class="mt-3 w-full h-11 rounded-xl text-sm text-muted">
+                Отмена
+              </button>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Модалка: суперсет (выбрать второе упражнение)
+      // ═══════════════════════════════════════════════════════════════
+
+      function SupersetModal({ exercises, currentIdx, onClose, onPick }) {
+        return html`
+          <div
+            class="absolute inset-0 z-30 flex items-end justify-center"
+            style=${{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
+            onClick=${onClose}
+          >
+            <div
+              class="bg-card border border-border rounded-t-3xl p-5 w-full fade-up"
+              onClick=${(e) => e.stopPropagation()}
+            >
+              <div class="w-12 h-1 bg-cardAlt rounded-full mx-auto mb-4"></div>
+              <div class="text-sm font-semibold">Объединить в суперсет</div>
+              <div class="text-xs text-muted mt-0.5 leading-relaxed">
+                Два упражнения будут чередоваться: подход первого → сразу подход второго → отдых.
+                Выбери второе:
+              </div>
+              <div class="mt-4 space-y-2 max-h-80 overflow-y-auto">
+                ${exercises.map((ex, i) => {
+                  if (i === currentIdx) return null
+                  return html`
+                    <button
+                      key=${ex.id}
+                      onClick=${() => onPick(i)}
+                      class="w-full flex items-center gap-3 p-3 rounded-2xl bg-cardAlt border border-border active:bg-card transition-colors text-left"
+                    >
+                      <div
+                        class="w-9 h-9 rounded-full bg-cardAlt flex items-center justify-center text-xs text-muted font-medium flex-shrink-0"
+                      >
+                        ${i + 1}
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate">${ex.name}</div>
+                        <div class="text-xs text-muted truncate">
+                          ${ex.sets}×${ex.targetReps} · ${ex.muscles}
+                        </div>
+                      </div>
+                    </button>
+                  `
+                })}
+              </div>
+              <button onClick=${onClose} class="mt-3 w-full h-11 rounded-xl text-sm text-muted">
+                Отмена
+              </button>
             </div>
           </div>
         `
