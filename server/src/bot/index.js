@@ -8,6 +8,7 @@ import prisma from '../utils/prisma.js'
 export function createBot(token) {
   const bot = new Telegraf(token)
   const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:5173'
+  const adminId = process.env.ADMIN_TELEGRAM_ID ? Number(process.env.ADMIN_TELEGRAM_ID) : null
   // Telegram разрешает web_app кнопки только с https://. В dev с localhost
   // отдаём просто ссылку текстом — кнопка заработает после деплоя на Vercel.
   const canUseWebAppButton = webAppUrl.startsWith('https://')
@@ -67,6 +68,14 @@ export function createBot(token) {
 
   bot.on('photo', async (ctx) => {
     try {
+      // ─── 0. Проверка доступа ──────────────────────────────────
+      // Пока фича в тесте — только админ может распознавать тренажёры.
+      // Убрать эту проверку, когда откроем для всех.
+      if (adminId && ctx.from.id !== adminId) {
+        await ctx.reply('🚧 Распознавание тренажёров пока в разработке. Скоро заработает!')
+        return
+      }
+
       // ─── 1. Показать индикатор "печатает..." ──────────────────
       // Без этого пользователь 5-10 секунд смотрит в пустой чат.
       // sendChatAction автоматически пропадёт, когда отправим ответ.
