@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>AI Trainer — Mockup v2</title>
+    <title>AI Trainer — Mockup v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -119,7 +119,7 @@
     </style>
   </head>
   <body>
-    <div class="phone-label">AI Trainer · Mockup v2</div>
+    <div class="phone-label">AI Trainer · Mockup v3</div>
     <div class="phone" id="root"></div>
 
     <!-- React + htm (no build step) -->
@@ -493,9 +493,47 @@
         const [supersetPair, setSupersetPair] = useState(null)
 
         const currentEx = exercises[currentExIdx]
-        const currentLog = log[currentExIdx]
-        const nextSetIdx = currentLog.findIndex((s) => !s.completed)
-        const allSetsDone = nextSetIdx === -1
+        const pairedEx = supersetPair !== null ? exercises[supersetPair] : null
+
+        // ─── Flow sets: обычный режим или интерливинг A↔B в суперсете ───
+        let flowSets = []
+        if (pairedEx) {
+          const maxSets = Math.max(currentEx.sets, pairedEx.sets)
+          for (let i = 0; i < maxSets; i++) {
+            if (i < currentEx.sets) {
+              flowSets.push({
+                exIdx: currentExIdx,
+                setIdx: i,
+                letter: 'A',
+                exerciseName: currentEx.name,
+                bodyweight: currentEx.bodyweight,
+                set: log[currentExIdx][i],
+              })
+            }
+            if (i < pairedEx.sets) {
+              flowSets.push({
+                exIdx: supersetPair,
+                setIdx: i,
+                letter: 'B',
+                exerciseName: pairedEx.name,
+                bodyweight: pairedEx.bodyweight,
+                set: log[supersetPair][i],
+              })
+            }
+          }
+        } else {
+          flowSets = log[currentExIdx].map((set, i) => ({
+            exIdx: currentExIdx,
+            setIdx: i,
+            letter: undefined,
+            exerciseName: undefined,
+            bodyweight: currentEx.bodyweight,
+            set,
+          }))
+        }
+
+        const nextFlowIdx = flowSets.findIndex(({ set }) => !set.completed)
+        const allSetsDone = nextFlowIdx === -1
 
         const totalSets = log.reduce((sum, arr) => sum + arr.length, 0)
         const doneSets = log.reduce((sum, arr) => sum + arr.filter((s) => s.completed).length, 0)
@@ -524,20 +562,24 @@
           })
         }
 
-        const markSetDone = (exIdx, setIdx) => {
-          updateSet(exIdx, setIdx, { completed: true })
-          const rest = exercises[exIdx].restSec
-          setRestTotal(rest)
-          setRestSec(rest)
-          setRestActive(true)
+        // В обычном режиме — таймер после каждого "Сделал".
+        // В суперсете — только после подхода B (перед новым циклом A→B).
+        const markFlowDone = (flow) => {
+          updateSet(flow.exIdx, flow.setIdx, { completed: true })
+          const startRest = !pairedEx || flow.letter === 'B'
+          if (startRest) {
+            const rest = exercises[flow.exIdx].restSec
+            setRestTotal(rest)
+            setRestSec(rest)
+            setRestActive(true)
+          }
         }
 
-        const undoSet = (exIdx, setIdx) => {
-          updateSet(exIdx, setIdx, { completed: false })
+        const undoFlow = (flow) => {
+          updateSet(flow.exIdx, flow.setIdx, { completed: false })
         }
 
         const addExtraSet = (exIdx) => {
-          // Добавляем ещё один подход, скопировав последний
           setLog((prev) => {
             const copy = prev.map((arr) => arr.map((s) => ({ ...s })))
             const last = copy[exIdx][copy[exIdx].length - 1]
@@ -553,14 +595,22 @@
           }
         }, [allDone])
 
-        // Упражнения в очереди для списка "Далее"
+        // Упражнения в очереди для списка "Далее".
+        // В суперсете B-упражнение уже показано в объединённой карточке — скрываем.
         const upcomingExercises = exercises
           .map((ex, i) => ({ ex, i }))
-          .filter(({ i }) => i > currentExIdx)
+          .filter(({ i }) => i > currentExIdx && i !== supersetPair)
 
+        // Сделанные упражнения — аналогично.
         const doneExercises = exercises
           .map((ex, i) => ({ ex, i }))
-          .filter(({ i }) => i < currentExIdx && log[i].every((s) => s.completed))
+          .filter(
+            ({ i }) =>
+              i !== currentExIdx &&
+              i !== supersetPair &&
+              log[i].every((s) => s.completed) &&
+              log[i].length > 0,
+          )
 
         return html`
           <div class="h-full flex flex-col overflow-hidden">
@@ -603,7 +653,10 @@
                       ({ ex, i }) => html`
                         <button
                           key=${ex.id}
-                          onClick=${() => setCurrentExIdx(i)}
+                          onClick=${() => {
+                            setSupersetPair(null)
+                            setCurrentExIdx(i)
+                          }}
                           class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-success/5 border border-success/15 text-sm text-muted"
                         >
                           <div
@@ -623,62 +676,110 @@
               `}
 
               <!-- Current exercise -->
-              <div class="px-5 pt-5 fade-up" key=${currentExIdx}>
-                <div class="flex items-start justify-between">
-                  <div class="flex-1 min-w-0 pr-3">
-                    <div class="text-xs uppercase tracking-wider text-subtle">сейчас</div>
-                    <div class="text-2xl font-semibold mt-1 leading-tight">${currentEx.name}</div>
-                    <div class="text-sm text-muted mt-1">
-                      ${currentEx.muscles} · ${currentEx.sets}×${currentEx.targetReps}
-                    </div>
-                    ${supersetPair !== null &&
-                    html`
-                      <div
-                        class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-accent/15 text-accent text-[11px] font-medium"
-                      >
-                        <${Icon} name="zap" size=${11} />
-                        <span>
-                          Суперсет с ${exercises[supersetPair]?.name || ''}
-                        </span>
+              <div class="px-5 pt-5 fade-up" key=${`${currentExIdx}_${supersetPair}`}>
+                ${pairedEx
+                  ? html`
+                      <!-- Заголовок: суперсет-пара -->
+                      <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0 pr-3">
+                          <div
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/15 text-accent text-[11px] font-bold uppercase tracking-wider"
+                          >
+                            <${Icon} name="zap" size=${11} />
+                            <span>Суперсет</span>
+                          </div>
+                          <div class="mt-3 p-3 rounded-2xl bg-card border border-border">
+                            <div class="flex items-center gap-2.5">
+                              <div
+                                class="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                              >
+                                A
+                              </div>
+                              <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold truncate">${currentEx.name}</div>
+                                <div class="text-xs text-muted truncate">
+                                  ${currentEx.sets}×${currentEx.targetReps} · ${currentEx.muscles}
+                                </div>
+                              </div>
+                            </div>
+                            <div class="border-l-2 border-dashed border-accent/40 ml-[13px] h-3 my-1"></div>
+                            <div class="flex items-center gap-2.5">
+                              <div
+                                class="w-7 h-7 rounded-full bg-success text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                              >
+                                B
+                              </div>
+                              <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold truncate">${pairedEx.name}</div>
+                                <div class="text-xs text-muted truncate">
+                                  ${pairedEx.sets}×${pairedEx.targetReps} · ${pairedEx.muscles}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick=${() => setMenuOpen(true)}
+                          class="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted flex-shrink-0"
+                        >
+                          <${Icon} name="moreHorizontal" size=${18} />
+                        </button>
+                      </div>
+                      <div class="text-[11px] text-subtle mt-2 leading-relaxed">
+                        Подходы чередуются: A → B → отдых → A → B → отдых
+                      </div>
+                    `
+                  : html`
+                      <!-- Заголовок: обычное упражнение -->
+                      <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0 pr-3">
+                          <div class="text-xs uppercase tracking-wider text-subtle">сейчас</div>
+                          <div class="text-2xl font-semibold mt-1 leading-tight">${currentEx.name}</div>
+                          <div class="text-sm text-muted mt-1">
+                            ${currentEx.muscles} · ${currentEx.sets}×${currentEx.targetReps}
+                          </div>
+                        </div>
+                        <button
+                          onClick=${() => setMenuOpen(true)}
+                          class="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted flex-shrink-0"
+                        >
+                          <${Icon} name="moreHorizontal" size=${18} />
+                        </button>
+                      </div>
+
+                      <!-- Previous session -->
+                      <div class="mt-4 p-3 rounded-xl bg-card border border-border">
+                        <div class="text-[10px] text-subtle uppercase tracking-wider">
+                          прошлая тренировка
+                        </div>
+                        <div class="text-sm font-mono mt-1 text-muted">
+                          ${currentEx.prev
+                            .map((s) =>
+                              currentEx.bodyweight ? `×${s.reps}` : `${s.weight}×${s.reps}`,
+                            )
+                            .join(' · ')}
+                        </div>
                       </div>
                     `}
-                  </div>
-                  <button
-                    onClick=${() => setMenuOpen(true)}
-                    class="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted flex-shrink-0"
-                  >
-                    <${Icon} name="moreHorizontal" size=${18} />
-                  </button>
-                </div>
 
-                <!-- Previous session -->
-                <div class="mt-4 p-3 rounded-xl bg-card border border-border">
-                  <div class="text-[10px] text-subtle uppercase tracking-wider">прошлая тренировка</div>
-                  <div class="text-sm font-mono mt-1 text-muted">
-                    ${currentEx.prev
-                      .map((s) =>
-                        currentEx.bodyweight ? `×${s.reps}` : `${s.weight}×${s.reps}`,
-                      )
-                      .join(' · ')}
-                  </div>
-                </div>
-
-                <!-- Sets list (v2) -->
+                <!-- Sets list (flowSets: обычно или интерливинг в суперсете) -->
                 <div class="mt-5 space-y-3">
-                  ${currentLog.map((set, setIdx) => {
-                    const isNext = setIdx === nextSetIdx
-                    const isDone = set.completed
+                  ${flowSets.map((flow, fIdx) => {
+                    const isNext = fIdx === nextFlowIdx
+                    const isDone = flow.set.completed
                     return html`
                       <${SetCard}
-                        key=${setIdx}
-                        setIdx=${setIdx}
-                        set=${set}
-                        bodyweight=${currentEx.bodyweight}
+                        key=${`${flow.exIdx}_${flow.setIdx}`}
+                        setIdx=${flow.setIdx}
+                        set=${flow.set}
+                        bodyweight=${flow.bodyweight}
                         isNext=${isNext}
                         isDone=${isDone}
-                        onUpdate=${(patch) => updateSet(currentExIdx, setIdx, patch)}
-                        onDone=${() => markSetDone(currentExIdx, setIdx)}
-                        onUndo=${() => undoSet(currentExIdx, setIdx)}
+                        letter=${flow.letter}
+                        exerciseName=${flow.exerciseName}
+                        onUpdate=${(patch) => updateSet(flow.exIdx, flow.setIdx, patch)}
+                        onDone=${() => markFlowDone(flow)}
+                        onUndo=${() => undoFlow(flow)}
                       />
                     `
                   })}
@@ -686,18 +787,28 @@
 
                 <!-- + подход / след. упражнение -->
                 <div class="mt-4 space-y-2">
-                  <button
-                    onClick=${() => addExtraSet(currentExIdx)}
-                    class="w-full h-11 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
-                  >
-                    <${Icon} name="plus" size=${14} />
-                    <span>Добавить подход</span>
-                  </button>
+                  ${!pairedEx &&
+                  html`
+                    <button
+                      onClick=${() => addExtraSet(currentExIdx)}
+                      class="w-full h-11 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+                    >
+                      <${Icon} name="plus" size=${14} />
+                      <span>Добавить подход</span>
+                    </button>
+                  `}
                   ${allSetsDone &&
                   currentExIdx < exercises.length - 1 &&
                   html`
                     <button
-                      onClick=${() => setCurrentExIdx((i) => i + 1)}
+                      onClick=${() => {
+                        // при переходе дальше сбрасываем суперсет и
+                        // перепрыгиваем через B-упражнение, если оно было в паре
+                        let nextIdx = currentExIdx + 1
+                        if (supersetPair !== null && nextIdx === supersetPair) nextIdx += 1
+                        setSupersetPair(null)
+                        setCurrentExIdx(Math.min(exercises.length - 1, nextIdx))
+                      }}
                       class="w-full h-13 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2"
                       style=${{ height: '52px' }}
                     >
@@ -718,7 +829,10 @@
                       ({ ex, i }) => html`
                         <button
                           key=${ex.id}
-                          onClick=${() => setCurrentExIdx(i)}
+                          onClick=${() => {
+                            setSupersetPair(null)
+                            setCurrentExIdx(i)
+                          }}
                           class="w-full flex items-center gap-3 p-3 rounded-2xl bg-card border border-border active:bg-cardAlt transition-colors text-left"
                         >
                           <div
@@ -837,27 +951,58 @@
       }
 
       // ═══════════════════════════════════════════════════════════════
-      // КАРТОЧКА ПОДХОДА (v2: широкая кнопка "Готово" снизу)
+      // КАРТОЧКА ПОДХОДА
+      // v2: широкая кнопка "Готово" снизу
+      // v3: опциональный маркер упражнения в суперсете (A/B + имя)
       // ═══════════════════════════════════════════════════════════════
 
-      function SetCard({ setIdx, set, bodyweight, isNext, isDone, onUpdate, onDone, onUndo }) {
+      function SetCard({
+        setIdx,
+        set,
+        bodyweight,
+        isNext,
+        isDone,
+        onUpdate,
+        onDone,
+        onUndo,
+        letter, // 'A' | 'B' | undefined
+        exerciseName, // string | undefined
+      }) {
+        const letterColor =
+          letter === 'A' ? 'bg-accent text-white' : letter === 'B' ? 'bg-success text-white' : null
+
+        // Бейдж: либо "A2" / "B2" (в суперсете), либо просто "2" (обычный режим)
+        const BadgeContent = letter ? html`<span>${letter}${setIdx + 1}</span>` : `${setIdx + 1}`
+
         // Три состояния: done, next (active), future (dimmed)
         if (isDone) {
-          // Компактная строка с возможностью отменить
           return html`
             <div
               class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-success/5 border border-success/20"
             >
               <div
-                class="w-8 h-8 rounded-full bg-success text-white flex items-center justify-center flex-shrink-0"
+                class=${`flex-shrink-0 h-8 min-w-8 px-2 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
+                  letter ? letterColor : 'bg-success text-white'
+                }`}
               >
-                <${Icon} name="check" size=${14} />
+                ${letter ? BadgeContent : html`<${Icon} name="check" size=${14} />`}
               </div>
               <div class="flex-1 min-w-0">
-                <div class="text-xs text-subtle uppercase tracking-wider">подход ${setIdx + 1}</div>
-                <div class="text-base font-mono tabular-nums font-medium mt-0.5">
-                  ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
-                </div>
+                ${exerciseName
+                  ? html`
+                      <div class="text-[11px] text-subtle truncate">${exerciseName}</div>
+                      <div class="text-sm font-mono tabular-nums font-medium">
+                        ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
+                      </div>
+                    `
+                  : html`
+                      <div class="text-xs text-subtle uppercase tracking-wider">
+                        подход ${setIdx + 1}
+                      </div>
+                      <div class="text-base font-mono tabular-nums font-medium mt-0.5">
+                        ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
+                      </div>
+                    `}
               </div>
               <button
                 onClick=${onUndo}
@@ -872,18 +1017,23 @@
         }
 
         if (!isNext) {
-          // Будущий подход — компактный, неактивный
           return html`
             <div
               class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border border-border opacity-50"
             >
               <div
-                class="w-8 h-8 rounded-full bg-cardAlt flex items-center justify-center text-xs text-muted font-medium flex-shrink-0"
+                class=${`flex-shrink-0 h-8 min-w-8 px-2 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
+                  letter ? letterColor + ' opacity-70' : 'bg-cardAlt text-muted'
+                }`}
               >
-                ${setIdx + 1}
+                ${BadgeContent}
               </div>
-              <div class="text-sm text-muted font-mono">
-                ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
+              <div class="flex-1 min-w-0">
+                ${exerciseName &&
+                html`<div class="text-[11px] text-subtle truncate">${exerciseName}</div>`}
+                <div class="text-sm text-muted font-mono">
+                  ${bodyweight ? `×${set.reps}` : `${set.weight} кг × ${set.reps}`}
+                </div>
               </div>
             </div>
           `
@@ -896,12 +1046,20 @@
           >
             <div class="flex items-center gap-2.5 mb-3">
               <div
-                class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold"
+                class=${`flex-shrink-0 h-8 min-w-8 px-2 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
+                  letter ? letterColor : 'bg-accent text-white'
+                }`}
               >
-                ${setIdx + 1}
+                ${BadgeContent}
               </div>
-              <div class="text-xs uppercase tracking-wider text-accent font-medium">
-                Текущий подход
+              <div class="min-w-0 flex-1">
+                <div class="text-xs uppercase tracking-wider text-accent font-medium">
+                  Текущий подход
+                </div>
+                ${exerciseName &&
+                html`<div class="text-sm font-medium truncate text-white mt-0.5">
+                  ${exerciseName}
+                </div>`}
               </div>
             </div>
 
