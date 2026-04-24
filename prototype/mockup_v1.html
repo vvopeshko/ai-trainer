@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>AI Trainer — Mockup v1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bg: '#0F0F13',
+              card: '#1A1A24',
+              cardAlt: '#22222E',
+              accent: '#7C5CFC',
+              accentDim: '#7C5CFC33',
+              success: '#34D399',
+              muted: 'rgba(232, 232, 240, 0.6)',
+              subtle: 'rgba(232, 232, 240, 0.4)',
+              border: 'rgba(255, 255, 255, 0.06)',
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(circle at 20% 10%, #1a1030 0%, #0f0f13 40%, #0a0a0e 100%);
+        color: #e8e8f0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        min-height: 100vh;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .phone {
+        width: 100%;
+        max-width: 400px;
+        height: 100vh;
+        max-height: 820px;
+        background: #0f0f13;
+        border-radius: 36px;
+        overflow: hidden;
+        box-shadow:
+          0 0 0 6px #1a1a24,
+          0 0 0 8px #2e2e3a,
+          0 24px 80px rgba(124, 92, 252, 0.15);
+        position: relative;
+      }
+      .phone-label {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(232, 232, 240, 0.3);
+      }
+      @media (max-width: 420px) {
+        body {
+          padding: 0;
+        }
+        .phone {
+          max-width: 100%;
+          height: 100vh;
+          max-height: 100vh;
+          border-radius: 0;
+          box-shadow: none;
+        }
+      }
+      /* hide scrollbars in scroll containers */
+      .scroll-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scroll-hide {
+        scrollbar-width: none;
+      }
+      .stepper-btn {
+        transition:
+          background-color 0.15s,
+          transform 0.1s;
+      }
+      .stepper-btn:active {
+        transform: scale(0.92);
+      }
+      @keyframes pulse-ring {
+        0% {
+          transform: scale(1);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1.4);
+          opacity: 0;
+        }
+      }
+      .timer-pulse {
+        animation: pulse-ring 1.6s ease-out infinite;
+      }
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .fade-up {
+        animation: fade-up 0.3s ease-out both;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="phone-label">AI Trainer · Mockup v1</div>
+    <div class="phone" id="root"></div>
+
+    <!-- React + htm (no build step) -->
+    <script type="module">
+      import {
+        html,
+        render,
+        useState,
+        useEffect,
+        useRef,
+      } from 'https://esm.sh/htm/preact/standalone'
+
+      // ═══════════════════════════════════════════════════════════════
+      // ИКОНКИ (инлайн SVG, стиль Lucide)
+      // ═══════════════════════════════════════════════════════════════
+
+      const Icon = ({ name, size = 20, cls = '' }) => {
+        const paths = {
+          dumbbell: html`
+            <path d="M14.4 14.4L9.6 9.6"></path>
+            <path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"></path>
+            <path d="m21.5 21.5-1.4-1.4"></path>
+            <path d="M3.9 3.9 2.5 2.5"></path>
+            <path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"></path>
+          `,
+          play: html`<polygon points="6 3 20 12 6 21 6 3"></polygon>`,
+          chevronRight: html`<polyline points="9 18 15 12 9 6"></polyline>`,
+          chevronLeft: html`<polyline points="15 18 9 12 15 6"></polyline>`,
+          plus: html`<line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>`,
+          minus: html`<line x1="5" y1="12" x2="19" y2="12"></line>`,
+          check: html`<polyline points="20 6 9 17 4 12"></polyline>`,
+          checkCircle: html`<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>`,
+          camera: html`<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>`,
+          messageCircle: html`<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>`,
+          moreHorizontal: html`<circle cx="12" cy="12" r="1"></circle>
+            <circle cx="19" cy="12" r="1"></circle>
+            <circle cx="5" cy="12" r="1"></circle>`,
+          x: html`<line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>`,
+          home: html`<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>`,
+          trendingUp: html`<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>`,
+          book: html`<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>`,
+          user: html`<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>`,
+          clock: html`<circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>`,
+          skipForward: html`<polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>`,
+          flame: html`<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>`,
+          zap: html`<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>`,
+        }
+        return html`
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width=${size}
+            height=${size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class=${cls}
+          >
+            ${paths[name] || null}
+          </svg>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // МОК-ДАННЫЕ
+      // ═══════════════════════════════════════════════════════════════
+
+      const mockProgram = {
+        name: 'Split A/B',
+        week: 2,
+        totalWorkouts: 12,
+        completedWorkouts: 5,
+        nextWorkout: {
+          type: 'B',
+          name: 'Тренировка B',
+          subtitle: 'Спина, бицепс, ноги',
+          duration: 50,
+          exercises: [
+            {
+              id: 'pullup',
+              name: 'Подтягивания',
+              sets: 3,
+              targetReps: '8-10',
+              restSec: 120,
+              muscles: 'широчайшие',
+              prev: [
+                { weight: 0, reps: 10 },
+                { weight: 0, reps: 10 },
+                { weight: 0, reps: 8 },
+              ],
+              bodyweight: true,
+            },
+            {
+              id: 'row',
+              name: 'Тяга штанги в наклоне',
+              sets: 4,
+              targetReps: '8-10',
+              restSec: 150,
+              muscles: 'широчайшие, ромбовидные',
+              prev: [
+                { weight: 60, reps: 10 },
+                { weight: 60, reps: 10 },
+                { weight: 60, reps: 8 },
+                { weight: 55, reps: 8 },
+              ],
+            },
+            {
+              id: 'latpull',
+              name: 'Тяга верхнего блока',
+              sets: 3,
+              targetReps: '10-12',
+              restSec: 90,
+              muscles: 'широчайшие',
+              prev: [
+                { weight: 70, reps: 10 },
+                { weight: 70, reps: 10 },
+                { weight: 70, reps: 10 },
+              ],
+            },
+            {
+              id: 'curl',
+              name: 'Подъём штанги на бицепс',
+              sets: 3,
+              targetReps: '10-12',
+              restSec: 75,
+              muscles: 'бицепс',
+              prev: [
+                { weight: 30, reps: 10 },
+                { weight: 30, reps: 10 },
+                { weight: 30, reps: 8 },
+              ],
+            },
+            {
+              id: 'squat',
+              name: 'Приседания со штангой',
+              sets: 4,
+              targetReps: '6-8',
+              restSec: 180,
+              muscles: 'квадрицепс, ягодицы',
+              prev: [
+                { weight: 80, reps: 8 },
+                { weight: 80, reps: 8 },
+                { weight: 80, reps: 7 },
+                { weight: 75, reps: 6 },
+              ],
+            },
+            {
+              id: 'legcurl',
+              name: 'Сгибание ног в тренажёре',
+              sets: 3,
+              targetReps: '12-15',
+              restSec: 60,
+              muscles: 'бицепс бедра',
+              prev: [
+                { weight: 40, reps: 12 },
+                { weight: 40, reps: 12 },
+                { weight: 40, reps: 10 },
+              ],
+            },
+          ],
+        },
+        recent: [
+          { label: 'Вчера', type: 'A' },
+          { label: '2 дня назад', type: 'B' },
+          { label: '4 дня назад', type: 'A' },
+          { label: '6 дней назад', type: 'B' },
+        ],
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ЭКРАН: ГЛАВНЫЙ "ПРОГРАММА"
+      // ═══════════════════════════════════════════════════════════════
+
+      function HomeScreen({ onStartWorkout, onSwitchWorkout }) {
+        const program = mockProgram
+        const progressPct = Math.round(
+          (program.completedWorkouts / program.totalWorkouts) * 100,
+        )
+        const next = program.nextWorkout
+
+        return html`
+          <div class="h-full flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="px-5 pt-8 pb-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs uppercase tracking-wider text-subtle">моя программа</div>
+                  <div class="text-xl font-semibold mt-1">${program.name}</div>
+                </div>
+                <button
+                  class="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-muted"
+                >
+                  <${Icon} name="moreHorizontal" size=${18} />
+                </button>
+              </div>
+
+              <!-- Progress -->
+              <div class="mt-5">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-muted"
+                    >Неделя ${program.week} · ${program.completedWorkouts} из ${program.totalWorkouts} тренировок</span
+                  >
+                  <span class="text-accent font-medium">${progressPct}%</span>
+                </div>
+                <div class="mt-2 h-1.5 rounded-full bg-card overflow-hidden">
+                  <div
+                    class="h-full bg-gradient-to-r from-accent to-success"
+                    style=${{ width: `${progressPct}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scrollable content -->
+            <div class="flex-1 overflow-y-auto scroll-hide px-5 pb-28">
+              <!-- Next workout hero card -->
+              <div class="fade-up">
+                <div
+                  class="rounded-3xl p-5 border border-border"
+                  style=${{
+                    background:
+                      'linear-gradient(135deg, rgba(124, 92, 252, 0.18) 0%, rgba(52, 211, 153, 0.08) 100%)',
+                  }}
+                >
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <div class="text-xs uppercase tracking-wider text-accent">следующая</div>
+                      <div class="text-2xl font-semibold mt-1 leading-tight">${next.name}</div>
+                      <div class="text-sm text-muted mt-1">${next.subtitle}</div>
+                    </div>
+                    <div
+                      class="w-14 h-14 rounded-2xl bg-accent/15 flex items-center justify-center text-accent"
+                    >
+                      <${Icon} name="dumbbell" size=${26} />
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4 mt-4 text-sm text-muted">
+                    <div class="flex items-center gap-1.5">
+                      <${Icon} name="dumbbell" size=${14} />
+                      <span>${next.exercises.length} упражнений</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <${Icon} name="clock" size=${14} />
+                      <span>~${next.duration} мин</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick=${onStartWorkout}
+                    class="mt-5 w-full h-14 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+                  >
+                    <${Icon} name="play" size=${18} />
+                    <span>Начать тренировку</span>
+                  </button>
+                  <button
+                    onClick=${onSwitchWorkout}
+                    class="mt-2 w-full h-11 rounded-xl text-sm text-muted hover:text-white"
+                  >
+                    Сделать другую вместо этой
+                  </button>
+                </div>
+              </div>
+
+              <!-- Exercises preview -->
+              <div class="mt-6">
+                <div class="text-xs uppercase tracking-wider text-subtle mb-3">в тренировке</div>
+                <div class="space-y-2">
+                  ${next.exercises.slice(0, 4).map(
+                    (ex, i) => html`
+                      <div
+                        key=${ex.id}
+                        class="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border"
+                      >
+                        <div
+                          class="w-8 h-8 rounded-full bg-cardAlt flex items-center justify-center text-xs text-muted font-medium"
+                        >
+                          ${i + 1}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium truncate">${ex.name}</div>
+                          <div class="text-xs text-muted">
+                            ${ex.sets}×${ex.targetReps}${' '}· ${ex.muscles}
+                          </div>
+                        </div>
+                      </div>
+                    `,
+                  )}
+                  ${next.exercises.length > 4 &&
+                  html`
+                    <div class="text-center text-xs text-muted pt-1">
+                      + ${next.exercises.length - 4} ещё
+                    </div>
+                  `}
+                </div>
+              </div>
+
+              <!-- Recent workouts -->
+              <div class="mt-6">
+                <div class="text-xs uppercase tracking-wider text-subtle mb-3">недавно</div>
+                <div class="space-y-2">
+                  ${program.recent.map(
+                    (r, i) => html`
+                      <div
+                        key=${i}
+                        class="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border"
+                      >
+                        <div
+                          class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center text-success"
+                        >
+                          <${Icon} name="check" size=${14} />
+                        </div>
+                        <div class="flex-1">
+                          <div class="text-sm">Тренировка ${r.type}</div>
+                          <div class="text-xs text-muted">${r.label}</div>
+                        </div>
+                        <button class="text-muted">
+                          <${Icon} name="chevronRight" size=${18} />
+                        </button>
+                      </div>
+                    `,
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <${BottomNav} active="home" />
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ЭКРАН: РЕЖИМ ТРЕНИРОВКИ
+      // ═══════════════════════════════════════════════════════════════
+
+      function WorkoutScreen({ onExit, onComplete }) {
+        const exercises = mockProgram.nextWorkout.exercises
+
+        // Состояние выполнения: массив массивов {weight, reps, completed}
+        const [log, setLog] = useState(() =>
+          exercises.map((ex) =>
+            Array.from({ length: ex.sets }, (_, i) => ({
+              weight: ex.prev[i]?.weight ?? 0,
+              reps: ex.prev[i]?.reps ?? 10,
+              completed: false,
+            })),
+          ),
+        )
+
+        // Какое упражнение активно, какой подход следующий выполнить
+        const [currentExIdx, setCurrentExIdx] = useState(0)
+        // Таймер отдыха
+        const [restSec, setRestSec] = useState(0)
+        const [restActive, setRestActive] = useState(false)
+        const [restTotal, setRestTotal] = useState(0)
+        // Модалка завершения
+        const [confirmFinish, setConfirmFinish] = useState(false)
+
+        const currentEx = exercises[currentExIdx]
+        const currentLog = log[currentExIdx]
+        // Индекс первого незавершённого подхода в текущем упражнении
+        const nextSetIdx = currentLog.findIndex((s) => !s.completed)
+        const allSetsDone = nextSetIdx === -1
+
+        // Общий прогресс
+        const totalSets = log.reduce((sum, arr) => sum + arr.length, 0)
+        const doneSets = log.reduce((sum, arr) => sum + arr.filter((s) => s.completed).length, 0)
+
+        // Все упражнения и подходы сделаны?
+        const allDone = doneSets === totalSets
+
+        // Tick таймера
+        useEffect(() => {
+          if (!restActive) return
+          const id = setInterval(() => {
+            setRestSec((s) => {
+              if (s <= 1) {
+                setRestActive(false)
+                return 0
+              }
+              return s - 1
+            })
+          }, 1000)
+          return () => clearInterval(id)
+        }, [restActive])
+
+        const updateSet = (exIdx, setIdx, patch) => {
+          setLog((prev) => {
+            const copy = prev.map((arr) => arr.map((s) => ({ ...s })))
+            copy[exIdx][setIdx] = { ...copy[exIdx][setIdx], ...patch }
+            return copy
+          })
+        }
+
+        const markSetDone = (exIdx, setIdx) => {
+          updateSet(exIdx, setIdx, { completed: true })
+          // Запускаем таймер отдыха
+          const rest = exercises[exIdx].restSec
+          setRestTotal(rest)
+          setRestSec(rest)
+          setRestActive(true)
+        }
+
+        // Показать модалку завершения, если все подходы сделаны
+        useEffect(() => {
+          if (allDone && !confirmFinish) {
+            setTimeout(() => setConfirmFinish(true), 300)
+          }
+        }, [allDone])
+
+        return html`
+          <div class="h-full flex flex-col overflow-hidden">
+            <!-- Top bar -->
+            <div
+              class="px-4 pt-6 pb-3 flex items-center justify-between border-b border-border"
+            >
+              <button
+                onClick=${onExit}
+                class="w-9 h-9 rounded-full bg-card flex items-center justify-center text-muted"
+              >
+                <${Icon} name="chevronLeft" size=${18} />
+              </button>
+              <div class="text-center">
+                <div class="text-sm font-semibold">${mockProgram.nextWorkout.name}</div>
+                <div class="text-xs text-muted">${doneSets} / ${totalSets} подходов</div>
+              </div>
+              <button
+                onClick=${() => setConfirmFinish(true)}
+                class="px-3 h-9 rounded-full bg-card text-xs font-medium text-muted border border-border"
+              >
+                Завершить
+              </button>
+            </div>
+
+            <!-- Exercises chips (mini-map) -->
+            <div class="px-4 py-3 border-b border-border overflow-x-auto scroll-hide">
+              <div class="flex gap-2">
+                ${exercises.map((ex, i) => {
+                  const done = log[i].every((s) => s.completed)
+                  const active = i === currentExIdx
+                  const cls = done
+                    ? 'bg-success/20 text-success border-success/30'
+                    : active
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-card text-muted border-border'
+                  return html`
+                    <button
+                      key=${ex.id}
+                      onClick=${() => setCurrentExIdx(i)}
+                      class=${`flex-shrink-0 px-3 h-9 rounded-full border text-xs font-medium flex items-center gap-1.5 ${cls}`}
+                    >
+                      <span>${i + 1}</span>
+                      ${done && html`<${Icon} name="check" size=${12} />`}
+                    </button>
+                  `
+                })}
+              </div>
+            </div>
+
+            <!-- Current exercise -->
+            <div class="flex-1 overflow-y-auto scroll-hide px-5 pt-5 pb-24">
+              <div class="fade-up" key=${currentExIdx}>
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div class="text-xs uppercase tracking-wider text-subtle">
+                      упражнение ${currentExIdx + 1}
+                    </div>
+                    <div class="text-2xl font-semibold mt-1 leading-tight">${currentEx.name}</div>
+                    <div class="text-sm text-muted mt-1">
+                      ${currentEx.muscles} · ${currentEx.sets}×${currentEx.targetReps}
+                    </div>
+                  </div>
+                  <div
+                    class="w-16 h-16 rounded-2xl bg-cardAlt flex items-center justify-center text-accent"
+                  >
+                    <${Icon} name="dumbbell" size=${26} />
+                  </div>
+                </div>
+
+                <!-- Previous session -->
+                <div class="mt-4 p-3 rounded-xl bg-card border border-border">
+                  <div class="text-xs text-subtle uppercase tracking-wider">прошлая тренировка</div>
+                  <div class="text-sm font-mono mt-1 text-muted">
+                    ${currentEx.prev
+                      .map((s) =>
+                        currentEx.bodyweight ? `×${s.reps}` : `${s.weight}×${s.reps}`,
+                      )
+                      .join(' · ')}
+                  </div>
+                </div>
+
+                <!-- Sets list -->
+                <div class="mt-5 space-y-2">
+                  ${currentLog.map((set, setIdx) => {
+                    const isNext = setIdx === nextSetIdx
+                    const isDone = set.completed
+                    return html`
+                      <${SetCard}
+                        key=${setIdx}
+                        setIdx=${setIdx}
+                        set=${set}
+                        bodyweight=${currentEx.bodyweight}
+                        isNext=${isNext}
+                        isDone=${isDone}
+                        onUpdate=${(patch) => updateSet(currentExIdx, setIdx, patch)}
+                        onDone=${() => markSetDone(currentExIdx, setIdx)}
+                      />
+                    `
+                  })}
+                </div>
+
+                ${allSetsDone &&
+                html`
+                  <div class="mt-5 space-y-2">
+                    <button
+                      onClick=${() =>
+                        setCurrentExIdx((i) => Math.min(exercises.length - 1, i + 1))}
+                      disabled=${currentExIdx === exercises.length - 1}
+                      class="w-full h-14 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:bg-card"
+                    >
+                      ${currentExIdx === exercises.length - 1
+                        ? 'Это было последнее упражнение'
+                        : html`
+                            <span>Следующее упражнение</span>
+                            <${Icon} name="chevronRight" size=${18} />
+                          `}
+                    </button>
+                    <button
+                      class="w-full h-11 rounded-xl text-sm text-muted flex items-center justify-center gap-1.5 border border-border"
+                    >
+                      <${Icon} name="plus" size=${14} />
+                      <span>Добавить ещё один подход</span>
+                    </button>
+                  </div>
+                `}
+
+                <!-- Secondary actions -->
+                <div class="mt-5 grid grid-cols-2 gap-2">
+                  <button
+                    class="h-12 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5"
+                  >
+                    <${Icon} name="messageCircle" size=${15} />
+                    <span>Спросить тренера</span>
+                  </button>
+                  <button
+                    class="h-12 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-1.5"
+                  >
+                    <${Icon} name="camera" size=${15} />
+                    <span>Фото тренажёра</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rest timer overlay -->
+            ${restActive &&
+            html`
+              <${RestTimer}
+                sec=${restSec}
+                total=${restTotal}
+                onSkip=${() => {
+                  setRestActive(false)
+                  setRestSec(0)
+                }}
+              />
+            `}
+
+            <!-- Finish confirmation -->
+            ${confirmFinish &&
+            html`
+              <${FinishModal}
+                allDone=${allDone}
+                onFinish=${() => {
+                  setConfirmFinish(false)
+                  onComplete()
+                }}
+                onKeep=${() => setConfirmFinish(false)}
+              />
+            `}
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // КАРТОЧКА ПОДХОДА
+      // ═══════════════════════════════════════════════════════════════
+
+      function SetCard({ setIdx, set, bodyweight, isNext, isDone, onUpdate, onDone }) {
+        const cls = isDone
+          ? 'border-success/20 bg-success/5'
+          : isNext
+            ? 'border-accent/40 bg-accent/5'
+            : 'border-border bg-card opacity-60'
+        return html`
+          <div class=${`rounded-2xl border p-4 ${cls} transition-colors`}>
+            <div class="flex items-center gap-3">
+              <div
+                class=${`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                  isDone
+                    ? 'bg-success text-white'
+                    : isNext
+                      ? 'bg-accent text-white'
+                      : 'bg-cardAlt text-muted'
+                }`}
+              >
+                ${isDone ? html`<${Icon} name="check" size=${14} />` : setIdx + 1}
+              </div>
+              <div class="flex-1 flex items-center gap-3">
+                ${!bodyweight &&
+                html`
+                  <${NumberStepper}
+                    label="кг"
+                    value=${set.weight}
+                    step=${2.5}
+                    onChange=${(v) => onUpdate({ weight: v })}
+                    disabled=${isDone}
+                  />
+                `}
+                <${NumberStepper}
+                  label="повт"
+                  value=${set.reps}
+                  step=${1}
+                  onChange=${(v) => onUpdate({ reps: v })}
+                  disabled=${isDone}
+                />
+              </div>
+              ${!isDone &&
+              isNext &&
+              html`
+                <button
+                  onClick=${onDone}
+                  class="w-11 h-11 rounded-full bg-accent text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
+                  aria-label="Готово"
+                >
+                  <${Icon} name="check" size=${18} />
+                </button>
+              `}
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // STEPPER
+      // ═══════════════════════════════════════════════════════════════
+
+      function NumberStepper({ label, value, step, onChange, disabled }) {
+        return html`
+          <div class="flex-1 flex items-center justify-center gap-2">
+            <button
+              onClick=${() => onChange(Math.max(0, value - step))}
+              disabled=${disabled}
+              class="stepper-btn w-8 h-8 rounded-full bg-cardAlt flex items-center justify-center text-muted disabled:opacity-30"
+            >
+              <${Icon} name="minus" size=${14} />
+            </button>
+            <div class="text-center min-w-[56px]">
+              <div class="text-lg font-semibold font-mono tabular-nums leading-none">${value}</div>
+              <div class="text-[10px] text-subtle uppercase tracking-wider mt-0.5">${label}</div>
+            </div>
+            <button
+              onClick=${() => onChange(value + step)}
+              disabled=${disabled}
+              class="stepper-btn w-8 h-8 rounded-full bg-cardAlt flex items-center justify-center text-muted disabled:opacity-30"
+            >
+              <${Icon} name="plus" size=${14} />
+            </button>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ТАЙМЕР ОТДЫХА
+      // ═══════════════════════════════════════════════════════════════
+
+      function RestTimer({ sec, total, onSkip }) {
+        const pct = total > 0 ? (sec / total) * 100 : 0
+        const mm = Math.floor(sec / 60)
+        const ss = (sec % 60).toString().padStart(2, '0')
+        return html`
+          <div
+            class="absolute inset-0 z-20 flex items-center justify-center"
+            style=${{ background: 'rgba(15, 15, 19, 0.88)', backdropFilter: 'blur(14px)' }}
+          >
+            <div class="text-center px-8 fade-up">
+              <div class="text-xs uppercase tracking-widest text-muted">Отдых</div>
+              <div class="relative mt-6">
+                <div class="absolute inset-0 rounded-full timer-pulse bg-accent/10"></div>
+                <svg width="220" height="220" viewBox="0 0 100 100" class="-rotate-90">
+                  <circle cx="50" cy="50" r="45" stroke="#1A1A24" stroke-width="5" fill="none" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    stroke="#7C5CFC"
+                    stroke-width="5"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-dasharray=${2 * Math.PI * 45}
+                    stroke-dashoffset=${2 * Math.PI * 45 * (1 - pct / 100)}
+                    style=${{ transition: 'stroke-dashoffset 1s linear' }}
+                  />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div>
+                    <div class="text-5xl font-semibold font-mono tabular-nums">${mm}:${ss}</div>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick=${onSkip}
+                class="mt-8 h-12 px-6 rounded-full bg-card border border-border text-sm text-muted flex items-center gap-1.5 mx-auto active:scale-95 transition-transform"
+              >
+                <${Icon} name="skipForward" size=${15} />
+                <span>Пропустить отдых</span>
+              </button>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // МОДАЛКА ЗАВЕРШЕНИЯ
+      // ═══════════════════════════════════════════════════════════════
+
+      function FinishModal({ allDone, onFinish, onKeep }) {
+        return html`
+          <div
+            class="absolute inset-0 z-30 flex items-end sm:items-center justify-center"
+            style=${{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
+          >
+            <div class="bg-card border border-border rounded-t-3xl sm:rounded-3xl p-6 w-full mx-4 fade-up">
+              <div
+                class="w-12 h-1 bg-cardAlt rounded-full mx-auto mb-5 sm:hidden"
+              ></div>
+              <div
+                class="w-14 h-14 rounded-2xl bg-accent/15 text-accent flex items-center justify-center mx-auto mb-4"
+              >
+                <${Icon} name="flame" size=${26} />
+              </div>
+              <div class="text-center">
+                <div class="text-xl font-semibold">
+                  ${allDone ? 'Отличная работа!' : 'Завершить тренировку?'}
+                </div>
+                <div class="text-sm text-muted mt-1.5 leading-relaxed">
+                  ${allDone
+                    ? 'Все подходы плана выполнены. Можно закруглиться, а можно добавить ещё один подход.'
+                    : 'Можно завершить в любой момент — незавершённое отметим в сводке.'}
+                </div>
+              </div>
+              <div class="mt-6 space-y-2">
+                <button
+                  onClick=${onFinish}
+                  class="w-full h-13 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2"
+                  style=${{ height: '52px' }}
+                >
+                  <${Icon} name="check" size=${18} />
+                  <span>Завершить тренировку</span>
+                </button>
+                <button
+                  onClick=${onKeep}
+                  class="w-full h-11 rounded-xl text-sm text-muted flex items-center justify-center gap-1.5"
+                >
+                  <${Icon} name="plus" size=${14} />
+                  <span>${allDone ? 'Ещё один подход' : 'Продолжить тренировку'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ЭКРАН: СВОДКА ПОСЛЕ ТРЕНИРОВКИ
+      // ═══════════════════════════════════════════════════════════════
+
+      function SummaryScreen({ onHome }) {
+        return html`
+          <div class="h-full flex flex-col items-center justify-center px-8 text-center fade-up">
+            <div
+              class="w-24 h-24 rounded-full bg-success/15 flex items-center justify-center text-success mb-6"
+            >
+              <${Icon} name="checkCircle" size=${48} />
+            </div>
+            <div class="text-2xl font-semibold">Готово!</div>
+            <div class="text-sm text-muted mt-2 leading-relaxed max-w-xs">
+              Тренировка записана. Подробная сводка придёт от тренера в чат.
+            </div>
+            <div class="mt-8 grid grid-cols-3 gap-3 w-full max-w-xs">
+              <${Stat} label="Подходов" value="20" />
+              <${Stat} label="Время" value="48м" />
+              <${Stat} label="Тоннаж" value="6.8т" />
+            </div>
+            <button
+              onClick=${onHome}
+              class="mt-10 h-12 px-8 rounded-full bg-accent text-white font-medium flex items-center gap-2"
+            >
+              <${Icon} name="home" size=${16} />
+              <span>К программе</span>
+            </button>
+            <div class="mt-6 text-xs text-subtle">
+              ⓘ сводка в боте с прогрессом месяца — в отдельном сообщении
+            </div>
+          </div>
+        `
+      }
+
+      function Stat({ label, value }) {
+        return html`
+          <div class="p-3 rounded-2xl bg-card border border-border">
+            <div class="text-xl font-semibold">${value}</div>
+            <div class="text-[11px] text-muted uppercase tracking-wider mt-1">${label}</div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // НИЖНИЙ ТАБ-БАР
+      // ═══════════════════════════════════════════════════════════════
+
+      function BottomNav({ active }) {
+        const items = [
+          { key: 'home', label: 'Программа', icon: 'dumbbell' },
+          { key: 'progress', label: 'Прогресс', icon: 'trendingUp' },
+          { key: 'library', label: 'Библиотека', icon: 'book' },
+          { key: 'profile', label: 'Профиль', icon: 'user' },
+        ]
+        return html`
+          <div
+            class="absolute bottom-0 inset-x-0 border-t border-border px-4 pt-3 pb-6"
+            style=${{
+              background: 'linear-gradient(to top, #0F0F13 80%, rgba(15, 15, 19, 0.9))',
+              backdropFilter: 'blur(16px)',
+            }}
+          >
+            <div class="flex items-center justify-around">
+              ${items.map(
+                (it) => html`
+                  <button
+                    key=${it.key}
+                    class=${`flex flex-col items-center gap-1 ${active === it.key ? 'text-accent' : 'text-subtle'}`}
+                  >
+                    <${Icon} name=${it.icon} size=${22} />
+                    <span class="text-[10px] tracking-wide">${it.label}</span>
+                  </button>
+                `,
+              )}
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // МОДАЛКА: ВЫБОР ДРУГОЙ ТРЕНИРОВКИ
+      // ═══════════════════════════════════════════════════════════════
+
+      function SwitchWorkoutModal({ onClose, onPick }) {
+        const items = [
+          { type: 'B', name: 'Тренировка B', subtitle: 'Спина, бицепс, ноги', recommended: true },
+          { type: 'A', name: 'Тренировка A', subtitle: 'Грудь, плечи, трицепс' },
+          { type: 'custom', name: 'Внеплановая', subtitle: 'Выбрать упражнения вручную' },
+        ]
+        return html`
+          <div
+            class="absolute inset-0 z-30 flex items-end justify-center"
+            style=${{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
+            onClick=${onClose}
+          >
+            <div
+              class="bg-card border border-border rounded-t-3xl p-5 w-full mx-0 fade-up"
+              onClick=${(e) => e.stopPropagation()}
+            >
+              <div class="w-12 h-1 bg-cardAlt rounded-full mx-auto mb-5"></div>
+              <div class="text-sm font-semibold mb-1">Какую тренировку сделать?</div>
+              <div class="text-xs text-muted mb-4">Чередование автоматическое, но можешь выбрать</div>
+              <div class="space-y-2">
+                ${items.map(
+                  (it) => html`
+                    <button
+                      key=${it.type}
+                      onClick=${() => onPick(it.type)}
+                      class=${`w-full flex items-center gap-3 p-3 rounded-2xl border ${
+                        it.recommended
+                          ? 'bg-accent/10 border-accent/30'
+                          : 'bg-cardAlt border-border'
+                      }`}
+                    >
+                      <div
+                        class=${`w-10 h-10 rounded-full flex items-center justify-center ${
+                          it.recommended ? 'bg-accent/20 text-accent' : 'bg-card text-muted'
+                        }`}
+                      >
+                        <${Icon} name="dumbbell" size=${18} />
+                      </div>
+                      <div class="flex-1 text-left">
+                        <div class="text-sm font-medium">${it.name}</div>
+                        <div class="text-xs text-muted">${it.subtitle}</div>
+                      </div>
+                      ${it.recommended &&
+                      html`<div class="text-[10px] text-accent uppercase tracking-wider">
+                        по плану
+                      </div>`}
+                    </button>
+                  `,
+                )}
+              </div>
+              <button
+                onClick=${onClose}
+                class="mt-3 w-full h-11 rounded-xl text-sm text-muted"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ROOT
+      // ═══════════════════════════════════════════════════════════════
+
+      function App() {
+        const [screen, setScreen] = useState('home') // home | workout | summary
+        const [switchModal, setSwitchModal] = useState(false)
+
+        return html`
+          ${screen === 'home' &&
+          html`
+            <${HomeScreen}
+              onStartWorkout=${() => setScreen('workout')}
+              onSwitchWorkout=${() => setSwitchModal(true)}
+            />
+          `}
+          ${screen === 'workout' &&
+          html`
+            <${WorkoutScreen}
+              onExit=${() => setScreen('home')}
+              onComplete=${() => setScreen('summary')}
+            />
+          `}
+          ${screen === 'summary' &&
+          html`<${SummaryScreen} onHome=${() => setScreen('home')} />`}
+          ${switchModal &&
+          html`
+            <${SwitchWorkoutModal}
+              onClose=${() => setSwitchModal(false)}
+              onPick=${() => {
+                setSwitchModal(false)
+                setScreen('workout')
+              }}
+            />
+          `}
+        `
+      }
+
+      render(html`<${App} />`, document.getElementById('root'))
+    </script>
+  </body>
+</html>
