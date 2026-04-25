@@ -725,10 +725,277 @@
 
       const mockProgram = buildMockProgram()
 
+      // ─── Карта мышечных групп ──────────────────────────────────────
+      // Минимально упрощённая модель: одна основная группа на упражнение.
+      // Целевые диапазоны подходов/нед для гипертрофии (Schoenfeld et al.):
+      //   крупные группы 12–18, мелкие 8–14, пресс 6–14.
+      // В реальном приложении будем считать с весом primary/secondary,
+      // но для прототипа — primary only.
+      const MUSCLE_GROUPS = {
+        chest: { label: 'Грудь', target: [12, 18], order: 1 },
+        back: { label: 'Спина', target: [12, 18], order: 2 },
+        shoulders: { label: 'Плечи', target: [12, 18], order: 3 },
+        biceps: { label: 'Бицепс', target: [8, 14], order: 4 },
+        triceps: { label: 'Трицепс', target: [8, 14], order: 5 },
+        legs: { label: 'Ноги', target: [12, 20], order: 6 },
+        abs: { label: 'Пресс', target: [6, 14], order: 7 },
+      }
+
+      const MUSCLE_MAP = {
+        // Грудь
+        'machine-chest-press': 'chest',
+        'smith-machine-incline-bench-press': 'chest',
+        'bench-press-db': 'chest',
+        'machine-incline-press': 'chest',
+        'machine-chest-fly': 'chest',
+        'pec-fly': 'chest',
+        'standing-cable-crossover': 'chest',
+        'dip': 'chest',
+        // Спина
+        'pull-up': 'back',
+        'chin-up': 'back',
+        'lat-pulldown-narrow': 'back',
+        'lat-pulldown-wide': 'back',
+        'straight-arm-pulldown': 'back',
+        'seated-row': 'back',
+        'seated-row-wide': 'back',
+        'incline-row-db': 'back',
+        'row-single-arm-l-db': 'back',
+        'row-single-arm-r-db': 'back',
+        // Плечи
+        'lateral-raise-machine': 'shoulders',
+        'lateral-raise-db': 'shoulders',
+        'reverse-fly-db': 'shoulders',
+        'machine-shoulder-fly': 'shoulders',
+        'cable-face-pull': 'shoulders',
+        'upright-row-cable': 'shoulders',
+        'shoulder-press-machine': 'shoulders',
+        // Бицепс
+        'biceps-curl-cable': 'biceps',
+        'biceps-curl-db': 'biceps',
+        'hammer-curl-db': 'biceps',
+        'preacher-curl': 'biceps',
+        'reverse-curl-barbell': 'biceps',
+        // Трицепс
+        'triceps-extension-rope': 'triceps',
+        'triceps-pulldown-rope': 'triceps',
+        // Ноги
+        'leg-press': 'legs',
+        'seated-leg-extension': 'legs',
+        'prone-leg-curl': 'legs',
+        'box-jump': 'legs',
+        'rfess-l-db': 'legs',
+        'rfess-r-db': 'legs',
+        'adductor-machine': 'legs',
+        'abductor-machine': 'legs',
+        'hip-thrust': 'legs',
+        'calf-raise': 'legs',
+        // Пресс
+        'crunches': 'abs',
+        'hanging-leg-raises': 'abs',
+        'plank': 'abs',
+      }
+
       // ─── Данные для экрана "Прогресс" ──────────────────────────────
-      // Периоды (неделя/месяц/всё время), история тоннажа, прогрессия
-      // топ-упражнений и список рекордов. Считается раз при загрузке.
+      // Actionable-метрики: соответствие плану, объём по мышцам vs цель,
+      // плато/прогресс по упражнениям, дисбалансы, рекорды.
       function buildMockProgress() {
+        const all = WORKOUTS_DATA.workouts
+        const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
+        if (!ppl.length) return null
+
+        const lastDate = ppl[ppl.length - 1].date
+        const todayDate = new Date(lastDate + 'T00:00:00Z')
+        todayDate.setUTCDate(todayDate.getUTCDate() + 1)
+
+        const dateOffset = (days) => {
+          const d = new Date(todayDate)
+          d.setUTCDate(d.getUTCDate() - days)
+          return d.toISOString().slice(0, 10)
+        }
+
+        // ─── 1. Адаптация плана ───────────────────────────────
+        const weekStart = dateOffset(7)
+        const weekWorkouts = ppl.filter((w) => w.date >= weekStart)
+        const planned = mockProgram.description.daysPerWeek
+        const planAdherence = {
+          planned,
+          done: weekWorkouts.length,
+          remainingDays: Math.max(0, planned - weekWorkouts.length),
+          // дни недели, в которые тренировался (понедельник=1)
+          // (для визуализации точек сделанных тренировок)
+          completedDates: weekWorkouts.map((w) => w.date),
+        }
+
+        // ─── 2. Объём по мышцам за последнюю неделю ─────────────
+        const muscleSets = {}
+        for (const key of Object.keys(MUSCLE_GROUPS)) muscleSets[key] = 0
+        for (const w of weekWorkouts) {
+          for (const ex of w.exercises) {
+            const muscle = MUSCLE_MAP[ex.id]
+            if (!muscle) continue
+            const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+            muscleSets[muscle] += valid.length
+          }
+        }
+        const muscleVolume = Object.entries(MUSCLE_GROUPS)
+          .map(([key, info]) => {
+            const sets = muscleSets[key]
+            const [min, max] = info.target
+            let status, hint
+            if (sets === 0) {
+              status = 'none'
+              hint = 'не тренировал'
+            } else if (sets < min) {
+              status = 'low'
+              hint = `до цели ещё ${min - sets}`
+            } else if (sets <= max) {
+              status = 'optimal'
+              hint = 'в норме'
+            } else if (sets <= max + 4) {
+              status = 'over'
+              hint = `выше цели на ${sets - max}`
+            } else {
+              status = 'overload'
+              hint = `сильно выше цели на ${sets - max}`
+            }
+            return { key, label: info.label, sets, min, max, status, hint, order: info.order }
+          })
+          .sort((a, b) => a.order - b.order)
+
+        // ─── 3. Прогрессивная перегрузка: insights ──────────────
+        // Используем упрощённую версию _computeRecommendation, но
+        // только для упражнений со значимой историей (>= 3 сессий за месяц).
+        const monthStart = dateOffset(30)
+        const monthWorkouts = ppl.filter((w) => w.date >= monthStart)
+        const exFreq = new Map()
+        for (const w of monthWorkouts) {
+          for (const ex of w.exercises) {
+            exFreq.set(ex.id, (exFreq.get(ex.id) || 0) + 1)
+          }
+        }
+        const overloadInsights = { plateau: [], progress: [], regression: [] }
+        for (const [exId, freq] of exFreq) {
+          if (freq < 3) continue
+          const rec = _computeRecommendation(exId, ppl)
+          if (!rec) continue
+          const ex = ppl.flatMap((w) => w.exercises).find((e) => e.id === exId)
+          if (!ex) continue
+          const item = { id: exId, name: ex.name, rec }
+          if (rec.tone === 'plateau') overloadInsights.plateau.push(item)
+          else if (rec.tone === 'progress') overloadInsights.progress.push(item)
+          else if (rec.tone === 'regression') overloadInsights.regression.push(item)
+        }
+        // Сортируем плато по числу подряд тренировок (самые длинные сверху)
+        overloadInsights.plateau.sort((a, b) => {
+          const at = parseInt(a.rec.title.match(/\d+/)?.[0] || 0)
+          const bt = parseInt(b.rec.title.match(/\d+/)?.[0] || 0)
+          return bt - at
+        })
+
+        // ─── 4. Дисбалансы ───────────────────────────────────────
+        // Считаем за последний месяц, грубо. Chest/back и frontside/rearside.
+        const monthMuscleSets = {}
+        for (const key of Object.keys(MUSCLE_GROUPS)) monthMuscleSets[key] = 0
+        for (const w of monthWorkouts) {
+          for (const ex of w.exercises) {
+            const muscle = MUSCLE_MAP[ex.id]
+            if (!muscle) continue
+            monthMuscleSets[muscle] += ex.sets.filter((s) => (s.reps || 0) > 0).length
+          }
+        }
+        const imbalances = []
+        const chest = monthMuscleSets.chest
+        const back = monthMuscleSets.back
+        if (chest > 0 && back > 0) {
+          const ratio = chest / back
+          if (ratio >= 1.4) {
+            imbalances.push({
+              tone: 'warn',
+              title: 'Грудь перевешивает спину',
+              body: `${chest} vs ${back} подходов / месяц (соотношение ${ratio.toFixed(1)}). Здоровый баланс ~1:1. Добавь день со спиной или вытащи 2–3 подхода грудных в пользу тяг.`,
+            })
+          } else if (ratio <= 0.7) {
+            imbalances.push({
+              tone: 'warn',
+              title: 'Спина перевешивает грудь',
+              body: `${back} vs ${chest} подходов / месяц. Баланс сместился, добавь жимовые движения.`,
+            })
+          }
+        }
+        const biceps = monthMuscleSets.biceps
+        const triceps = monthMuscleSets.triceps
+        if (biceps > 0 && triceps > 0) {
+          const ratio = biceps / triceps
+          if (ratio >= 1.5) {
+            imbalances.push({
+              tone: 'warn',
+              title: 'Бицепс перевешивает трицепс',
+              body: `${biceps} vs ${triceps} за месяц. Для здоровья локтевых суставов рекомендуется ~1:1.`,
+            })
+          } else if (ratio <= 0.6) {
+            imbalances.push({
+              tone: 'warn',
+              title: 'Трицепс перевешивает бицепс',
+              body: `${triceps} vs ${biceps} за месяц. Добавь упражнения на бицепс.`,
+            })
+          }
+        }
+
+        // ─── 5. Рекорды (как было) ───────────────────────────────
+        const records = []
+        const cutoffRecent = dateOffset(30)
+        const cutoffPrev = dateOffset(90)
+        const exMaxRecent = new Map()
+        const exMaxPrev = new Map()
+        const exSessionsPrev = new Map()
+        for (const w of ppl) {
+          const isRecent = w.date >= cutoffRecent
+          const isPrev = !isRecent && w.date >= cutoffPrev
+          if (!isRecent && !isPrev) continue
+          for (const ex of w.exercises) {
+            if (isPrev) {
+              exSessionsPrev.set(ex.id, (exSessionsPrev.get(ex.id) || 0) + 1)
+            }
+            for (const s of ex.sets) {
+              if (!s.weightKg) continue
+              const tgt = isRecent ? exMaxRecent : exMaxPrev
+              const cur = tgt.get(ex.id) || 0
+              if (s.weightKg > cur) tgt.set(ex.id, s.weightKg)
+            }
+          }
+        }
+        for (const [id, recent] of exMaxRecent) {
+          const prev = exMaxPrev.get(id) || 0
+          const sessions = exSessionsPrev.get(id) || 0
+          if (sessions < 3 || prev <= 0 || recent <= prev) continue
+          const delta = recent - prev
+          const pct = (delta / prev) * 100
+          if (delta < 2.5 || pct > 30) continue
+          const ex = ppl.flatMap((w) => w.exercises).find((e) => e.id === id)
+          if (!ex) continue
+          records.push({ id, name: ex.name, prevWeight: prev, weight: recent, delta })
+        }
+        records.sort((a, b) => b.delta - a.delta)
+
+        return {
+          today: todayDate.toISOString().slice(0, 10),
+          planAdherence,
+          muscleVolume,
+          overloadInsights,
+          imbalances,
+          records,
+        }
+      }
+
+      const mockProgress = buildMockProgress()
+
+      // ─── (УДАЛЕНО v0.3) Старая vanity-версия buildMockProgress ────
+      // Раньше тут был блок с total tonnage / total workouts / линейными
+      // графиками. Заменили на actionable-метрики (см. реализацию выше:
+      // planAdherence, muscleVolume, overloadInsights, imbalances).
+      function _legacyMockProgress_unused() {
+        return null
         const all = WORKOUTS_DATA.workouts
         const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
         if (!ppl.length) return null
@@ -886,8 +1153,6 @@
 
         return { periods, tonnageHistory, exerciseProgress, records, today: todayDate.toISOString().slice(0, 10) }
       }
-
-      const mockProgress = buildMockProgress()
 
       // ═══════════════════════════════════════════════════════════════
       // ЭКРАН: ГЛАВНЫЙ "ПРОГРАММА"
@@ -2491,24 +2756,20 @@
       // ═══════════════════════════════════════════════════════════════
 
       // ═══════════════════════════════════════════════════════════════
-      // ЭКРАН: ПРОГРЕСС
+      // ЭКРАН: ПРОГРЕСС (actionable-метрики)
+      // Vanity-числа (тоннаж, всего трен.) намеренно убраны — на экране
+      // только то, что подсказывает решение: где недогруз, где плато,
+      // где дисбаланс, что заслуживает прибавки.
       // ═══════════════════════════════════════════════════════════════
 
-      function ProgressScreen({ onNav }) {
-        const [period, setPeriod] = useState('month') // week | month | all
+      function ProgressScreen_OLD_REMOVED({ onNav }) {
+        const [period, setPeriod] = useState('month')
         const data = mockProgress
         if (!data) {
-          return html`
-            <div class="h-full flex items-center justify-center text-muted">
-              Нет данных
-            </div>
-          `
+          return html`<div class="h-full flex items-center justify-center text-muted">Нет данных</div>`
         }
-
-        const stats = data.periods[period]
-        const formatTonnage = (kg) =>
-          kg >= 1000 ? `${(kg / 1000).toFixed(1)}т` : `${kg} кг`
-
+        const stats = data.periods?.[period] || {}
+        const formatTonnage = (kg) => kg >= 1000 ? `${(kg / 1000).toFixed(1)}т` : `${kg} кг`
         return html`
           <div class="h-full flex flex-col overflow-hidden">
             <!-- Top bar -->
@@ -2757,6 +3018,312 @@
                 stroke-linejoin="round"
               />
             </svg>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ЭКРАН: ПРОГРЕСС (actionable-версия)
+      // ═══════════════════════════════════════════════════════════════
+
+      function ProgressScreen({ onNav }) {
+        const data = mockProgress
+        const [showAllPlateau, setShowAllPlateau] = useState(false)
+        if (!data) {
+          return html`
+            <div class="h-full flex items-center justify-center text-muted">Нет данных</div>
+          `
+        }
+
+        const adh = data.planAdherence
+        const adhStatus =
+          adh.done >= adh.planned
+            ? 'optimal'
+            : adh.remainingDays > 0
+              ? 'in-progress'
+              : 'low'
+        const adhDots = Array.from({ length: adh.planned }, (_, i) => i < adh.done)
+        const extraCount = Math.max(0, adh.done - adh.planned)
+
+        const plateauList = showAllPlateau
+          ? data.overloadInsights.plateau
+          : data.overloadInsights.plateau.slice(0, 5)
+
+        return html`
+          <div class="h-full flex flex-col overflow-hidden">
+            <div class="px-4 pt-6 pb-3 flex items-center justify-between">
+              <div>
+                <div class="text-xl font-semibold">Прогресс</div>
+                <div class="text-xs text-muted">за неделю и месяц</div>
+              </div>
+              <button
+                class="w-9 h-9 rounded-full bg-card flex items-center justify-center text-muted"
+              >
+                <${Icon} name="moreHorizontal" size=${18} />
+              </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto scroll-hide px-4 pb-28">
+              <!-- 1. Адаптация плана -->
+              <div
+                class="rounded-3xl border border-border p-4 fade-up"
+                style=${{
+                  background:
+                    'linear-gradient(135deg, rgba(124, 92, 252, 0.15) 0%, rgba(52, 211, 153, 0.05) 100%)',
+                }}
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-base">📅</span>
+                  <div class="text-[10px] uppercase tracking-wider text-accent font-medium">
+                    эта неделя
+                  </div>
+                </div>
+                <div class="mt-2 flex items-baseline gap-2">
+                  <span class="text-2xl font-semibold tabular-nums">${adh.done}</span>
+                  <span class="text-sm text-muted">из ${adh.planned} тренировок по плану</span>
+                </div>
+                <div class="mt-3 flex items-center gap-1.5">
+                  ${adhDots.map(
+                    (done, i) => html`
+                      <div
+                        key=${i}
+                        class=${`flex-1 h-2 rounded-full ${done ? 'bg-accent' : 'bg-cardAlt border border-border'}`}
+                      ></div>
+                    `,
+                  )}
+                  ${Array.from({ length: extraCount }, (_, i) => html`
+                    <div key=${`ex${i}`} class="flex-1 h-2 rounded-full bg-success"></div>
+                  `)}
+                </div>
+                <div class="mt-3 text-[12px] text-muted leading-relaxed">
+                  ${adhStatus === 'optimal'
+                    ? extraCount > 0
+                      ? `План выполнен и сверху ещё ${extraCount}. Не забудь про восстановление.`
+                      : 'План недели выполнен. Молодец.'
+                    : adhStatus === 'in-progress'
+                      ? `Осталось ${adh.remainingDays} ${adh.remainingDays === 1 ? 'тренировка' : 'тренировки'} до конца недели.`
+                      : 'Не успел в этом цикле — пробуй на следующей неделе.'}
+                </div>
+              </div>
+
+              <!-- 2. Объём по группам мышц -->
+              <div class="mt-6">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs uppercase tracking-wider text-subtle">
+                    подходы по группам · неделя
+                  </div>
+                  <div class="text-[10px] text-subtle">цель в скобках</div>
+                </div>
+                <div class="space-y-2">
+                  ${data.muscleVolume.map(
+                    (m) => html`<${MuscleVolumeRow} key=${m.key} m=${m} />`,
+                  )}
+                </div>
+                <div class="text-[10px] text-subtle mt-2 leading-relaxed">
+                  Целевой диапазон — для гипертрофии (Schoenfeld et al). Зелёная полоса —
+                  оптимум, оранжевый — недогруз, жёлтый — выше нормы, красный — перегрузка.
+                </div>
+              </div>
+
+              <!-- 3. Прогрессивная перегрузка -->
+              ${(data.overloadInsights.plateau.length > 0 ||
+                data.overloadInsights.progress.length > 0 ||
+                data.overloadInsights.regression.length > 0) &&
+              html`
+                <div class="mt-6">
+                  <div class="text-xs uppercase tracking-wider text-subtle mb-3">
+                    прогрессивная перегрузка
+                  </div>
+                  <div class="flex gap-2 flex-wrap mb-3">
+                    ${data.overloadInsights.plateau.length > 0 &&
+                    html`
+                      <div class="px-3 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-medium flex items-center gap-1">
+                        <span>⚡</span>
+                        <span>${data.overloadInsights.plateau.length} в плато</span>
+                      </div>
+                    `}
+                    ${data.overloadInsights.progress.length > 0 &&
+                    html`
+                      <div class="px-3 py-1.5 rounded-full bg-success/15 text-success text-xs font-medium flex items-center gap-1">
+                        <span>📈</span>
+                        <span>${data.overloadInsights.progress.length} растёт</span>
+                      </div>
+                    `}
+                    ${data.overloadInsights.regression.length > 0 &&
+                    html`
+                      <div class="px-3 py-1.5 rounded-full bg-orange-400/15 text-orange-400 text-xs font-medium flex items-center gap-1">
+                        <span>↩️</span>
+                        <span>${data.overloadInsights.regression.length} просели</span>
+                      </div>
+                    `}
+                  </div>
+
+                  <div class="space-y-2">
+                    ${plateauList.map(
+                      (item) => html`
+                        <div
+                          key=${item.id}
+                          class="rounded-2xl border border-accent/25 bg-accent/5 p-3"
+                        >
+                          <div class="flex items-center justify-between gap-2">
+                            <div class="text-sm font-medium truncate min-w-0 flex-1">
+                              ${item.name}
+                            </div>
+                            <div class="text-[10px] uppercase tracking-wider text-accent font-medium flex-shrink-0">
+                              ⚡ ${item.rec.title}
+                            </div>
+                          </div>
+                          <div class="text-[12px] text-muted leading-relaxed mt-1">
+                            ${item.rec.body}
+                          </div>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                  ${data.overloadInsights.plateau.length > 5 &&
+                  html`
+                    <button
+                      onClick=${() => setShowAllPlateau(!showAllPlateau)}
+                      class="mt-2 w-full h-10 rounded-xl text-xs text-muted hover:text-white"
+                    >
+                      ${showAllPlateau
+                        ? 'Свернуть'
+                        : `Показать все ${data.overloadInsights.plateau.length}`}
+                    </button>
+                  `}
+
+                  ${data.overloadInsights.progress.length > 0 &&
+                  html`
+                    <div class="space-y-2 mt-2">
+                      ${data.overloadInsights.progress.map(
+                        (item) => html`
+                          <div
+                            key=${item.id}
+                            class="rounded-2xl border border-success/25 bg-success/5 p-3"
+                          >
+                            <div class="flex items-center justify-between gap-2">
+                              <div class="text-sm font-medium truncate min-w-0 flex-1">
+                                ${item.name}
+                              </div>
+                              <div class="text-[10px] uppercase tracking-wider text-success font-medium flex-shrink-0">
+                                📈 ${item.rec.title}
+                              </div>
+                            </div>
+                            <div class="text-[12px] text-muted leading-relaxed mt-1">
+                              ${item.rec.body}
+                            </div>
+                          </div>
+                        `,
+                      )}
+                    </div>
+                  `}
+                </div>
+              `}
+
+              <!-- 4. Дисбалансы -->
+              ${data.imbalances.length > 0 &&
+              html`
+                <div class="mt-6">
+                  <div class="text-xs uppercase tracking-wider text-subtle mb-3">
+                    дисбалансы
+                  </div>
+                  <div class="space-y-2">
+                    ${data.imbalances.map(
+                      (im, i) => html`
+                        <div
+                          key=${i}
+                          class="rounded-2xl border border-orange-400/25 bg-orange-400/5 p-3"
+                        >
+                          <div class="flex items-center gap-2">
+                            <span>⚠️</span>
+                            <div class="text-sm font-medium">${im.title}</div>
+                          </div>
+                          <div class="text-[12px] text-muted leading-relaxed mt-1">
+                            ${im.body}
+                          </div>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `}
+
+              <!-- 5. Рекорды (компактно) -->
+              ${data.records.length > 0 &&
+              html`
+                <div class="mt-6">
+                  <div class="text-xs uppercase tracking-wider text-subtle mb-3">
+                    рекорды месяца
+                  </div>
+                  <div class="space-y-1.5">
+                    ${data.records.map(
+                      (r) => html`
+                        <div
+                          key=${r.id}
+                          class="flex items-center gap-3 px-3 py-2 rounded-xl bg-card border border-border"
+                        >
+                          <span class="text-sm">🏆</span>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-sm truncate">${r.name}</div>
+                            <div class="text-[11px] text-muted">
+                              ${r.prevWeight} → ${r.weight} кг
+                            </div>
+                          </div>
+                          <div class="text-success text-xs font-semibold tabular-nums">
+                            +${r.delta}
+                          </div>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `}
+            </div>
+
+            <${BottomNav} active="progress" onChange=${onNav} />
+          </div>
+        `
+      }
+
+      // Строка объёма группы мышц
+      function MuscleVolumeRow({ m }) {
+        // Шкалу растягиваем до max+50%, чтобы overload-кейсы не выходили за рамки
+        const scaleMax = Math.max(m.sets, m.max + Math.ceil(m.max * 0.5))
+        const fillPct = Math.min(100, (m.sets / scaleMax) * 100)
+        const minPct = (m.min / scaleMax) * 100
+        const maxPct = (m.max / scaleMax) * 100
+
+        const colors = {
+          none: { bar: 'bg-white/20', text: 'text-muted' },
+          low: { bar: 'bg-orange-400', text: 'text-orange-400' },
+          optimal: { bar: 'bg-success', text: 'text-success' },
+          over: { bar: 'bg-yellow-400', text: 'text-yellow-400' },
+          overload: { bar: 'bg-red-400', text: 'text-red-400' },
+        }
+        const c = colors[m.status] || colors.optimal
+
+        return html`
+          <div class="rounded-2xl bg-card border border-border p-3">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="text-sm font-medium">${m.label}</div>
+              <div class="flex items-baseline gap-1.5">
+                <span class=${`text-base font-semibold tabular-nums ${c.text}`}>${m.sets}</span>
+                <span class="text-[11px] text-subtle">/ ${m.min}–${m.max}</span>
+              </div>
+            </div>
+            <div class="relative h-2 rounded-full bg-cardAlt overflow-hidden">
+              <!-- зелёная зона цели -->
+              <div
+                class="absolute h-full bg-success/15"
+                style=${{ left: `${minPct}%`, width: `${maxPct - minPct}%` }}
+              ></div>
+              <!-- бар -->
+              <div
+                class=${`absolute h-full ${c.bar} rounded-full`}
+                style=${{ width: `${fillPct}%` }}
+              ></div>
+            </div>
+            <div class=${`text-[11px] mt-1.5 ${c.text}`}>${m.hint}</div>
           </div>
         `
       }

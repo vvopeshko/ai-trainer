@@ -553,10 +553,277 @@ def build_block(data: dict) -> str:
 
       const mockProgram = buildMockProgram()
 
+      // ─── Карта мышечных групп ──────────────────────────────────────
+      // Минимально упрощённая модель: одна основная группа на упражнение.
+      // Целевые диапазоны подходов/нед для гипертрофии (Schoenfeld et al.):
+      //   крупные группы 12–18, мелкие 8–14, пресс 6–14.
+      // В реальном приложении будем считать с весом primary/secondary,
+      // но для прототипа — primary only.
+      const MUSCLE_GROUPS = {{
+        chest: {{ label: 'Грудь', target: [12, 18], order: 1 }},
+        back: {{ label: 'Спина', target: [12, 18], order: 2 }},
+        shoulders: {{ label: 'Плечи', target: [12, 18], order: 3 }},
+        biceps: {{ label: 'Бицепс', target: [8, 14], order: 4 }},
+        triceps: {{ label: 'Трицепс', target: [8, 14], order: 5 }},
+        legs: {{ label: 'Ноги', target: [12, 20], order: 6 }},
+        abs: {{ label: 'Пресс', target: [6, 14], order: 7 }},
+      }}
+
+      const MUSCLE_MAP = {{
+        // Грудь
+        'machine-chest-press': 'chest',
+        'smith-machine-incline-bench-press': 'chest',
+        'bench-press-db': 'chest',
+        'machine-incline-press': 'chest',
+        'machine-chest-fly': 'chest',
+        'pec-fly': 'chest',
+        'standing-cable-crossover': 'chest',
+        'dip': 'chest',
+        // Спина
+        'pull-up': 'back',
+        'chin-up': 'back',
+        'lat-pulldown-narrow': 'back',
+        'lat-pulldown-wide': 'back',
+        'straight-arm-pulldown': 'back',
+        'seated-row': 'back',
+        'seated-row-wide': 'back',
+        'incline-row-db': 'back',
+        'row-single-arm-l-db': 'back',
+        'row-single-arm-r-db': 'back',
+        // Плечи
+        'lateral-raise-machine': 'shoulders',
+        'lateral-raise-db': 'shoulders',
+        'reverse-fly-db': 'shoulders',
+        'machine-shoulder-fly': 'shoulders',
+        'cable-face-pull': 'shoulders',
+        'upright-row-cable': 'shoulders',
+        'shoulder-press-machine': 'shoulders',
+        // Бицепс
+        'biceps-curl-cable': 'biceps',
+        'biceps-curl-db': 'biceps',
+        'hammer-curl-db': 'biceps',
+        'preacher-curl': 'biceps',
+        'reverse-curl-barbell': 'biceps',
+        // Трицепс
+        'triceps-extension-rope': 'triceps',
+        'triceps-pulldown-rope': 'triceps',
+        // Ноги
+        'leg-press': 'legs',
+        'seated-leg-extension': 'legs',
+        'prone-leg-curl': 'legs',
+        'box-jump': 'legs',
+        'rfess-l-db': 'legs',
+        'rfess-r-db': 'legs',
+        'adductor-machine': 'legs',
+        'abductor-machine': 'legs',
+        'hip-thrust': 'legs',
+        'calf-raise': 'legs',
+        // Пресс
+        'crunches': 'abs',
+        'hanging-leg-raises': 'abs',
+        'plank': 'abs',
+      }}
+
       // ─── Данные для экрана "Прогресс" ──────────────────────────────
-      // Периоды (неделя/месяц/всё время), история тоннажа, прогрессия
-      // топ-упражнений и список рекордов. Считается раз при загрузке.
+      // Actionable-метрики: соответствие плану, объём по мышцам vs цель,
+      // плато/прогресс по упражнениям, дисбалансы, рекорды.
       function buildMockProgress() {{
+        const all = WORKOUTS_DATA.workouts
+        const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
+        if (!ppl.length) return null
+
+        const lastDate = ppl[ppl.length - 1].date
+        const todayDate = new Date(lastDate + 'T00:00:00Z')
+        todayDate.setUTCDate(todayDate.getUTCDate() + 1)
+
+        const dateOffset = (days) => {{
+          const d = new Date(todayDate)
+          d.setUTCDate(d.getUTCDate() - days)
+          return d.toISOString().slice(0, 10)
+        }}
+
+        // ─── 1. Адаптация плана ───────────────────────────────
+        const weekStart = dateOffset(7)
+        const weekWorkouts = ppl.filter((w) => w.date >= weekStart)
+        const planned = mockProgram.description.daysPerWeek
+        const planAdherence = {{
+          planned,
+          done: weekWorkouts.length,
+          remainingDays: Math.max(0, planned - weekWorkouts.length),
+          // дни недели, в которые тренировался (понедельник=1)
+          // (для визуализации точек сделанных тренировок)
+          completedDates: weekWorkouts.map((w) => w.date),
+        }}
+
+        // ─── 2. Объём по мышцам за последнюю неделю ─────────────
+        const muscleSets = {{}}
+        for (const key of Object.keys(MUSCLE_GROUPS)) muscleSets[key] = 0
+        for (const w of weekWorkouts) {{
+          for (const ex of w.exercises) {{
+            const muscle = MUSCLE_MAP[ex.id]
+            if (!muscle) continue
+            const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+            muscleSets[muscle] += valid.length
+          }}
+        }}
+        const muscleVolume = Object.entries(MUSCLE_GROUPS)
+          .map(([key, info]) => {{
+            const sets = muscleSets[key]
+            const [min, max] = info.target
+            let status, hint
+            if (sets === 0) {{
+              status = 'none'
+              hint = 'не тренировал'
+            }} else if (sets < min) {{
+              status = 'low'
+              hint = `до цели ещё ${{min - sets}}`
+            }} else if (sets <= max) {{
+              status = 'optimal'
+              hint = 'в норме'
+            }} else if (sets <= max + 4) {{
+              status = 'over'
+              hint = `выше цели на ${{sets - max}}`
+            }} else {{
+              status = 'overload'
+              hint = `сильно выше цели на ${{sets - max}}`
+            }}
+            return {{ key, label: info.label, sets, min, max, status, hint, order: info.order }}
+          }})
+          .sort((a, b) => a.order - b.order)
+
+        // ─── 3. Прогрессивная перегрузка: insights ──────────────
+        // Используем упрощённую версию _computeRecommendation, но
+        // только для упражнений со значимой историей (>= 3 сессий за месяц).
+        const monthStart = dateOffset(30)
+        const monthWorkouts = ppl.filter((w) => w.date >= monthStart)
+        const exFreq = new Map()
+        for (const w of monthWorkouts) {{
+          for (const ex of w.exercises) {{
+            exFreq.set(ex.id, (exFreq.get(ex.id) || 0) + 1)
+          }}
+        }}
+        const overloadInsights = {{ plateau: [], progress: [], regression: [] }}
+        for (const [exId, freq] of exFreq) {{
+          if (freq < 3) continue
+          const rec = _computeRecommendation(exId, ppl)
+          if (!rec) continue
+          const ex = ppl.flatMap((w) => w.exercises).find((e) => e.id === exId)
+          if (!ex) continue
+          const item = {{ id: exId, name: ex.name, rec }}
+          if (rec.tone === 'plateau') overloadInsights.plateau.push(item)
+          else if (rec.tone === 'progress') overloadInsights.progress.push(item)
+          else if (rec.tone === 'regression') overloadInsights.regression.push(item)
+        }}
+        // Сортируем плато по числу подряд тренировок (самые длинные сверху)
+        overloadInsights.plateau.sort((a, b) => {{
+          const at = parseInt(a.rec.title.match(/\\d+/)?.[0] || 0)
+          const bt = parseInt(b.rec.title.match(/\\d+/)?.[0] || 0)
+          return bt - at
+        }})
+
+        // ─── 4. Дисбалансы ───────────────────────────────────────
+        // Считаем за последний месяц, грубо. Chest/back и frontside/rearside.
+        const monthMuscleSets = {{}}
+        for (const key of Object.keys(MUSCLE_GROUPS)) monthMuscleSets[key] = 0
+        for (const w of monthWorkouts) {{
+          for (const ex of w.exercises) {{
+            const muscle = MUSCLE_MAP[ex.id]
+            if (!muscle) continue
+            monthMuscleSets[muscle] += ex.sets.filter((s) => (s.reps || 0) > 0).length
+          }}
+        }}
+        const imbalances = []
+        const chest = monthMuscleSets.chest
+        const back = monthMuscleSets.back
+        if (chest > 0 && back > 0) {{
+          const ratio = chest / back
+          if (ratio >= 1.4) {{
+            imbalances.push({{
+              tone: 'warn',
+              title: 'Грудь перевешивает спину',
+              body: `${{chest}} vs ${{back}} подходов / месяц (соотношение ${{ratio.toFixed(1)}}). Здоровый баланс ~1:1. Добавь день со спиной или вытащи 2–3 подхода грудных в пользу тяг.`,
+            }})
+          }} else if (ratio <= 0.7) {{
+            imbalances.push({{
+              tone: 'warn',
+              title: 'Спина перевешивает грудь',
+              body: `${{back}} vs ${{chest}} подходов / месяц. Баланс сместился, добавь жимовые движения.`,
+            }})
+          }}
+        }}
+        const biceps = monthMuscleSets.biceps
+        const triceps = monthMuscleSets.triceps
+        if (biceps > 0 && triceps > 0) {{
+          const ratio = biceps / triceps
+          if (ratio >= 1.5) {{
+            imbalances.push({{
+              tone: 'warn',
+              title: 'Бицепс перевешивает трицепс',
+              body: `${{biceps}} vs ${{triceps}} за месяц. Для здоровья локтевых суставов рекомендуется ~1:1.`,
+            }})
+          }} else if (ratio <= 0.6) {{
+            imbalances.push({{
+              tone: 'warn',
+              title: 'Трицепс перевешивает бицепс',
+              body: `${{triceps}} vs ${{biceps}} за месяц. Добавь упражнения на бицепс.`,
+            }})
+          }}
+        }}
+
+        // ─── 5. Рекорды (как было) ───────────────────────────────
+        const records = []
+        const cutoffRecent = dateOffset(30)
+        const cutoffPrev = dateOffset(90)
+        const exMaxRecent = new Map()
+        const exMaxPrev = new Map()
+        const exSessionsPrev = new Map()
+        for (const w of ppl) {{
+          const isRecent = w.date >= cutoffRecent
+          const isPrev = !isRecent && w.date >= cutoffPrev
+          if (!isRecent && !isPrev) continue
+          for (const ex of w.exercises) {{
+            if (isPrev) {{
+              exSessionsPrev.set(ex.id, (exSessionsPrev.get(ex.id) || 0) + 1)
+            }}
+            for (const s of ex.sets) {{
+              if (!s.weightKg) continue
+              const tgt = isRecent ? exMaxRecent : exMaxPrev
+              const cur = tgt.get(ex.id) || 0
+              if (s.weightKg > cur) tgt.set(ex.id, s.weightKg)
+            }}
+          }}
+        }}
+        for (const [id, recent] of exMaxRecent) {{
+          const prev = exMaxPrev.get(id) || 0
+          const sessions = exSessionsPrev.get(id) || 0
+          if (sessions < 3 || prev <= 0 || recent <= prev) continue
+          const delta = recent - prev
+          const pct = (delta / prev) * 100
+          if (delta < 2.5 || pct > 30) continue
+          const ex = ppl.flatMap((w) => w.exercises).find((e) => e.id === id)
+          if (!ex) continue
+          records.push({{ id, name: ex.name, prevWeight: prev, weight: recent, delta }})
+        }}
+        records.sort((a, b) => b.delta - a.delta)
+
+        return {{
+          today: todayDate.toISOString().slice(0, 10),
+          planAdherence,
+          muscleVolume,
+          overloadInsights,
+          imbalances,
+          records,
+        }}
+      }}
+
+      const mockProgress = buildMockProgress()
+
+      // ─── (УДАЛЕНО v0.3) Старая vanity-версия buildMockProgress ────
+      // Раньше тут был блок с total tonnage / total workouts / линейными
+      // графиками. Заменили на actionable-метрики (см. реализацию выше:
+      // planAdherence, muscleVolume, overloadInsights, imbalances).
+      function _legacyMockProgress_unused() {{
+        return null
         const all = WORKOUTS_DATA.workouts
         const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
         if (!ppl.length) return null
@@ -714,8 +981,6 @@ def build_block(data: dict) -> str:
 
         return {{ periods, tonnageHistory, exerciseProgress, records, today: todayDate.toISOString().slice(0, 10) }}
       }}
-
-      const mockProgress = buildMockProgress()
 
       // ═══════════════════════════════════════════════════════════════
 """
