@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Trainer — варианты карточек объёма</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bg: '#0F0F13',
+              card: '#1A1A24',
+              cardAlt: '#22222E',
+              accent: '#7C5CFC',
+              success: '#34D399',
+              muted: 'rgba(232, 232, 240, 0.6)',
+              subtle: 'rgba(232, 232, 240, 0.4)',
+              border: 'rgba(255, 255, 255, 0.06)',
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #0a0a0e;
+        color: #e8e8f0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" class="max-w-[1280px] mx-auto px-6 py-10"></div>
+    <script type="module">
+      import { html, render, useState } from 'https://esm.sh/htm/preact/standalone'
+
+      // ═══════════════════════════════════════════════════════════════
+      // МОК-ДАННЫЕ — одна группа "Грудь" + набор 4-х состояний
+      // ═══════════════════════════════════════════════════════════════
+      const chest = {
+        emoji: '🛡',
+        label: 'Грудь',
+        total: 29,
+        min: 12,
+        max: 18,
+        status: 'overload',
+        hint: 'сильно выше цели на 11',
+        subs: [
+          {
+            label: 'Верх груди',
+            sets: 10,
+            min: 4,
+            max: 8,
+            status: 'over',
+            hint: 'выше цели на 2',
+          },
+          {
+            label: 'Середина груди',
+            sets: 16,
+            min: 4,
+            max: 8,
+            status: 'overload',
+            hint: 'сильно выше на 8',
+          },
+          { label: 'Низ груди', sets: 3, min: 2, max: 6, status: 'optimal', hint: 'в норме' },
+        ],
+      }
+
+      // 4 состояния для одного и того же диапазона 4-8 — чтобы напрямую сравнить
+      // как каждый вариант показывает разные ситуации.
+      const stateDemos = [
+        { sets: 2, min: 4, max: 8, label: 'Недогруз', status: 'low' },
+        { sets: 6, min: 4, max: 8, label: 'Оптимум', status: 'optimal' },
+        { sets: 10, min: 4, max: 8, label: 'Перебор', status: 'over' },
+        { sets: 16, min: 4, max: 8, label: 'Сильно перебор', status: 'overload' },
+      ]
+
+      const COLORS = {
+        none: 'text-muted',
+        low: 'text-orange-400',
+        optimal: 'text-success',
+        over: 'text-yellow-400',
+        overload: 'text-red-400',
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ВАРИАНТ A. ЛИНЕЙНАЯ СЕМАНТИЧЕСКАЯ (текущая)
+      // 3 сегмента: серый buildup → зелёная цель → красный хвост сверх.
+      // ═══════════════════════════════════════════════════════════════
+      function BarA({ sets, min, max, height = 'h-2' }) {
+        const overflow = Math.max(2, Math.ceil(max * 0.4))
+        const scale = Math.max(sets, max + overflow, min + 1)
+        const pct = (s) => (s / scale) * 100
+
+        if (sets <= 0) return html`<div class=${`relative ${height} rounded-full bg-cardAlt`}></div>`
+        if (sets < min) {
+          return html`
+            <div class=${`relative ${height} rounded-full bg-cardAlt overflow-hidden`}>
+              <div
+                class="absolute inset-y-0 left-0 bg-orange-400 rounded-full"
+                style=${{ width: `${pct(sets)}%` }}
+              ></div>
+              <div
+                class="absolute inset-y-0 w-px bg-white/30"
+                style=${{ left: `${pct(min)}%` }}
+              ></div>
+            </div>
+          `
+        }
+        const greyW = pct(min)
+        const greenL = pct(min)
+        const greenW = pct(Math.min(sets, max) - min)
+        const redL = pct(max)
+        const redW = sets > max ? pct(sets - max) : 0
+        return html`
+          <div class=${`relative ${height} rounded-full bg-cardAlt overflow-hidden`}>
+            <div
+              class="absolute inset-y-0 bg-white/25"
+              style=${{ left: 0, width: `${greyW}%` }}
+            ></div>
+            <div
+              class="absolute inset-y-0 bg-success"
+              style=${{ left: `${greenL}%`, width: `${greenW}%` }}
+            ></div>
+            ${redW > 0 &&
+            html`
+              <div
+                class="absolute inset-y-0 bg-red-400"
+                style=${{ left: `${redL}%`, width: `${redW}%` }}
+              ></div>
+            `}
+            <div
+              class="absolute inset-y-0 w-px bg-white/15"
+              style=${{ left: `${pct(max)}%` }}
+            ></div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ВАРИАНТ B. BULLET CHART (фон-зоны + маркер сверху)
+      // Фоновые зоны цветные, current-position обозначен ▼ маркером.
+      // ═══════════════════════════════════════════════════════════════
+      function BarB({ sets, min, max, height = 'h-3' }) {
+        const overflow = Math.max(4, Math.ceil(max * 0.5))
+        const scale = Math.max(sets, max + overflow, min + 1)
+        const pct = (s) => Math.min(100, (s / scale) * 100)
+
+        const status =
+          sets === 0 ? 'none' : sets < min ? 'low' : sets <= max ? 'optimal' : sets <= max + Math.ceil(max * 0.3) ? 'over' : 'overload'
+        const markerColor = {
+          none: '#666',
+          low: '#FB923C',
+          optimal: '#34D399',
+          over: '#FACC15',
+          overload: '#F87171',
+        }[status]
+
+        return html`
+          <div class="relative">
+            <div class=${`relative ${height} rounded-full overflow-hidden`}>
+              <!-- low (под цель) -->
+              <div
+                class="absolute inset-y-0 left-0 bg-orange-400/15"
+                style=${{ width: `${pct(min)}%` }}
+              ></div>
+              <!-- optimal -->
+              <div
+                class="absolute inset-y-0 bg-success/20"
+                style=${{ left: `${pct(min)}%`, width: `${pct(max) - pct(min)}%` }}
+              ></div>
+              <!-- over -->
+              <div
+                class="absolute inset-y-0 bg-yellow-400/15"
+                style=${{
+                  left: `${pct(max)}%`,
+                  width: `${pct(max + Math.ceil(max * 0.3)) - pct(max)}%`,
+                }}
+              ></div>
+              <!-- overload -->
+              <div
+                class="absolute inset-y-0 bg-red-400/15"
+                style=${{
+                  left: `${pct(max + Math.ceil(max * 0.3))}%`,
+                  right: 0,
+                }}
+              ></div>
+              <!-- маркер: вертикальная полоска по центру значения -->
+              <div
+                class="absolute inset-y-0 w-1 rounded-full"
+                style=${{
+                  left: `calc(${pct(sets)}% - 2px)`,
+                  background: markerColor,
+                  boxShadow: `0 0 8px ${markerColor}`,
+                }}
+              ></div>
+            </div>
+            <!-- треугольник под маркером -->
+            <div
+              class="absolute"
+              style=${{
+                left: `calc(${pct(sets)}% - 5px)`,
+                top: '100%',
+                width: 0,
+                height: 0,
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderTop: `5px solid ${markerColor}`,
+              }}
+            ></div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ВАРИАНТ C. ОТКЛОНЕНИЕ ОТ ОПТИМУМА
+      // Центр шкалы = середина целевой зоны. Бар растёт от центра:
+      // влево (оранжевый) если недогруз, вправо (жёлтый/красный) если перебор.
+      // ═══════════════════════════════════════════════════════════════
+      function BarC({ sets, min, max, height = 'h-2' }) {
+        const midpoint = (min + max) / 2
+        const range = (max - min) / 2 // полу-ширина зелёной зоны
+        const maxDeviation = Math.max(midpoint, max + Math.ceil(max * 0.5) - midpoint)
+        // Шкала: 50% слева под "недогруз/середина", 50% справа под "выше середины/перебор"
+        const halfWidth = maxDeviation
+        const pct = (delta) => (Math.abs(delta) / halfWidth) * 50
+
+        const deviation = sets - midpoint
+        const isOver = deviation > 0
+        const isUnder = deviation < 0
+
+        // Зелёная зона по центру (от -range до +range вокруг midpoint)
+        const greenHalf = (range / halfWidth) * 50
+
+        // Сегмент-бар
+        let barColor, barLeft, barWidth
+        if (sets === 0) {
+          barColor = 'bg-white/0'
+          barLeft = 50
+          barWidth = 0
+        } else if (isUnder && Math.abs(deviation) <= range) {
+          // в зелёной зоне, слева от центра
+          barColor = 'bg-success'
+          barLeft = 50 - pct(deviation)
+          barWidth = pct(deviation)
+        } else if (!isUnder && deviation <= range) {
+          // в зелёной зоне, справа от центра (или ровно по центру)
+          barColor = 'bg-success'
+          barLeft = 50
+          barWidth = pct(deviation)
+        } else if (isUnder) {
+          // далеко влево — недогруз
+          barColor = 'bg-orange-400'
+          barLeft = 50 - pct(deviation)
+          barWidth = pct(deviation)
+        } else {
+          // далеко вправо — перебор
+          const overOptimal = deviation - range
+          const isOverload = overOptimal > range
+          barColor = isOverload ? 'bg-red-400' : 'bg-yellow-400'
+          barLeft = 50
+          barWidth = pct(deviation)
+        }
+
+        return html`
+          <div class=${`relative ${height} rounded-full bg-cardAlt overflow-hidden`}>
+            <!-- зелёная зона по центру -->
+            <div
+              class="absolute inset-y-0 bg-success/15"
+              style=${{ left: `${50 - greenHalf}%`, width: `${greenHalf * 2}%` }}
+            ></div>
+            <!-- центральная отсечка (середина оптимума) -->
+            <div class="absolute inset-y-0 w-px bg-white/30" style=${{ left: '50%' }}></div>
+            <!-- бар -->
+            <div
+              class=${`absolute inset-y-0 ${barColor}`}
+              style=${{ left: `${barLeft}%`, width: `${barWidth}%` }}
+            ></div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ВАРИАНТ D. ТОЧЕЧНАЯ ЛЕСЕНКА
+      // Каждый подход = одна точка. Min/max обведены скобками.
+      // Цвет зависит от позиции (до min — серый, в зоне — зелёный,
+      // выше max — красный). Превышение видно числом красных точек.
+      // ═══════════════════════════════════════════════════════════════
+      function BarD({ sets, min, max }) {
+        // Ограничиваем визуальное число точек (для overload)
+        const maxDots = Math.min(Math.max(sets, max), max + 8)
+        const dots = []
+        for (let i = 1; i <= maxDots; i++) {
+          let color
+          if (i > sets) color = 'bg-cardAlt border border-white/10'
+          else if (i <= min - 1) color = 'bg-white/30'
+          else if (i <= max) color = 'bg-success'
+          else color = 'bg-red-400'
+          dots.push({ idx: i, color })
+        }
+        const overflowDots = sets > maxDots ? sets - maxDots : 0
+
+        return html`
+          <div class="flex items-center gap-1 flex-wrap">
+            ${dots.map(
+              (d) => html`
+                <div
+                  key=${d.idx}
+                  class=${`w-2 h-2 rounded-full ${d.color} relative`}
+                >
+                  ${d.idx === min &&
+                  html`
+                    <div
+                      class="absolute -left-[3px] top-1/2 w-px bg-white/40"
+                      style=${{ height: '14px', transform: 'translateY(-50%)' }}
+                    ></div>
+                  `}
+                  ${d.idx === max &&
+                  html`
+                    <div
+                      class="absolute -right-[3px] top-1/2 w-px bg-white/40"
+                      style=${{ height: '14px', transform: 'translateY(-50%)' }}
+                    ></div>
+                  `}
+                </div>
+              `,
+            )}
+            ${overflowDots > 0 &&
+            html`
+              <div class="text-[10px] text-red-400 ml-1">+${overflowDots}</div>
+            `}
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ВАРИАНТ E. РАДИАЛЬНОЕ КОЛЬЦО
+      // Кольцо как Apple Watch. Trace = серый круг.
+      // Зелёная дуга = целевая зона.
+      // Заполнение = solid arc от 0 до sets.
+      // Перебор: красный outer-glow вокруг.
+      // ═══════════════════════════════════════════════════════════════
+      function BarE({ sets, min, max, size = 64 }) {
+        const overflow = Math.max(2, Math.ceil(max * 0.4))
+        const scale = Math.max(sets, max + overflow, min + 1)
+        const r = size / 2 - 4
+        const cx = size / 2
+        const cy = size / 2
+        const circ = 2 * Math.PI * r
+        const angOf = (s) => (s / scale) * 360
+
+        // Кодируем дугу через stroke-dasharray
+        const greenLenA = (angOf(max) - angOf(min)) / 360
+        const greenLen = circ * greenLenA
+        const greenOffset = circ - circ * (angOf(min) / 360)
+
+        const fillLenA = Math.min(1, sets / scale)
+        const fillLen = circ * fillLenA
+        const fillOffset = circ - 0 // start at 12 o'clock (rotate -90)
+
+        const overloaded = sets > max
+        const status =
+          sets === 0 ? 'none' : sets < min ? 'low' : sets <= max ? 'optimal' : 'overload'
+        const fillColor = {
+          none: '#666',
+          low: '#FB923C',
+          optimal: '#34D399',
+          overload: '#F87171',
+        }[status]
+
+        return html`
+          <div class="relative" style=${{ width: `${size}px`, height: `${size}px` }}>
+            ${overloaded &&
+            html`
+              <div
+                class="absolute inset-0 rounded-full"
+                style=${{ boxShadow: '0 0 16px 2px #F87171AA' }}
+              ></div>
+            `}
+            <svg width=${size} height=${size} class="-rotate-90">
+              <!-- background ring -->
+              <circle
+                cx=${cx}
+                cy=${cy}
+                r=${r}
+                stroke="#22222E"
+                stroke-width="6"
+                fill="none"
+              />
+              <!-- target zone arc (green, semi-transparent) -->
+              <circle
+                cx=${cx}
+                cy=${cy}
+                r=${r}
+                stroke="#34D39955"
+                stroke-width="6"
+                fill="none"
+                stroke-dasharray=${`${greenLen} ${circ}`}
+                stroke-dashoffset=${`${-circ * (angOf(min) / 360)}`}
+              />
+              <!-- filled arc -->
+              ${sets > 0 &&
+              html`
+                <circle
+                  cx=${cx}
+                  cy=${cy}
+                  r=${r}
+                  stroke=${fillColor}
+                  stroke-width="6"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-dasharray=${`${fillLen} ${circ}`}
+                  stroke-dashoffset="0"
+                />
+              `}
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <div class=${`text-sm font-semibold tabular-nums ${COLORS[status]}`}>${sets}</div>
+              <div class="text-[8px] text-subtle leading-none">/ ${min}–${max}</div>
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // КАРТОЧКА ГРУППЫ — параметризируется компонентом-баром
+      // ═══════════════════════════════════════════════════════════════
+      function GroupCard({ Bar, group, isRadial = false }) {
+        return html`
+          <div
+            class="rounded-3xl bg-card border border-border p-4"
+            style=${{ width: '300px' }}
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="text-xl">${group.emoji}</span>
+                <div class="text-base font-semibold truncate">${group.label}</div>
+              </div>
+              ${!isRadial &&
+              html`
+                <div class="flex items-baseline gap-1 flex-shrink-0">
+                  <span class=${`text-2xl font-semibold tabular-nums ${COLORS[group.status]}`}>
+                    ${group.total}
+                  </span>
+                  <span class="text-[11px] text-subtle">/ ${group.min}–${group.max}</span>
+                </div>
+              `}
+              ${isRadial &&
+              html`
+                <${Bar} sets=${group.total} min=${group.min} max=${group.max} size=${56} />
+              `}
+            </div>
+
+            ${!isRadial &&
+            html`
+              <div class="mt-3 pb-1">
+                <${Bar} sets=${group.total} min=${group.min} max=${group.max} />
+              </div>
+              <div class=${`text-[11px] mt-1 ${COLORS[group.status]}`}>${group.hint}</div>
+            `}
+            ${isRadial &&
+            html`<div class=${`text-[11px] mt-2 ${COLORS[group.status]}`}>${group.hint}</div>`}
+
+            <div class="h-px bg-white/5 my-3"></div>
+
+            <div class="space-y-3">
+              ${group.subs.map(
+                (sub) => html`
+                  <div key=${sub.label}>
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="text-[12px] truncate">${sub.label}</div>
+                      <div class="flex items-baseline gap-1 flex-shrink-0">
+                        <span
+                          class=${`text-[13px] font-semibold tabular-nums ${COLORS[sub.status]}`}
+                          >${sub.sets}</span
+                        >
+                        <span class="text-[10px] text-subtle">/${sub.min}–${sub.max}</span>
+                      </div>
+                    </div>
+                    <div class="mt-1 ${isRadial ? 'flex justify-center' : ''}">
+                      ${isRadial
+                        ? html`<${Bar}
+                            sets=${sub.sets}
+                            min=${sub.min}
+                            max=${sub.max}
+                            size=${44}
+                          />`
+                        : html`<${Bar}
+                            sets=${sub.sets}
+                            min=${sub.min}
+                            max=${sub.max}
+                            height="h-1.5"
+                          />`}
+                    </div>
+                  </div>
+                `,
+              )}
+            </div>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // СТРОКА 4 СОСТОЯНИЙ — для side-by-side сравнения
+      // ═══════════════════════════════════════════════════════════════
+      function StatesRow({ Bar, isRadial = false }) {
+        return html`
+          <div class="grid grid-cols-4 gap-3 mt-4">
+            ${stateDemos.map(
+              (d) => html`
+                <div key=${d.label} class="rounded-2xl bg-card/60 border border-border p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="text-[10px] uppercase tracking-wider text-subtle">${d.label}</div>
+                    <div class=${`text-xs font-semibold tabular-nums ${COLORS[d.status]}`}>
+                      ${d.sets}/${d.min}–${d.max}
+                    </div>
+                  </div>
+                  ${isRadial
+                    ? html`
+                        <div class="flex justify-center">
+                          <${Bar} sets=${d.sets} min=${d.min} max=${d.max} size=${56} />
+                        </div>
+                      `
+                    : html`<${Bar} sets=${d.sets} min=${d.min} max=${d.max} />`}
+                </div>
+              `,
+            )}
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ROOT
+      // ═══════════════════════════════════════════════════════════════
+      function App() {
+        const variants = [
+          {
+            id: 'A',
+            title: 'A. Линейная семантическая (текущая)',
+            desc: 'Серый buildup до min → зелёный сегмент в зоне → красный хвост сверх max. Длина каждого сегмента отражает реальное соотношение. Перебор виден как "красный торчит за зелёное".',
+            Bar: BarA,
+          },
+          {
+            id: 'B',
+            title: 'B. Bullet chart с маркером',
+            desc: 'Фон поделён на 4 цветные зоны (low / optimal / over / overload), маркер ▼ показывает где именно ты находишься. Стандарт BI-дашбордов.',
+            Bar: BarB,
+          },
+          {
+            id: 'C',
+            title: 'C. Отклонение от центра оптимума',
+            desc: 'Шкала симметрична относительно середины целевой зоны. Бар растёт от центра — влево если недогруз, вправо если перебор. Длина = насколько ты ушёл от идеального.',
+            Bar: BarC,
+          },
+          {
+            id: 'D',
+            title: 'D. Точечная лесенка',
+            desc: 'Каждый подход = одна точка. Целевая зона помечена скобками. Серые точки до зоны, зелёные внутри, красные после. Самая буквальная: можно физически посчитать "сколько лишнего".',
+            Bar: BarD,
+          },
+          {
+            id: 'E',
+            title: 'E. Радиальное кольцо',
+            desc: 'Кольцо как Apple Watch / Whoop. Зелёная дуга — целевая зона, заполненная дуга — твой прогресс. При перегрузе кольцо горит красным glow вокруг.',
+            Bar: BarE,
+            isRadial: true,
+          },
+        ]
+
+        return html`
+          <header class="mb-10">
+            <div class="text-2xl font-semibold">Варианты карточки "Объём по мышцам"</div>
+            <div class="text-sm text-muted mt-1 max-w-2xl">
+              5 разных визуализаций на одних и тех же данных (Грудь 29 / 12–18, статус
+              <span class="text-red-400">overload</span>). Под каждой картой — строка с 4-мя
+              типичными состояниями (4–8 в качестве цели), чтобы напрямую сравнить читаемость.
+            </div>
+          </header>
+          <div class="space-y-12">
+            ${variants.map(
+              (v) => html`
+                <section
+                  key=${v.id}
+                  class="rounded-3xl border border-border p-6"
+                  style=${{ background: 'rgba(26, 26, 36, 0.4)' }}
+                >
+                  <div class="text-xs uppercase tracking-widest text-accent mb-1">
+                    Вариант ${v.id}
+                  </div>
+                  <div class="text-lg font-semibold">${v.title}</div>
+                  <p class="text-sm text-muted mt-2 max-w-3xl leading-relaxed">${v.desc}</p>
+                  <div class="grid lg:grid-cols-[auto,1fr] gap-6 mt-5 items-start">
+                    <${GroupCard} Bar=${v.Bar} group=${chest} isRadial=${v.isRadial} />
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-subtle mb-1">
+                        4 состояния (диапазон 4–8)
+                      </div>
+                      <${StatesRow} Bar=${v.Bar} isRadial=${v.isRadial} />
+                    </div>
+                  </div>
+                </section>
+              `,
+            )}
+          </div>
+
+          <footer class="mt-12 text-xs text-subtle text-center">
+            Когда выберешь — скажи букву варианта (A/B/C/D/E), и я перенесу его в основной
+            mockup_v1.html.
+          </footer>
+        `
+      }
+
+      render(html`<${App} />`, document.getElementById('root'))
+    </script>
+  </body>
+</html>
