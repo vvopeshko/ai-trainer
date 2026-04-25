@@ -122,6 +122,134 @@ def build_block(data: dict) -> str:
         'hanging-leg-raises': ['crunches'],
       }}
 
+      // Рекомендация по упражнению: анализ последних 5 сессий
+      // → определяем плато / прогресс / откат / стабильность.
+      // В проде логика будет в LLM-сервисе с более тонким анализом
+      // (RPE, объём, периодизация). Здесь — простая эвристика для прототипа.
+      function _computeRecommendation(exId, allWorkouts) {{
+        const sessions = []
+        for (let i = allWorkouts.length - 1; i >= 0 && sessions.length < 5; i--) {{
+          const ex = allWorkouts[i].exercises.find((e) => e.id === exId)
+          if (!ex) continue
+          const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+          if (!valid.length) continue
+          const weights = valid.map((s) => s.weightKg || 0)
+          sessions.push({{
+            date: allWorkouts[i].date,
+            maxW: ex.bodyweight ? 0 : Math.max(...weights),
+            maxReps: Math.max(...valid.map((s) => s.reps)),
+            totalReps: valid.reduce((sum, s) => sum + s.reps, 0),
+            isBw: ex.bodyweight,
+            setCount: valid.length,
+          }})
+        }}
+
+        const last = sessions[0]
+        if (!last) {{
+          return {{
+            tone: 'newcomer',
+            emoji: '🆕',
+            title: 'Новое упражнение',
+            body: 'Первая попытка — ориентируйся на ощущения, не гонись за весом.',
+          }}
+        }}
+        const prev = sessions[1]
+
+        // Bodyweight: оперируем повторами и общим объёмом
+        if (last.isBw) {{
+          if (!prev) {{
+            return {{
+              tone: 'baseline',
+              emoji: '🎯',
+              title: 'Стартовый ориентир',
+              body: `В прошлый раз ${{last.setCount}} подх. на ${{last.totalReps}} повт. Стартуй с такого же темпа.`,
+            }}
+          }}
+          if (last.totalReps > prev.totalReps) {{
+            return {{
+              tone: 'progress',
+              emoji: '📈',
+              title: `Прогресс +${{last.totalReps - prev.totalReps}} повт.`,
+              body: `Сделал ${{last.totalReps}} vs ${{prev.totalReps}} в прошлый раз. Можно прибавить ещё 1–2 повтора в первом подходе.`,
+            }}
+          }}
+          if (last.totalReps < prev.totalReps) {{
+            return {{
+              tone: 'regression',
+              emoji: '↩️',
+              title: 'Откат повторов',
+              body: `${{last.totalReps}} vs ${{prev.totalReps}} раньше. Сегодня просто верни прошлый темп — без героики.`,
+            }}
+          }}
+          return {{
+            tone: 'maintain',
+            emoji: '⚖️',
+            title: 'Держишь стабильно',
+            body: `${{last.totalReps}} повторов в сумме — твой рабочий объём. Если закроешь всё легко, добавь +1 повтор.`,
+          }}
+        }}
+
+        // Силовые с весом
+        if (!prev) {{
+          return {{
+            tone: 'baseline',
+            emoji: '🎯',
+            title: 'Стартовый ориентир',
+            body: `В прошлый раз — ${{last.maxW}} кг × ${{last.maxReps}}. Повтори или чуть выше.`,
+            suggestedWeight: last.maxW,
+          }}
+        }}
+
+        if (last.maxW > prev.maxW) {{
+          const d = (last.maxW - prev.maxW).toFixed(1).replace(/\\.0$/, '')
+          return {{
+            tone: 'progress',
+            emoji: '📈',
+            title: `Прогресс +${{d}} кг`,
+            body: `Вырос с ${{prev.maxW}} до ${{last.maxW}} кг. Закрепи этот вес — не торопись прибавлять дальше.`,
+            suggestedWeight: last.maxW,
+          }}
+        }}
+
+        // Плато: сколько подряд сессий держится тот же вес
+        let plateau = 1
+        for (let i = 1; i < sessions.length; i++) {{
+          if (sessions[i].maxW === last.maxW && !sessions[i].isBw) plateau += 1
+          else break
+        }}
+
+        if (plateau >= 3) {{
+          const nextW = parseFloat((last.maxW + 2.5).toFixed(1))
+          const targetReps = Math.max(6, last.maxReps - 2)
+          return {{
+            tone: 'plateau',
+            emoji: '⚡',
+            title: `Плато ${{plateau}} тренировки`,
+            body: `${{last.maxW}}×${{last.maxReps}} стоит ${{plateau}} раза подряд. Попробуй ${{nextW}} × ${{targetReps}} на первом подходе — пробьёт стенку.`,
+            suggestedWeight: nextW,
+            suggestedReps: targetReps,
+          }}
+        }}
+
+        if (last.maxW < prev.maxW) {{
+          return {{
+            tone: 'regression',
+            emoji: '↩️',
+            title: 'Шаг назад',
+            body: `${{prev.maxW}} → ${{last.maxW}} кг. Возможно, устал в прошлый раз. Стартуй с ${{last.maxW}} и слушай тело.`,
+            suggestedWeight: last.maxW,
+          }}
+        }}
+
+        return {{
+          tone: 'maintain',
+          emoji: '⚖️',
+          title: 'Держишь стабильно',
+          body: `${{last.maxW}}×${{last.maxReps}} — твой рабочий вес. Закроешь все подходы до верха диапазона — попробуй +1 повтор.`,
+          suggestedWeight: last.maxW,
+        }}
+      }}
+
       // Для альтернативы строим карточку: имя, мышцы, последняя сессия.
       function _buildAlternatives(exId, allWorkouts) {{
         const altIds = ALT_SWAPS[exId] || []
@@ -312,6 +440,7 @@ def build_block(data: dict) -> str:
               prev: validSets.map((s) => ({{ weight: s.weightKg || 0, reps: s.reps }})),
               bodyweight: ex.bodyweight,
               alternatives: _buildAlternatives(ex.id, all),
+              recommendation: _computeRecommendation(ex.id, all),
             }}
           }})
           .filter(Boolean)

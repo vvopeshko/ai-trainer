@@ -294,6 +294,134 @@
         'hanging-leg-raises': ['crunches'],
       }
 
+      // Рекомендация по упражнению: анализ последних 5 сессий
+      // → определяем плато / прогресс / откат / стабильность.
+      // В проде логика будет в LLM-сервисе с более тонким анализом
+      // (RPE, объём, периодизация). Здесь — простая эвристика для прототипа.
+      function _computeRecommendation(exId, allWorkouts) {
+        const sessions = []
+        for (let i = allWorkouts.length - 1; i >= 0 && sessions.length < 5; i--) {
+          const ex = allWorkouts[i].exercises.find((e) => e.id === exId)
+          if (!ex) continue
+          const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+          if (!valid.length) continue
+          const weights = valid.map((s) => s.weightKg || 0)
+          sessions.push({
+            date: allWorkouts[i].date,
+            maxW: ex.bodyweight ? 0 : Math.max(...weights),
+            maxReps: Math.max(...valid.map((s) => s.reps)),
+            totalReps: valid.reduce((sum, s) => sum + s.reps, 0),
+            isBw: ex.bodyweight,
+            setCount: valid.length,
+          })
+        }
+
+        const last = sessions[0]
+        if (!last) {
+          return {
+            tone: 'newcomer',
+            emoji: '🆕',
+            title: 'Новое упражнение',
+            body: 'Первая попытка — ориентируйся на ощущения, не гонись за весом.',
+          }
+        }
+        const prev = sessions[1]
+
+        // Bodyweight: оперируем повторами и общим объёмом
+        if (last.isBw) {
+          if (!prev) {
+            return {
+              tone: 'baseline',
+              emoji: '🎯',
+              title: 'Стартовый ориентир',
+              body: `В прошлый раз ${last.setCount} подх. на ${last.totalReps} повт. Стартуй с такого же темпа.`,
+            }
+          }
+          if (last.totalReps > prev.totalReps) {
+            return {
+              tone: 'progress',
+              emoji: '📈',
+              title: `Прогресс +${last.totalReps - prev.totalReps} повт.`,
+              body: `Сделал ${last.totalReps} vs ${prev.totalReps} в прошлый раз. Можно прибавить ещё 1–2 повтора в первом подходе.`,
+            }
+          }
+          if (last.totalReps < prev.totalReps) {
+            return {
+              tone: 'regression',
+              emoji: '↩️',
+              title: 'Откат повторов',
+              body: `${last.totalReps} vs ${prev.totalReps} раньше. Сегодня просто верни прошлый темп — без героики.`,
+            }
+          }
+          return {
+            tone: 'maintain',
+            emoji: '⚖️',
+            title: 'Держишь стабильно',
+            body: `${last.totalReps} повторов в сумме — твой рабочий объём. Если закроешь всё легко, добавь +1 повтор.`,
+          }
+        }
+
+        // Силовые с весом
+        if (!prev) {
+          return {
+            tone: 'baseline',
+            emoji: '🎯',
+            title: 'Стартовый ориентир',
+            body: `В прошлый раз — ${last.maxW} кг × ${last.maxReps}. Повтори или чуть выше.`,
+            suggestedWeight: last.maxW,
+          }
+        }
+
+        if (last.maxW > prev.maxW) {
+          const d = (last.maxW - prev.maxW).toFixed(1).replace(/\.0$/, '')
+          return {
+            tone: 'progress',
+            emoji: '📈',
+            title: `Прогресс +${d} кг`,
+            body: `Вырос с ${prev.maxW} до ${last.maxW} кг. Закрепи этот вес — не торопись прибавлять дальше.`,
+            suggestedWeight: last.maxW,
+          }
+        }
+
+        // Плато: сколько подряд сессий держится тот же вес
+        let plateau = 1
+        for (let i = 1; i < sessions.length; i++) {
+          if (sessions[i].maxW === last.maxW && !sessions[i].isBw) plateau += 1
+          else break
+        }
+
+        if (plateau >= 3) {
+          const nextW = parseFloat((last.maxW + 2.5).toFixed(1))
+          const targetReps = Math.max(6, last.maxReps - 2)
+          return {
+            tone: 'plateau',
+            emoji: '⚡',
+            title: `Плато ${plateau} тренировки`,
+            body: `${last.maxW}×${last.maxReps} стоит ${plateau} раза подряд. Попробуй ${nextW} × ${targetReps} на первом подходе — пробьёт стенку.`,
+            suggestedWeight: nextW,
+            suggestedReps: targetReps,
+          }
+        }
+
+        if (last.maxW < prev.maxW) {
+          return {
+            tone: 'regression',
+            emoji: '↩️',
+            title: 'Шаг назад',
+            body: `${prev.maxW} → ${last.maxW} кг. Возможно, устал в прошлый раз. Стартуй с ${last.maxW} и слушай тело.`,
+            suggestedWeight: last.maxW,
+          }
+        }
+
+        return {
+          tone: 'maintain',
+          emoji: '⚖️',
+          title: 'Держишь стабильно',
+          body: `${last.maxW}×${last.maxReps} — твой рабочий вес. Закроешь все подходы до верха диапазона — попробуй +1 повтор.`,
+          suggestedWeight: last.maxW,
+        }
+      }
+
       // Для альтернативы строим карточку: имя, мышцы, последняя сессия.
       function _buildAlternatives(exId, allWorkouts) {
         const altIds = ALT_SWAPS[exId] || []
@@ -484,6 +612,7 @@
               prev: validSets.map((s) => ({ weight: s.weightKg || 0, reps: s.reps })),
               bodyweight: ex.bodyweight,
               alternatives: _buildAlternatives(ex.id, all),
+              recommendation: _computeRecommendation(ex.id, all),
             }
           })
           .filter(Boolean)
@@ -974,6 +1103,29 @@
         // Superset-пара для текущего упражнения (mock: просто сохраняем id)
         const [supersetPair, setSupersetPair] = useState(null)
 
+        // ─── Таймер тренировки ─────────────────────────────────────
+        // Стартует при монтировании WorkoutScreen.
+        // В проде стартовое время записывается в Workout.startedAt и
+        // подгружается оттуда при возврате к незавершённой тренировке.
+        const [workoutStart] = useState(() => Date.now())
+        const [elapsedSec, setElapsedSec] = useState(0)
+        useEffect(() => {
+          const id = setInterval(() => {
+            setElapsedSec(Math.floor((Date.now() - workoutStart) / 1000))
+          }, 1000)
+          return () => clearInterval(id)
+        }, [workoutStart])
+
+        const formatElapsed = (sec) => {
+          const h = Math.floor(sec / 3600)
+          const m = Math.floor((sec % 3600) / 60)
+          const s = sec % 60
+          if (h > 0) {
+            return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+          }
+          return `${m}:${String(s).padStart(2, '0')}`
+        }
+
         const currentEx = exercises[currentExIdx]
         const pairedEx = supersetPair !== null ? exercises[supersetPair] : null
 
@@ -1135,9 +1287,9 @@
 
         return html`
           <div class="h-full flex flex-col overflow-hidden">
-            <!-- Top bar -->
+            <!-- Top bar — компактный, только навигация и название -->
             <div
-              class="px-4 pt-6 pb-3 flex items-center justify-between border-b border-border"
+              class="px-4 pt-6 pb-3 flex items-center justify-between"
             >
               <button
                 onClick=${onExit}
@@ -1145,21 +1297,49 @@
               >
                 <${Icon} name="chevronLeft" size=${18} />
               </button>
-              <div class="text-center">
-                <div class="text-sm font-semibold">
+              <div class="text-center min-w-0 flex-1 px-3">
+                <div class="text-sm font-semibold truncate">
                   ${mockProgram.nextWorkout.name}
-                </div>
-                <div class="text-xs text-muted">
-                  Упражнение ${currentExIdx + 1} / ${exercises.length} · ${doneSets}/${totalSets}
-                  подходов
                 </div>
               </div>
               <button
-                onClick=${() => setConfirmFinish(true)}
-                class="px-3 h-9 rounded-full bg-card text-xs font-medium text-muted border border-border"
+                class="w-9 h-9 rounded-full bg-card flex items-center justify-center text-muted"
+                aria-label="Меню тренировки"
               >
-                Завершить
+                <${Icon} name="moreHorizontal" size=${18} />
               </button>
+            </div>
+
+            <!-- Workout timer + Завершить -->
+            <div class="px-4 pb-3">
+              <div
+                class="rounded-2xl border border-border p-3 flex items-center gap-3"
+                style=${{
+                  background:
+                    'linear-gradient(135deg, rgba(124, 92, 252, 0.10) 0%, rgba(52, 211, 153, 0.04) 100%)',
+                }}
+              >
+                <div
+                  class="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center text-accent flex-shrink-0"
+                >
+                  <${Icon} name="clock" size=${18} />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-2xl font-semibold font-mono tabular-nums leading-none">
+                    ${formatElapsed(elapsedSec)}
+                  </div>
+                  <div class="text-[11px] text-muted mt-1">
+                    Упр. ${currentExIdx + 1}/${exercises.length} · ${doneSets}/${totalSets} подх.
+                  </div>
+                </div>
+                <button
+                  onClick=${() => setConfirmFinish(true)}
+                  class="h-10 px-4 rounded-xl bg-card border border-border text-xs font-medium text-muted active:scale-95 transition-transform flex items-center gap-1.5"
+                >
+                  <${Icon} name="check" size=${14} />
+                  <span>Завершить</span>
+                </button>
+              </div>
             </div>
 
             <!-- Scrollable content -->
@@ -1279,19 +1459,15 @@
                         </button>
                       </div>
 
-                      <!-- Previous session -->
-                      <div class="mt-4 p-3 rounded-xl bg-card border border-border">
-                        <div class="text-[10px] text-subtle uppercase tracking-wider">
-                          прошлая тренировка
-                        </div>
-                        <div class="text-sm font-mono mt-1 text-muted">
-                          ${currentEx.prev
-                            .map((s) =>
-                              currentEx.bodyweight ? `×${s.reps}` : `${s.weight}×${s.reps}`,
-                            )
-                            .join(' · ')}
-                        </div>
-                      </div>
+                      <!-- Recommendation + previous session (объединённая карточка) -->
+                      ${currentEx.recommendation &&
+                      html`
+                        <${RecommendationCard}
+                          rec=${currentEx.recommendation}
+                          prev=${currentEx.prev}
+                          bodyweight=${currentEx.bodyweight}
+                        />
+                      `}
                     `}
 
                 <!-- Sets list (flowSets: обычно или интерливинг в суперсете) -->
@@ -1634,6 +1810,59 @@
                 Сделал · ${bodyweight ? `×${set.reps}` : `${set.weight} × ${set.reps}`}
               </span>
             </button>
+          </div>
+        `
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Карточка с рекомендацией + прошлой тренировкой
+      // ═══════════════════════════════════════════════════════════════
+
+      function RecommendationCard({ rec, prev, bodyweight }) {
+        // Цветовое выделение по тону рекомендации
+        const toneCls =
+          rec.tone === 'progress'
+            ? 'border-success/30 bg-success/5'
+            : rec.tone === 'plateau'
+              ? 'border-accent/30 bg-accent/5'
+              : rec.tone === 'regression'
+                ? 'border-orange-400/30 bg-orange-400/5'
+                : 'border-border bg-card'
+        const labelCls =
+          rec.tone === 'progress'
+            ? 'text-success'
+            : rec.tone === 'plateau'
+              ? 'text-accent'
+              : rec.tone === 'regression'
+                ? 'text-orange-400'
+                : 'text-muted'
+
+        return html`
+          <div class=${`mt-4 rounded-2xl border p-4 ${toneCls}`}>
+            <div class="flex items-center gap-2">
+              <span class="text-base">${rec.emoji}</span>
+              <div
+                class=${`text-[10px] uppercase tracking-wider font-medium ${labelCls}`}
+              >
+                Рекомендация тренера
+              </div>
+            </div>
+            <div class="mt-2 text-sm font-semibold">${rec.title}</div>
+            <div class="mt-1 text-[13px] leading-relaxed text-muted">${rec.body}</div>
+            ${prev &&
+            prev.length > 0 &&
+            html`
+              <div class="mt-3 pt-3 border-t border-white/5">
+                <div class="text-[10px] uppercase tracking-wider text-subtle">
+                  Прошлая тренировка
+                </div>
+                <div class="text-sm font-mono tabular-nums mt-1 text-muted">
+                  ${prev
+                    .map((s) => (bodyweight ? `×${s.reps}` : `${s.weight}×${s.reps}`))
+                    .join('  ·  ')}
+                </div>
+              </div>
+            `}
           </div>
         `
       }
