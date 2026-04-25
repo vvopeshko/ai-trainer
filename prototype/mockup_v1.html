@@ -277,21 +277,125 @@
         return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
       }
 
+      function _daysBetween(a, b) {
+        return Math.round((b - a) / 86400000)
+      }
+
+      function _computeStreak(workouts, todayDate) {
+        // Подряд сделанных тренировок без разрыва > 3 дней (с конца к началу).
+        let streak = 0
+        let prev = todayDate
+        for (const w of [...workouts].reverse()) {
+          const wDate = new Date(w.date + 'T00:00:00Z')
+          if (_daysBetween(wDate, prev) > 3) break
+          streak += 1
+          prev = wDate
+        }
+        return streak
+      }
+
+      function _computeMonthlyStats(workouts) {
+        let tonnage = 0
+        let totalSets = 0
+        for (const w of workouts) {
+          for (const ex of w.exercises) {
+            for (const s of ex.sets) {
+              if ((s.weightKg || 0) > 0 && (s.reps || 0) > 0) {
+                tonnage += s.weightKg * s.reps
+                totalSets += 1
+              } else if ((s.reps || 0) > 0) {
+                totalSets += 1
+              }
+            }
+          }
+        }
+        return { tonnage: Math.round(tonnage), sets: totalSets }
+      }
+
+      function _findRecentPR(workouts) {
+        // PR за последние 30 дней против предыдущих 30–90 дней.
+        // Сравниваем не с all-time max, а с прошлым месяцем —
+        // так не ловим артефакты смены тренажёра под тем же именем.
+        if (!workouts.length) return null
+        const todayDate = new Date(workouts[workouts.length - 1].date + 'T00:00:00Z')
+        const cutoffRecent = new Date(todayDate)
+        cutoffRecent.setUTCDate(todayDate.getUTCDate() - 30)
+        const cutoffPrev = new Date(todayDate)
+        cutoffPrev.setUTCDate(todayDate.getUTCDate() - 90)
+        const cutoffRecentIso = cutoffRecent.toISOString().slice(0, 10)
+        const cutoffPrevIso = cutoffPrev.toISOString().slice(0, 10)
+
+        const exMaxRecent = new Map() // последние 30 дней
+        const exMaxPrev = new Map() // 30-90 дней назад
+        const exSessionsPrev = new Map()
+
+        for (const w of workouts) {
+          const isRecent = w.date >= cutoffRecentIso
+          const isPrev = !isRecent && w.date >= cutoffPrevIso
+          if (!isRecent && !isPrev) continue
+          for (const ex of w.exercises) {
+            if (isPrev) {
+              exSessionsPrev.set(ex.id, (exSessionsPrev.get(ex.id) || 0) + 1)
+            }
+            for (const s of ex.sets) {
+              if (!s.weightKg) continue
+              const target = isRecent ? exMaxRecent : exMaxPrev
+              const cur = target.get(ex.id) || 0
+              if (s.weightKg > cur) target.set(ex.id, s.weightKg)
+            }
+          }
+        }
+
+        let best = null
+        for (const [id, recent] of exMaxRecent) {
+          const prev = exMaxPrev.get(id) || 0
+          const sessionsPrev = exSessionsPrev.get(id) || 0
+          if (sessionsPrev < 3) continue // нужна устойчивая база
+          if (prev <= 0) continue
+          if (recent <= prev) continue
+          const delta = recent - prev
+          if (delta < 2.5) continue // незначительный прирост
+          const growthPct = (delta / prev) * 100
+          if (growthPct > 30) continue // подозрительно большой скачок (смена тренажёра?)
+          const ex = workouts.flatMap((w) => w.exercises).find((e) => e.id === id)
+          if (!ex) continue
+          if (!best || delta > best.delta) {
+            best = { id, name: ex.name, weight: recent, prevWeight: prev, delta }
+          }
+        }
+        return best
+      }
+
       // ─── Построение mockProgram из реальных данных ─────────────────
       function buildMockProgram() {
         const all = WORKOUTS_DATA.workouts
-        // Текущая программа = PPL+Arms (последняя активная)
         const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
         if (!ppl.length) throw new Error('Нет данных по программе PPL+Arms')
 
         const lastDone = ppl[ppl.length - 1]
-        const today = lastDone.date // симулируем "сегодня" = день после последней тренировки
+
+        // "Сегодня" = день после последней тренировки.
+        const todayDate = new Date(lastDone.date + 'T00:00:00Z')
+        todayDate.setUTCDate(todayDate.getUTCDate() + 1)
+        const today = todayDate.toISOString().slice(0, 10)
+
+        const daysSinceLast = _daysBetween(
+          new Date(lastDone.date + 'T00:00:00Z'),
+          todayDate,
+        )
 
         // Ротация 4-дневного сплита
         const rotation = ['.1 Chest Triceps', '.2 Back Biceps', '.3 Legs', '.4 Shoulders Arms']
+        const dayMeta = {
+          '.1 Chest Triceps': { name: 'День 1 · Грудь, трицепс', subtitle: 'Грудь + трицепс + плечи', type: '1' },
+          '.2 Back Biceps': { name: 'День 2 · Спина, бицепс', subtitle: 'Спина + бицепс', type: '2' },
+          '.3 Legs': { name: 'День 3 · Ноги', subtitle: 'Квадрицепс, бицепс бедра, ягодицы', type: '3' },
+          '.4 Shoulders Arms': { name: 'День 4 · Плечи, руки', subtitle: 'Плечи + бицепс + трицепс', type: '4' },
+        }
         const lastIdx = rotation.findIndex((r) => lastDone.name.startsWith(r))
         const nextIdx = (lastIdx + 1) % rotation.length
         const nextKey = rotation[nextIdx]
+        const lastKey = rotation[lastIdx]
 
         // Шаблон = последняя такая же тренировка
         const template = [...ppl].reverse().find((w) => w.name.startsWith(nextKey))
@@ -302,7 +406,7 @@
         const exercises = template.exercises
           .map((ex) => {
             const validSets = ex.sets.filter((s) => (s.reps || 0) > 0)
-            if (!validSets.length) return null // пропускаем упражнения без валидных подходов
+            if (!validSets.length) return null
             const meta = _getMeta(ex.id)
             return {
               id: ex.id,
@@ -317,42 +421,90 @@
           })
           .filter(Boolean)
 
-        // Отображаемые имена
-        const dayMeta = {
-          '.1 Chest Triceps': { name: 'День 1 · Грудь, трицепс', subtitle: 'Грудь + трицепс', type: '1' },
-          '.2 Back Biceps': { name: 'День 2 · Спина, бицепс', subtitle: 'Спина + бицепс', type: '2' },
-          '.3 Legs': { name: 'День 3 · Ноги', subtitle: 'Квадрицепс, бицепс бедра, ягодицы', type: '3' },
-          '.4 Shoulders Arms': { name: 'День 4 · Плечи, руки', subtitle: 'Плечи + бицепс + трицепс', type: '4' },
-        }[nextKey]
-
         const duration = Math.max(40, Math.min(75, exercises.length * 6 + 18))
 
         // Прогресс в текущем цикле: считаем последние 30 дней
-        const thirtyDaysAgo = new Date(today + 'T00:00:00Z')
-        thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30)
+        const thirtyDaysAgo = new Date(todayDate)
+        thirtyDaysAgo.setUTCDate(todayDate.getUTCDate() - 30)
         const cycleStartIso = thirtyDaysAgo.toISOString().slice(0, 10)
-        const completedInCycle = ppl.filter((w) => w.date >= cycleStartIso).length
-        const totalInCycle = 12 // плановые 12 тренировок в месяц (3/нед)
+        const monthlyWorkouts = ppl.filter((w) => w.date >= cycleStartIso)
+        const completedInCycle = monthlyWorkouts.length
+        const totalInCycle = 12
+
+        // Месячная статистика: тоннаж, подходы
+        const monthly = _computeMonthlyStats(monthlyWorkouts)
+
+        // Streak — подряд тренировок без разрыва > 3 дней
+        const streak = _computeStreak(monthlyWorkouts, todayDate)
+
+        // PR за месяц — самое значительное превышение веса
+        const recentPR = _findRecentPR(ppl)
+
+        // Неделя с начала программы (PPL стартовала со второго месяца)
+        const programStart = new Date(ppl[0].date + 'T00:00:00Z')
+        const programWeek = Math.ceil(_daysBetween(programStart, todayDate) / 7)
 
         // Последние 4 тренировки
-        const recent = ppl.slice(-4).reverse().map((w) => {
-          const key = rotation.find((r) => w.name.startsWith(r)) || rotation[0]
-          const meta = {
-            '.1 Chest Triceps': '1', '.2 Back Biceps': '2',
-            '.3 Legs': '3', '.4 Shoulders Arms': '4',
-          }[key]
-          return { label: _humanDate(w.date, today), type: meta }
-        })
+        const typeOf = (name) => {
+          const k = rotation.find((r) => name.startsWith(r)) || rotation[0]
+          return { '.1 Chest Triceps': '1', '.2 Back Biceps': '2',
+                   '.3 Legs': '3', '.4 Shoulders Arms': '4' }[k]
+        }
+        const recent = ppl.slice(-4).reverse().map((w) => ({
+          label: _humanDate(w.date, today),
+          type: typeOf(w.name),
+        }))
+
+        // AI-инсайт (для прототипа выбираем 1 из набора по дню)
+        // В проде — генерируется LLM-сервисом раз в день и кэшируется.
+        const insightPool = [
+          {
+            emoji: '⚖️',
+            text: 'За последний месяц грудь получила в 1.5× больше подходов, чем спина. На следующей неделе попробуй сместить акцент.',
+            cta: 'Сбалансировать',
+          },
+          {
+            emoji: '📈',
+            text: 'Жим лежа вырос с 60 до 81 кг за 4 месяца — можно поднять верхнюю границу повторов с 8 до 10.',
+            cta: 'Обновить план',
+          },
+          {
+            emoji: '💡',
+            text: 'Между подходами на ноги ты часто прерываешь отдых на 30+ секунд раньше. Попробуй полные 3 минуты — повторы дойдут.',
+            cta: 'Принято',
+          },
+          {
+            emoji: '🎯',
+            text: 'Streak 5 тренировок подряд — отличный темп. Не забывай про восстановление: один полный день отдыха раз в 5–7 дней.',
+            cta: 'Понял',
+          },
+        ]
+        const insight = insightPool[
+          (todayDate.getUTCDate() + todayDate.getUTCMonth()) % insightPool.length
+        ]
 
         return {
           name: 'PPL + Arms',
-          week: Math.ceil(ppl.length / 4),
+          goal: 'Набор массы',
+          week: programWeek,
           totalWorkouts: totalInCycle,
           completedWorkouts: Math.min(completedInCycle, totalInCycle),
+          // Контекст для главного экрана
+          today,
+          daysSinceLast,
+          lastDoneType: typeOf(lastDone.name),
+          lastDoneSubtitle: dayMeta[lastKey]?.subtitle ?? '',
+          monthly: {
+            tonnageKg: monthly.tonnage,
+            totalSets: monthly.sets,
+            streak,
+            pr: recentPR,
+          },
+          insight,
           nextWorkout: {
-            type: dayMeta.type,
-            name: dayMeta.name,
-            subtitle: dayMeta.subtitle,
+            type: dayMeta[nextKey].type,
+            name: dayMeta[nextKey].name,
+            subtitle: dayMeta[nextKey].subtitle,
             duration,
             exercises,
           },
@@ -368,19 +520,36 @@
 
       function HomeScreen({ onStartWorkout, onSwitchWorkout }) {
         const program = mockProgram
-        const progressPct = Math.round(
-          (program.completedWorkouts / program.totalWorkouts) * 100,
-        )
         const next = program.nextWorkout
+        const monthly = program.monthly
+        const insight = program.insight
+
+        // Контекст последней тренировки: "Прошло 2 дня после Дня 3"
+        const sinceText =
+          program.daysSinceLast === 0
+            ? 'сегодня'
+            : program.daysSinceLast === 1
+              ? 'вчера'
+              : `${program.daysSinceLast} дн. назад`
+
+        // Форматирование тоннажа: 18400 → "18.4т"
+        const formatTonnage = (kg) => {
+          if (kg >= 1000) return `${(kg / 1000).toFixed(1)}т`
+          return `${kg} кг`
+        }
 
         return html`
           <div class="h-full flex flex-col overflow-hidden">
-            <!-- Header -->
-            <div class="px-5 pt-8 pb-4">
+            <!-- Header: цель + неделя -->
+            <div class="px-5 pt-8 pb-3">
               <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-xs uppercase tracking-wider text-subtle">моя программа</div>
-                  <div class="text-xl font-semibold mt-1">${program.name}</div>
+                <div
+                  class="inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full bg-accent/10 border border-accent/20"
+                >
+                  <span class="text-base">🎯</span>
+                  <span class="text-xs font-medium text-accent">${program.goal}</span>
+                  <span class="text-xs text-accent/60">·</span>
+                  <span class="text-xs text-accent/80">${program.week} нед.</span>
                 </div>
                 <button
                   class="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-muted"
@@ -388,48 +557,46 @@
                   <${Icon} name="moreHorizontal" size=${18} />
                 </button>
               </div>
-
-              <!-- Progress -->
-              <div class="mt-5">
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-muted"
-                    >Неделя ${program.week} · ${program.completedWorkouts} из ${program.totalWorkouts} тренировок</span
-                  >
-                  <span class="text-accent font-medium">${progressPct}%</span>
-                </div>
-                <div class="mt-2 h-1.5 rounded-full bg-card overflow-hidden">
-                  <div
-                    class="h-full bg-gradient-to-r from-accent to-success"
-                    style=${{ width: `${progressPct}%` }}
-                  ></div>
-                </div>
-              </div>
             </div>
 
             <!-- Scrollable content -->
             <div class="flex-1 overflow-y-auto scroll-hide px-5 pb-28">
-              <!-- Next workout hero card -->
+              <!-- Hero: следующая тренировка -->
               <div class="fade-up">
                 <div
                   class="rounded-3xl p-5 border border-border"
                   style=${{
                     background:
-                      'linear-gradient(135deg, rgba(124, 92, 252, 0.18) 0%, rgba(52, 211, 153, 0.08) 100%)',
+                      'linear-gradient(135deg, rgba(124, 92, 252, 0.20) 0%, rgba(52, 211, 153, 0.08) 100%)',
                   }}
                 >
                   <div class="flex items-start justify-between">
-                    <div>
-                      <div class="text-xs uppercase tracking-wider text-accent">следующая</div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[11px] uppercase tracking-widest text-accent font-medium">
+                        следующая
+                      </div>
                       <div class="text-2xl font-semibold mt-1 leading-tight">${next.name}</div>
                       <div class="text-sm text-muted mt-1">${next.subtitle}</div>
                     </div>
                     <div
-                      class="w-14 h-14 rounded-2xl bg-accent/15 flex items-center justify-center text-accent"
+                      class="w-14 h-14 rounded-2xl bg-accent/15 flex items-center justify-center text-accent flex-shrink-0 ml-3"
                     >
                       <${Icon} name="dumbbell" size=${26} />
                     </div>
                   </div>
-                  <div class="flex items-center gap-4 mt-4 text-sm text-muted">
+
+                  <!-- Контекст: прошло X дней после последней -->
+                  <div
+                    class="mt-3 flex items-center gap-1.5 text-xs text-muted"
+                  >
+                    <${Icon} name="clock" size=${12} />
+                    <span>
+                      Последняя — День ${program.lastDoneType} · ${sinceText}
+                    </span>
+                  </div>
+
+                  <!-- Meta: упражнения и время -->
+                  <div class="flex items-center gap-4 mt-2 text-sm text-muted">
                     <div class="flex items-center gap-1.5">
                       <${Icon} name="dumbbell" size=${14} />
                       <span>${next.exercises.length} упражнений</span>
@@ -439,9 +606,10 @@
                       <span>~${next.duration} мин</span>
                     </div>
                   </div>
+
                   <button
                     onClick=${onStartWorkout}
-                    class="mt-5 w-full h-14 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+                    class="mt-5 w-full h-14 rounded-2xl bg-accent text-white font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98] shadow-[0_8px_24px_-8px_rgba(124,92,252,0.6)]"
                   >
                     <${Icon} name="play" size=${18} />
                     <span>Начать тренировку</span>
@@ -455,42 +623,74 @@
                 </div>
               </div>
 
-              <!-- Exercises preview -->
+              <!-- Этот месяц: статы 4×1 -->
               <div class="mt-6">
-                <div class="text-xs uppercase tracking-wider text-subtle mb-3">в тренировке</div>
-                <div class="space-y-2">
-                  ${next.exercises.slice(0, 4).map(
-                    (ex, i) => html`
-                      <div
-                        key=${ex.id}
-                        class="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border"
-                      >
-                        <div
-                          class="w-8 h-8 rounded-full bg-cardAlt flex items-center justify-center text-xs text-muted font-medium"
-                        >
-                          ${i + 1}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium truncate">${ex.name}</div>
-                          <div class="text-xs text-muted">
-                            ${ex.sets}×${ex.targetReps}${' '}· ${ex.muscles}
-                          </div>
-                        </div>
-                      </div>
-                    `,
-                  )}
-                  ${next.exercises.length > 4 &&
-                  html`
-                    <div class="text-center text-xs text-muted pt-1">
-                      + ${next.exercises.length - 4} ещё
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs uppercase tracking-wider text-subtle">этот месяц</div>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                  <${StatTile}
+                    value=${program.completedWorkouts}
+                    label="трен."
+                    color="accent"
+                  />
+                  <${StatTile}
+                    value=${formatTonnage(monthly.tonnageKg)}
+                    label="тоннаж"
+                    color="white"
+                  />
+                  <${StatTile}
+                    value=${`🔥${monthly.streak}`}
+                    label="подряд"
+                    color="white"
+                  />
+                  <${StatTile}
+                    value=${monthly.pr ? '🏆 1' : '—'}
+                    label="рекорд"
+                    color="success"
+                  />
+                </div>
+                ${monthly.pr &&
+                html`
+                  <div class="mt-2 text-[11px] text-muted text-center">
+                    Новый рекорд: ${monthly.pr.name} · ${monthly.pr.prevWeight}→${monthly.pr.weight} кг
+                  </div>
+                `}
+              </div>
+
+              <!-- AI-инсайт -->
+              <div class="mt-6">
+                <div
+                  class="rounded-3xl p-4 border border-accent/20 bg-cardAlt/40 fade-up"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-base">${insight.emoji}</span>
+                    <div class="text-xs uppercase tracking-wider text-accent font-medium">
+                      замечание тренера
                     </div>
-                  `}
+                  </div>
+                  <div class="mt-2 text-sm leading-relaxed text-white/90">
+                    ${insight.text}
+                  </div>
+                  <div class="mt-3 flex items-center gap-2">
+                    <button
+                      class="h-9 px-4 rounded-full bg-accent text-white text-xs font-medium"
+                    >
+                      ${insight.cta}
+                    </button>
+                    <button class="h-9 px-3 rounded-full text-xs text-muted">
+                      Не сейчас
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Recent workouts -->
+              <!-- Недавно -->
               <div class="mt-6">
-                <div class="text-xs uppercase tracking-wider text-subtle mb-3">недавно</div>
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs uppercase tracking-wider text-subtle">недавно</div>
+                  <button class="text-xs text-muted">Все →</button>
+                </div>
                 <div class="space-y-2">
                   ${program.recent.map(
                     (r, i) => html`
@@ -499,12 +699,12 @@
                         class="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border"
                       >
                         <div
-                          class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center text-success"
+                          class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center text-success font-bold text-xs"
                         >
-                          <${Icon} name="check" size=${14} />
+                          ${r.type}
                         </div>
                         <div class="flex-1">
-                          <div class="text-sm">Тренировка ${r.type}</div>
+                          <div class="text-sm">День ${r.type}</div>
                           <div class="text-xs text-muted">${r.label}</div>
                         </div>
                         <button class="text-muted">
@@ -518,6 +718,22 @@
             </div>
 
             <${BottomNav} active="home" />
+          </div>
+        `
+      }
+
+      // Маленькая плашка статистики
+      function StatTile({ value, label, color }) {
+        const valueCls =
+          color === 'accent'
+            ? 'text-accent'
+            : color === 'success'
+              ? 'text-success'
+              : 'text-white'
+        return html`
+          <div class="rounded-2xl bg-card border border-border p-3 text-center">
+            <div class=${`text-base font-semibold leading-none ${valueCls}`}>${value}</div>
+            <div class="text-[10px] text-subtle uppercase tracking-wider mt-1.5">${label}</div>
           </div>
         `
       }

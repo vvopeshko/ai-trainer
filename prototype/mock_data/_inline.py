@@ -105,21 +105,125 @@ def build_block(data: dict) -> str:
         return d.toLocaleDateString('ru-RU', {{ day: 'numeric', month: 'short' }})
       }}
 
+      function _daysBetween(a, b) {{
+        return Math.round((b - a) / 86400000)
+      }}
+
+      function _computeStreak(workouts, todayDate) {{
+        // Подряд сделанных тренировок без разрыва > 3 дней (с конца к началу).
+        let streak = 0
+        let prev = todayDate
+        for (const w of [...workouts].reverse()) {{
+          const wDate = new Date(w.date + 'T00:00:00Z')
+          if (_daysBetween(wDate, prev) > 3) break
+          streak += 1
+          prev = wDate
+        }}
+        return streak
+      }}
+
+      function _computeMonthlyStats(workouts) {{
+        let tonnage = 0
+        let totalSets = 0
+        for (const w of workouts) {{
+          for (const ex of w.exercises) {{
+            for (const s of ex.sets) {{
+              if ((s.weightKg || 0) > 0 && (s.reps || 0) > 0) {{
+                tonnage += s.weightKg * s.reps
+                totalSets += 1
+              }} else if ((s.reps || 0) > 0) {{
+                totalSets += 1
+              }}
+            }}
+          }}
+        }}
+        return {{ tonnage: Math.round(tonnage), sets: totalSets }}
+      }}
+
+      function _findRecentPR(workouts) {{
+        // PR за последние 30 дней против предыдущих 30–90 дней.
+        // Сравниваем не с all-time max, а с прошлым месяцем —
+        // так не ловим артефакты смены тренажёра под тем же именем.
+        if (!workouts.length) return null
+        const todayDate = new Date(workouts[workouts.length - 1].date + 'T00:00:00Z')
+        const cutoffRecent = new Date(todayDate)
+        cutoffRecent.setUTCDate(todayDate.getUTCDate() - 30)
+        const cutoffPrev = new Date(todayDate)
+        cutoffPrev.setUTCDate(todayDate.getUTCDate() - 90)
+        const cutoffRecentIso = cutoffRecent.toISOString().slice(0, 10)
+        const cutoffPrevIso = cutoffPrev.toISOString().slice(0, 10)
+
+        const exMaxRecent = new Map() // последние 30 дней
+        const exMaxPrev = new Map() // 30-90 дней назад
+        const exSessionsPrev = new Map()
+
+        for (const w of workouts) {{
+          const isRecent = w.date >= cutoffRecentIso
+          const isPrev = !isRecent && w.date >= cutoffPrevIso
+          if (!isRecent && !isPrev) continue
+          for (const ex of w.exercises) {{
+            if (isPrev) {{
+              exSessionsPrev.set(ex.id, (exSessionsPrev.get(ex.id) || 0) + 1)
+            }}
+            for (const s of ex.sets) {{
+              if (!s.weightKg) continue
+              const target = isRecent ? exMaxRecent : exMaxPrev
+              const cur = target.get(ex.id) || 0
+              if (s.weightKg > cur) target.set(ex.id, s.weightKg)
+            }}
+          }}
+        }}
+
+        let best = null
+        for (const [id, recent] of exMaxRecent) {{
+          const prev = exMaxPrev.get(id) || 0
+          const sessionsPrev = exSessionsPrev.get(id) || 0
+          if (sessionsPrev < 3) continue // нужна устойчивая база
+          if (prev <= 0) continue
+          if (recent <= prev) continue
+          const delta = recent - prev
+          if (delta < 2.5) continue // незначительный прирост
+          const growthPct = (delta / prev) * 100
+          if (growthPct > 30) continue // подозрительно большой скачок (смена тренажёра?)
+          const ex = workouts.flatMap((w) => w.exercises).find((e) => e.id === id)
+          if (!ex) continue
+          if (!best || delta > best.delta) {{
+            best = {{ id, name: ex.name, weight: recent, prevWeight: prev, delta }}
+          }}
+        }}
+        return best
+      }}
+
       // ─── Построение mockProgram из реальных данных ─────────────────
       function buildMockProgram() {{
         const all = WORKOUTS_DATA.workouts
-        // Текущая программа = PPL+Arms (последняя активная)
         const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
         if (!ppl.length) throw new Error('Нет данных по программе PPL+Arms')
 
         const lastDone = ppl[ppl.length - 1]
-        const today = lastDone.date // симулируем "сегодня" = день после последней тренировки
+
+        // "Сегодня" = день после последней тренировки.
+        const todayDate = new Date(lastDone.date + 'T00:00:00Z')
+        todayDate.setUTCDate(todayDate.getUTCDate() + 1)
+        const today = todayDate.toISOString().slice(0, 10)
+
+        const daysSinceLast = _daysBetween(
+          new Date(lastDone.date + 'T00:00:00Z'),
+          todayDate,
+        )
 
         // Ротация 4-дневного сплита
         const rotation = ['.1 Chest Triceps', '.2 Back Biceps', '.3 Legs', '.4 Shoulders Arms']
+        const dayMeta = {{
+          '.1 Chest Triceps': {{ name: 'День 1 · Грудь, трицепс', subtitle: 'Грудь + трицепс + плечи', type: '1' }},
+          '.2 Back Biceps': {{ name: 'День 2 · Спина, бицепс', subtitle: 'Спина + бицепс', type: '2' }},
+          '.3 Legs': {{ name: 'День 3 · Ноги', subtitle: 'Квадрицепс, бицепс бедра, ягодицы', type: '3' }},
+          '.4 Shoulders Arms': {{ name: 'День 4 · Плечи, руки', subtitle: 'Плечи + бицепс + трицепс', type: '4' }},
+        }}
         const lastIdx = rotation.findIndex((r) => lastDone.name.startsWith(r))
         const nextIdx = (lastIdx + 1) % rotation.length
         const nextKey = rotation[nextIdx]
+        const lastKey = rotation[lastIdx]
 
         // Шаблон = последняя такая же тренировка
         const template = [...ppl].reverse().find((w) => w.name.startsWith(nextKey))
@@ -130,7 +234,7 @@ def build_block(data: dict) -> str:
         const exercises = template.exercises
           .map((ex) => {{
             const validSets = ex.sets.filter((s) => (s.reps || 0) > 0)
-            if (!validSets.length) return null // пропускаем упражнения без валидных подходов
+            if (!validSets.length) return null
             const meta = _getMeta(ex.id)
             return {{
               id: ex.id,
@@ -145,42 +249,90 @@ def build_block(data: dict) -> str:
           }})
           .filter(Boolean)
 
-        // Отображаемые имена
-        const dayMeta = {{
-          '.1 Chest Triceps': {{ name: 'День 1 · Грудь, трицепс', subtitle: 'Грудь + трицепс', type: '1' }},
-          '.2 Back Biceps': {{ name: 'День 2 · Спина, бицепс', subtitle: 'Спина + бицепс', type: '2' }},
-          '.3 Legs': {{ name: 'День 3 · Ноги', subtitle: 'Квадрицепс, бицепс бедра, ягодицы', type: '3' }},
-          '.4 Shoulders Arms': {{ name: 'День 4 · Плечи, руки', subtitle: 'Плечи + бицепс + трицепс', type: '4' }},
-        }}[nextKey]
-
         const duration = Math.max(40, Math.min(75, exercises.length * 6 + 18))
 
         // Прогресс в текущем цикле: считаем последние 30 дней
-        const thirtyDaysAgo = new Date(today + 'T00:00:00Z')
-        thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30)
+        const thirtyDaysAgo = new Date(todayDate)
+        thirtyDaysAgo.setUTCDate(todayDate.getUTCDate() - 30)
         const cycleStartIso = thirtyDaysAgo.toISOString().slice(0, 10)
-        const completedInCycle = ppl.filter((w) => w.date >= cycleStartIso).length
-        const totalInCycle = 12 // плановые 12 тренировок в месяц (3/нед)
+        const monthlyWorkouts = ppl.filter((w) => w.date >= cycleStartIso)
+        const completedInCycle = monthlyWorkouts.length
+        const totalInCycle = 12
+
+        // Месячная статистика: тоннаж, подходы
+        const monthly = _computeMonthlyStats(monthlyWorkouts)
+
+        // Streak — подряд тренировок без разрыва > 3 дней
+        const streak = _computeStreak(monthlyWorkouts, todayDate)
+
+        // PR за месяц — самое значительное превышение веса
+        const recentPR = _findRecentPR(ppl)
+
+        // Неделя с начала программы (PPL стартовала со второго месяца)
+        const programStart = new Date(ppl[0].date + 'T00:00:00Z')
+        const programWeek = Math.ceil(_daysBetween(programStart, todayDate) / 7)
 
         // Последние 4 тренировки
-        const recent = ppl.slice(-4).reverse().map((w) => {{
-          const key = rotation.find((r) => w.name.startsWith(r)) || rotation[0]
-          const meta = {{
-            '.1 Chest Triceps': '1', '.2 Back Biceps': '2',
-            '.3 Legs': '3', '.4 Shoulders Arms': '4',
-          }}[key]
-          return {{ label: _humanDate(w.date, today), type: meta }}
-        }})
+        const typeOf = (name) => {{
+          const k = rotation.find((r) => name.startsWith(r)) || rotation[0]
+          return {{ '.1 Chest Triceps': '1', '.2 Back Biceps': '2',
+                   '.3 Legs': '3', '.4 Shoulders Arms': '4' }}[k]
+        }}
+        const recent = ppl.slice(-4).reverse().map((w) => ({{
+          label: _humanDate(w.date, today),
+          type: typeOf(w.name),
+        }}))
+
+        // AI-инсайт (для прототипа выбираем 1 из набора по дню)
+        // В проде — генерируется LLM-сервисом раз в день и кэшируется.
+        const insightPool = [
+          {{
+            emoji: '⚖️',
+            text: 'За последний месяц грудь получила в 1.5× больше подходов, чем спина. На следующей неделе попробуй сместить акцент.',
+            cta: 'Сбалансировать',
+          }},
+          {{
+            emoji: '📈',
+            text: 'Жим лежа вырос с 60 до 81 кг за 4 месяца — можно поднять верхнюю границу повторов с 8 до 10.',
+            cta: 'Обновить план',
+          }},
+          {{
+            emoji: '💡',
+            text: 'Между подходами на ноги ты часто прерываешь отдых на 30+ секунд раньше. Попробуй полные 3 минуты — повторы дойдут.',
+            cta: 'Принято',
+          }},
+          {{
+            emoji: '🎯',
+            text: 'Streak 5 тренировок подряд — отличный темп. Не забывай про восстановление: один полный день отдыха раз в 5–7 дней.',
+            cta: 'Понял',
+          }},
+        ]
+        const insight = insightPool[
+          (todayDate.getUTCDate() + todayDate.getUTCMonth()) % insightPool.length
+        ]
 
         return {{
           name: 'PPL + Arms',
-          week: Math.ceil(ppl.length / 4),
+          goal: 'Набор массы',
+          week: programWeek,
           totalWorkouts: totalInCycle,
           completedWorkouts: Math.min(completedInCycle, totalInCycle),
+          // Контекст для главного экрана
+          today,
+          daysSinceLast,
+          lastDoneType: typeOf(lastDone.name),
+          lastDoneSubtitle: dayMeta[lastKey]?.subtitle ?? '',
+          monthly: {{
+            tonnageKg: monthly.tonnage,
+            totalSets: monthly.sets,
+            streak,
+            pr: recentPR,
+          }},
+          insight,
           nextWorkout: {{
-            type: dayMeta.type,
-            name: dayMeta.name,
-            subtitle: dayMeta.subtitle,
+            type: dayMeta[nextKey].type,
+            name: dayMeta[nextKey].name,
+            subtitle: dayMeta[nextKey].subtitle,
             duration,
             exercises,
           }},
