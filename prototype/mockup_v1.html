@@ -687,19 +687,54 @@
             Math.max(1, monthlyWorkouts.length),
         )
 
+        // Все 4 дня программы: для экрана редактирования.
+        // Берём последний шаблон каждого дня из истории.
+        const programDays = rotation
+          .map((key) => {
+            const tpl = [...ppl].reverse().find((w) => w.name.startsWith(key))
+            if (!tpl) return null
+            const exs = tpl.exercises
+              .map((ex) => {
+                const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+                if (!valid.length) return null
+                const meta = _getMeta(ex.id)
+                return {
+                  id: ex.id,
+                  name: ex.name,
+                  sets: valid.length,
+                  targetReps: _derivTargetReps(valid),
+                  muscles: meta.muscles,
+                  bodyweight: ex.bodyweight,
+                }
+              })
+              .filter(Boolean)
+            return {
+              key,
+              type: dayMeta[key].type,
+              name: dayMeta[key].name,
+              subtitle: dayMeta[key].subtitle,
+              duration: Math.max(40, Math.min(75, exs.length * 6 + 18)),
+              exercises: exs,
+            }
+          })
+          .filter(Boolean)
+
         return {
           name: 'PPL + Arms',
           goal: 'Набор массы',
           week: programWeek,
           totalWorkouts: totalInCycle,
           completedWorkouts: Math.min(completedInCycle, totalInCycle),
-          // Описание программы для home-блока
+          // Описание программы для home-блока + экрана редактирования
           description: {
             split: 'Push / Pull / Legs / Arms',
             daysPerWeek,
             difficulty: 'Средний',
             avgExercisesPerDay,
+            focus: 'Гипертрофия с акцентом на грудь, спину и плечи. Чередуем верх и низ, на 4-й день — изоляция плеч и рук.',
           },
+          // Все 4 дня программы — список для экрана редактирования
+          days: programDays,
           // Контекст для главного экрана
           today,
           daysSinceLast,
@@ -1244,14 +1279,12 @@
       // ЭКРАН: ГЛАВНЫЙ "ПРОГРАММА"
       // ═══════════════════════════════════════════════════════════════
 
-      function HomeScreen({ onStartWorkout, onSwitchWorkout, onNav }) {
+      function HomeScreen({ onStartWorkout, onSwitchWorkout, onNav, onEditProgram }) {
         const program = mockProgram
         const next = program.nextWorkout
         const monthly = program.monthly
         const insight = program.insight
         const desc = program.description
-
-        const [programMenuOpen, setProgramMenuOpen] = useState(false)
 
         // Контекст последней тренировки: "Прошло 2 дня после Дня 3"
         const sinceText =
@@ -1301,7 +1334,7 @@
                 >
                   <!-- Programme header — вся строка кликабельна, открывает меню изменения -->
                   <button
-                    onClick=${() => setProgramMenuOpen(true)}
+                    onClick=${onEditProgram}
                     class="w-full px-4 py-4 flex items-center gap-3 active:bg-white/[0.04] transition-colors text-left"
                     aria-label="Программа · нажми для изменения"
                   >
@@ -1473,13 +1506,6 @@
             </div>
 
             <${BottomNav} active="home" onChange=${onNav} />
-            ${programMenuOpen &&
-            html`
-              <${ProgramMenuModal}
-                program=${program}
-                onClose=${() => setProgramMenuOpen(false)}
-              />
-            `}
           </div>
         `
       }
@@ -3706,6 +3732,265 @@
         `
       }
 
+      // ═══════════════════════════════════════════════════════════════
+      // ЭКРАН: РЕДАКТИРОВАНИЕ ПРОГРАММЫ
+      // Открывается тапом на programme-strip на главном экране.
+      // ═══════════════════════════════════════════════════════════════
+
+      function ProgramEditScreen({ onExit, onNav }) {
+        const program = mockProgram
+        const desc = program.description
+        const data = mockProgress
+        // Локальное состояние дней — позволяет удалять упражнения и т.д.
+        const [days, setDays] = useState(() =>
+          program.days.map((d) => ({ ...d, exercises: [...d.exercises] })),
+        )
+        const [expanded, setExpanded] = useState(new Set([0])) // первая открыта по умолчанию
+        const [dirty, setDirty] = useState(false)
+
+        const toggleDay = (idx) => {
+          setExpanded((prev) => {
+            const next = new Set(prev)
+            if (next.has(idx)) next.delete(idx)
+            else next.add(idx)
+            return next
+          })
+        }
+        const removeExercise = (dayIdx, exIdx) => {
+          setDays((prev) =>
+            prev.map((d, i) =>
+              i !== dayIdx ? d : { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) },
+            ),
+          )
+          setDirty(true)
+        }
+
+        return html`
+          <div class="h-full flex flex-col overflow-hidden">
+            <!-- Top bar -->
+            <div class="px-4 pt-6 pb-3 flex items-center justify-between border-b border-border">
+              <button
+                onClick=${onExit}
+                class="w-9 h-9 rounded-full bg-card flex items-center justify-center text-muted"
+                aria-label="Назад"
+              >
+                <${Icon} name="chevronLeft" size=${18} />
+              </button>
+              <div class="text-center min-w-0 flex-1 px-3">
+                <div class="text-sm font-semibold truncate">Программа</div>
+              </div>
+              <button
+                onClick=${() => {
+                  if (dirty) alert('Изменения сохранены (заглушка)')
+                  onExit()
+                }}
+                class=${`px-3 h-9 rounded-full text-xs font-medium ${dirty ? 'bg-accent text-white' : 'bg-card text-muted border border-border'}`}
+              >
+                ${dirty ? 'Сохранить' : 'Готово'}
+              </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto scroll-hide px-4 pb-28">
+              <!-- 1. Описание программы -->
+              <div class="mt-4 rounded-3xl border border-border p-4"
+                style=${{
+                  background:
+                    'linear-gradient(135deg, rgba(124, 92, 252, 0.18) 0%, rgba(52, 211, 153, 0.06) 100%)',
+                }}
+              >
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent flex-shrink-0"
+                  >
+                    <${Icon} name="zap" size=${18} />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-base font-semibold">${program.name}</div>
+                    <div class="text-[12px] text-muted mt-0.5">
+                      ${desc.split} · ${desc.daysPerWeek} дн./нед · ${desc.difficulty}
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 text-[13px] leading-relaxed text-white/80">${desc.focus}</div>
+                <div class="mt-3 flex items-center gap-2 flex-wrap">
+                  <div
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-medium"
+                  >
+                    🎯 ${program.goal}
+                  </div>
+                  <div
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-medium"
+                  >
+                    ${days.length} дн.
+                  </div>
+                  <div
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-medium"
+                  >
+                    ${desc.avgExercisesPerDay} упр./день
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Цели по мышцам -->
+              <div class="mt-6">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs uppercase tracking-wider text-subtle">
+                    цели по мышцам · неделя
+                  </div>
+                  <div class="text-[10px] text-subtle">подходов</div>
+                </div>
+                <div class="rounded-2xl bg-card border border-border overflow-hidden">
+                  ${(data?.muscleGroups || []).map(
+                    (g, i) => html`
+                      <div
+                        key=${g.key}
+                        class=${`flex items-center gap-3 px-4 py-3 ${i > 0 ? 'border-t border-white/5' : ''}`}
+                      >
+                        <span class="text-base flex-shrink-0">${g.emoji}</span>
+                        <div class="text-sm flex-1 min-w-0">${g.label}</div>
+                        <div class="flex items-baseline gap-1 flex-shrink-0">
+                          <span class="text-sm font-semibold tabular-nums">${g.min}–${g.max}</span>
+                          <span class="text-[10px] text-subtle">подх.</span>
+                        </div>
+                      </div>
+                    `,
+                  )}
+                </div>
+              </div>
+
+              <!-- 3. Тренировочные дни -->
+              <div class="mt-6">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs uppercase tracking-wider text-subtle">
+                    тренировочные дни
+                  </div>
+                  <div class="text-[10px] text-subtle">${days.length} шт.</div>
+                </div>
+                <div class="space-y-3">
+                  ${days.map(
+                    (day, dayIdx) => html`
+                      <${DayCard}
+                        key=${day.key}
+                        day=${day}
+                        dayIdx=${dayIdx}
+                        expanded=${expanded.has(dayIdx)}
+                        onToggle=${() => toggleDay(dayIdx)}
+                        onRemoveExercise=${(exIdx) => removeExercise(dayIdx, exIdx)}
+                      />
+                    `,
+                  )}
+                </div>
+              </div>
+
+              <!-- 4. Действия -->
+              <div class="mt-8 space-y-2">
+                <button
+                  onClick=${() => {
+                    alert(dirty ? 'Изменения сохранены (заглушка)' : 'Нет изменений')
+                    setDirty(false)
+                  }}
+                  class=${`w-full h-13 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98] ${dirty ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgba(124,92,252,0.6)]' : 'bg-cardAlt text-muted'}`}
+                  style=${{ height: '52px' }}
+                >
+                  <${Icon} name="check" size=${18} />
+                  <span>Сохранить изменения</span>
+                </button>
+                <button
+                  class="w-full h-12 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-2"
+                >
+                  <${Icon} name="book" size=${15} />
+                  <span>Выбрать из сохранённых</span>
+                </button>
+                <button
+                  class="w-full h-12 rounded-xl bg-card border border-border text-sm text-muted flex items-center justify-center gap-2"
+                >
+                  <${Icon} name="messageCircle" size=${15} />
+                  <span>Пересобрать с тренером</span>
+                </button>
+              </div>
+            </div>
+
+            <${BottomNav} active="home" onChange=${onNav} />
+          </div>
+        `
+      }
+
+      // Карточка одного дня программы — сворачивается/разворачивается
+      function DayCard({ day, dayIdx, expanded, onToggle, onRemoveExercise }) {
+        const dayColors = {
+          1: 'bg-accent/15 text-accent',
+          2: 'bg-success/15 text-success',
+          3: 'bg-yellow-400/15 text-yellow-400',
+          4: 'bg-pink-400/15 text-pink-400',
+        }
+        const badge = dayColors[day.type] || 'bg-cardAlt text-muted'
+
+        return html`
+          <div class="rounded-2xl bg-card border border-border overflow-hidden">
+            <button
+              onClick=${onToggle}
+              class="w-full flex items-center gap-3 px-4 py-3 active:bg-white/[0.03] transition-colors text-left"
+            >
+              <div
+                class=${`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${badge}`}
+              >
+                ${day.type}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold truncate">${day.name}</div>
+                <div class="text-[11px] text-muted">
+                  ${day.exercises.length} упр. · ~${day.duration} мин · ${day.subtitle}
+                </div>
+              </div>
+              <div
+                class=${`w-7 h-7 rounded-full bg-cardAlt flex items-center justify-center text-muted flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
+              >
+                <${Icon} name="chevronRight" size=${14} />
+              </div>
+            </button>
+
+            ${expanded &&
+            html`
+              <div class="border-t border-white/5">
+                ${day.exercises.map(
+                  (ex, exIdx) => html`
+                    <div
+                      key=${exIdx}
+                      class=${`flex items-center gap-3 px-4 py-2.5 ${exIdx > 0 ? 'border-t border-white/5' : ''}`}
+                    >
+                      <div
+                        class="w-6 h-6 rounded-full bg-cardAlt text-[11px] font-medium text-muted flex items-center justify-center flex-shrink-0"
+                      >
+                        ${exIdx + 1}
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-[13px] truncate">${ex.name}</div>
+                        <div class="text-[11px] text-muted">
+                          ${ex.sets}×${ex.targetReps} · ${ex.muscles}
+                        </div>
+                      </div>
+                      <button
+                        onClick=${() => onRemoveExercise(exIdx)}
+                        class="w-7 h-7 rounded-full bg-cardAlt/60 flex items-center justify-center text-muted active:scale-95 transition-transform flex-shrink-0"
+                        aria-label="Убрать упражнение"
+                      >
+                        <${Icon} name="x" size=${13} />
+                      </button>
+                    </div>
+                  `,
+                )}
+                <button
+                  class="w-full px-4 py-3 text-[12px] text-muted border-t border-white/5 flex items-center justify-center gap-1.5 active:bg-white/[0.03]"
+                >
+                  <${Icon} name="plus" size=${13} />
+                  <span>Добавить упражнение</span>
+                </button>
+              </div>
+            `}
+          </div>
+        `
+      }
+
       function BottomNav({ active, onChange }) {
         const items = [
           { key: 'home', label: 'Программа', icon: 'dumbbell' },
@@ -3809,15 +4094,14 @@
       // ═══════════════════════════════════════════════════════════════
 
       function App() {
-        // home | workout | summary | progress | library | profile
+        // home | workout | summary | progress | programEdit | library | profile
         const [screen, setScreen] = useState('home')
         const [switchModal, setSwitchModal] = useState(false)
 
         const handleNav = (key) => {
-          if (key === 'home' || key === 'progress') {
+          if (key === 'home' || key === 'progress' || key === 'programEdit') {
             setScreen(key)
           } else {
-            // Library и Profile — пока заглушки
             alert(`Экран "${key}" пока не реализован в прототипе`)
           }
         }
@@ -3828,6 +4112,7 @@
             <${HomeScreen}
               onStartWorkout=${() => setScreen('workout')}
               onSwitchWorkout=${() => setSwitchModal(true)}
+              onEditProgram=${() => setScreen('programEdit')}
               onNav=${handleNav}
             />
           `}
@@ -3842,6 +4127,13 @@
           html`<${SummaryScreen} onHome=${() => setScreen('home')} />`}
           ${screen === 'progress' &&
           html`<${ProgressScreen} onNav=${handleNav} />`}
+          ${screen === 'programEdit' &&
+          html`
+            <${ProgramEditScreen}
+              onExit=${() => setScreen('home')}
+              onNav=${handleNav}
+            />
+          `}
           ${switchModal &&
           html`
             <${SwitchWorkoutModal}

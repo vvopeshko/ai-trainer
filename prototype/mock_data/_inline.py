@@ -515,19 +515,54 @@ def build_block(data: dict) -> str:
             Math.max(1, monthlyWorkouts.length),
         )
 
+        // Все 4 дня программы: для экрана редактирования.
+        // Берём последний шаблон каждого дня из истории.
+        const programDays = rotation
+          .map((key) => {{
+            const tpl = [...ppl].reverse().find((w) => w.name.startsWith(key))
+            if (!tpl) return null
+            const exs = tpl.exercises
+              .map((ex) => {{
+                const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+                if (!valid.length) return null
+                const meta = _getMeta(ex.id)
+                return {{
+                  id: ex.id,
+                  name: ex.name,
+                  sets: valid.length,
+                  targetReps: _derivTargetReps(valid),
+                  muscles: meta.muscles,
+                  bodyweight: ex.bodyweight,
+                }}
+              }})
+              .filter(Boolean)
+            return {{
+              key,
+              type: dayMeta[key].type,
+              name: dayMeta[key].name,
+              subtitle: dayMeta[key].subtitle,
+              duration: Math.max(40, Math.min(75, exs.length * 6 + 18)),
+              exercises: exs,
+            }}
+          }})
+          .filter(Boolean)
+
         return {{
           name: 'PPL + Arms',
           goal: 'Набор массы',
           week: programWeek,
           totalWorkouts: totalInCycle,
           completedWorkouts: Math.min(completedInCycle, totalInCycle),
-          // Описание программы для home-блока
+          // Описание программы для home-блока + экрана редактирования
           description: {{
             split: 'Push / Pull / Legs / Arms',
             daysPerWeek,
             difficulty: 'Средний',
             avgExercisesPerDay,
+            focus: 'Гипертрофия с акцентом на грудь, спину и плечи. Чередуем верх и низ, на 4-й день — изоляция плеч и рук.',
           }},
+          // Все 4 дня программы — список для экрана редактирования
+          days: programDays,
           // Контекст для главного экрана
           today,
           daysSinceLast,
