@@ -86,6 +86,72 @@ def build_block(data: dict) -> str:
         return EXERCISE_META[id] || {{ muscles: '—', restSec: 90 }}
       }}
 
+      // Таблица заранее подготовленных альтернатив по упражнениям.
+      // В реальном бэке это поле upcoming Program.exercises[i].alternatives[].
+      // Сценарий: тренажёр занят / устал / хочется разнообразия — переключаешься
+      // одним тапом на альтернативу, не дёргая AI.
+      const ALT_SWAPS = {{
+        'pull-up': ['lat-pulldown-narrow', 'lat-pulldown-wide'],
+        'chin-up': ['lat-pulldown-narrow', 'pull-up'],
+        'lat-pulldown-narrow': ['lat-pulldown-wide', 'pull-up', 'seated-row'],
+        'lat-pulldown-wide': ['lat-pulldown-narrow', 'pull-up'],
+        'seated-row': ['seated-row-wide', 'lat-pulldown-wide', 'incline-row-db'],
+        'seated-row-wide': ['seated-row', 'lat-pulldown-wide', 'incline-row-db'],
+        'incline-row-db': ['seated-row', 'row-single-arm-l-db'],
+        'cable-face-pull': ['reverse-fly-db', 'machine-shoulder-fly'],
+        'machine-chest-press': ['smith-machine-incline-bench-press', 'bench-press-db'],
+        'smith-machine-incline-bench-press': ['machine-chest-press', 'bench-press-db', 'machine-incline-press'],
+        'bench-press-db': ['machine-chest-press', 'smith-machine-incline-bench-press'],
+        'machine-chest-fly': ['pec-fly', 'standing-cable-crossover'],
+        'pec-fly': ['machine-chest-fly', 'standing-cable-crossover'],
+        'dip': ['triceps-extension-rope', 'machine-chest-press'],
+        'triceps-extension-rope': ['triceps-pulldown-rope', 'dip'],
+        'triceps-pulldown-rope': ['triceps-extension-rope'],
+        'lateral-raise-machine': ['lateral-raise-db'],
+        'lateral-raise-db': ['lateral-raise-machine', 'upright-row-cable'],
+        'reverse-fly-db': ['cable-face-pull', 'machine-shoulder-fly'],
+        'machine-shoulder-fly': ['cable-face-pull', 'reverse-fly-db'],
+        'biceps-curl-cable': ['biceps-curl-db', 'hammer-curl-db'],
+        'biceps-curl-db': ['biceps-curl-cable', 'hammer-curl-db'],
+        'hammer-curl-db': ['biceps-curl-db', 'reverse-curl-barbell'],
+        'reverse-curl-barbell': ['hammer-curl-db', 'biceps-curl-db'],
+        'leg-press': ['seated-leg-extension'],
+        'seated-leg-extension': ['leg-press'],
+        'prone-leg-curl': ['rfess-l-db'],
+        'crunches': ['hanging-leg-raises'],
+        'hanging-leg-raises': ['crunches'],
+      }}
+
+      // Для альтернативы строим карточку: имя, мышцы, последняя сессия.
+      function _buildAlternatives(exId, allWorkouts) {{
+        const altIds = ALT_SWAPS[exId] || []
+        const result = []
+        for (const altId of altIds) {{
+          // Последнее использование альтернативы в истории
+          let last = null
+          for (let i = allWorkouts.length - 1; i >= 0; i--) {{
+            const ex = allWorkouts[i].exercises.find((e) => e.id === altId)
+            if (ex) {{
+              last = {{ ex, date: allWorkouts[i].date }}
+              break
+            }}
+          }}
+          if (!last) continue
+          const meta = _getMeta(altId)
+          const validSets = last.ex.sets.filter((s) => (s.reps || 0) > 0)
+          if (!validSets.length) continue // нет валидных подходов в истории
+          result.push({{
+            id: altId,
+            name: last.ex.name,
+            muscles: meta.muscles,
+            bodyweight: last.ex.bodyweight,
+            lastSets: validSets.map((s) => ({{ weight: s.weightKg || 0, reps: s.reps }})),
+            lastUsed: last.date,
+          }})
+        }}
+        return result
+      }}
+
       function _derivTargetReps(sets) {{
         const reps = sets.map((s) => s.reps).filter((r) => r > 0)
         if (!reps.length) return '—'
@@ -229,8 +295,8 @@ def build_block(data: dict) -> str:
         const template = [...ppl].reverse().find((w) => w.name.startsWith(nextKey))
         if (!template) throw new Error(`Нет истории для ${{nextKey}}`)
 
-        // Упражнения шаблона с метаданными.
-        // Фильтруем подходы с reps=0 (это нестандартные заметки вроде "дропсеты").
+        // Упражнения шаблона с метаданными + альтернативами.
+        // Фильтруем подходы с reps=0 (нестандартные заметки вроде "дропсеты").
         const exercises = template.exercises
           .map((ex) => {{
             const validSets = ex.sets.filter((s) => (s.reps || 0) > 0)
@@ -245,6 +311,7 @@ def build_block(data: dict) -> str:
               muscles: meta.muscles,
               prev: validSets.map((s) => ({{ weight: s.weightKg || 0, reps: s.reps }})),
               bodyweight: ex.bodyweight,
+              alternatives: _buildAlternatives(ex.id, all),
             }}
           }})
           .filter(Boolean)
@@ -311,12 +378,27 @@ def build_block(data: dict) -> str:
           (todayDate.getUTCDate() + todayDate.getUTCMonth()) % insightPool.length
         ]
 
+        // Описание программы — для блока "Моя программа" на главном экране.
+        // Дни/нед — оценка средней частоты тренировок за последний месяц.
+        const daysPerWeek = monthlyWorkouts.length >= 12 ? 4 : monthlyWorkouts.length >= 8 ? 3 : 2
+        const avgExercisesPerDay = Math.round(
+          monthlyWorkouts.reduce((s, w) => s + w.exercises.length, 0) /
+            Math.max(1, monthlyWorkouts.length),
+        )
+
         return {{
           name: 'PPL + Arms',
           goal: 'Набор массы',
           week: programWeek,
           totalWorkouts: totalInCycle,
           completedWorkouts: Math.min(completedInCycle, totalInCycle),
+          // Описание программы для home-блока
+          description: {{
+            split: 'Push / Pull / Legs / Arms',
+            daysPerWeek,
+            difficulty: 'Средний',
+            avgExercisesPerDay,
+          }},
           // Контекст для главного экрана
           today,
           daysSinceLast,
