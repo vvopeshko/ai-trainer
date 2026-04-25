@@ -563,6 +563,22 @@ def build_block(data: dict) -> str:
           }},
           // Все 4 дня программы — список для экрана редактирования
           days: programDays,
+          // Годовая статистика для шапки
+          yearStats: (() => {{
+            const year = todayDate.getUTCFullYear()
+            const yearStartIso = `${{year}}-01-01`
+            const done = all.filter((w) => w.date >= yearStartIso).length
+            // Цель = daysPerWeek × 52 недели
+            const target = daysPerWeek * 52
+            return {{ year, done, target }}
+          }})(),
+          // Профиль (моковый, в проде придёт от Telegram + UserProfile)
+          profile: {{
+            firstName: 'Виктор',
+            lastName: 'В.',
+            initials: 'В',
+            photoUrl: null,
+          }},
           // Контекст для главного экрана
           today,
           daysSinceLast,

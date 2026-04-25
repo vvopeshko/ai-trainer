@@ -735,6 +735,22 @@
           },
           // Все 4 дня программы — список для экрана редактирования
           days: programDays,
+          // Годовая статистика для шапки
+          yearStats: (() => {
+            const year = todayDate.getUTCFullYear()
+            const yearStartIso = `${year}-01-01`
+            const done = all.filter((w) => w.date >= yearStartIso).length
+            // Цель = daysPerWeek × 52 недели
+            const target = daysPerWeek * 52
+            return { year, done, target }
+          })(),
+          // Профиль (моковый, в проде придёт от Telegram + UserProfile)
+          profile: {
+            firstName: 'Виктор',
+            lastName: 'В.',
+            initials: 'В',
+            photoUrl: null,
+          },
           // Контекст для главного экрана
           today,
           daysSinceLast,
@@ -1302,19 +1318,51 @@
 
         return html`
           <div class="h-full flex flex-col overflow-hidden">
-            <!-- Header: цель + неделя -->
+            <!-- Header: аватар + годовая цель + меню -->
             <div class="px-5 pt-8 pb-3">
-              <div class="flex items-center justify-between">
-                <div
-                  class="inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full bg-accent/10 border border-accent/20"
-                >
-                  <span class="text-base">🎯</span>
-                  <span class="text-xs font-medium text-accent">${program.goal}</span>
-                  <span class="text-xs text-accent/60">·</span>
-                  <span class="text-xs text-accent/80">${program.week} нед.</span>
-                </div>
+              <div class="flex items-center gap-3">
+                <!-- Аватар (точка входа в Профиль) -->
                 <button
-                  class="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-muted"
+                  onClick=${() => onNav('profile')}
+                  class="w-10 h-10 rounded-full bg-gradient-to-br from-accent/40 to-success/30 border border-white/10 flex items-center justify-center text-sm font-semibold flex-shrink-0 active:scale-95 transition-transform"
+                  aria-label="Профиль"
+                >
+                  ${program.profile.photoUrl
+                    ? html`<img
+                        src=${program.profile.photoUrl}
+                        class="w-full h-full rounded-full object-cover"
+                      />`
+                    : program.profile.initials}
+                </button>
+
+                <!-- Годовая цель: число + бар + год -->
+                <button
+                  onClick=${() => onNav('progress')}
+                  class="flex-1 min-w-0 text-left active:opacity-70 transition-opacity"
+                  aria-label="Годовая цель — открыть прогресс"
+                >
+                  <div class="flex items-baseline gap-1.5">
+                    <span class="text-base font-semibold tabular-nums">
+                      ${program.yearStats.done}
+                    </span>
+                    <span class="text-xs text-muted">/ ${program.yearStats.target}</span>
+                    <span class="text-[11px] text-subtle ml-auto">
+                      ${program.yearStats.year}
+                    </span>
+                  </div>
+                  <div class="mt-1.5 relative h-1 rounded-full bg-cardAlt overflow-hidden">
+                    <div
+                      class="absolute inset-y-0 left-0 bg-gradient-to-r from-accent to-success rounded-full"
+                      style=${{
+                        width: `${Math.min(100, (program.yearStats.done / program.yearStats.target) * 100)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </button>
+
+                <button
+                  class="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-muted flex-shrink-0"
+                  aria-label="Меню"
                 >
                   <${Icon} name="moreHorizontal" size=${18} />
                 </button>
