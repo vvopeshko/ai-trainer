@@ -553,6 +553,170 @@ def build_block(data: dict) -> str:
 
       const mockProgram = buildMockProgram()
 
+      // ─── Данные для экрана "Прогресс" ──────────────────────────────
+      // Периоды (неделя/месяц/всё время), история тоннажа, прогрессия
+      // топ-упражнений и список рекордов. Считается раз при загрузке.
+      function buildMockProgress() {{
+        const all = WORKOUTS_DATA.workouts
+        const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
+        if (!ppl.length) return null
+
+        const lastDate = ppl[ppl.length - 1].date
+        const todayDate = new Date(lastDate + 'T00:00:00Z')
+        todayDate.setUTCDate(todayDate.getUTCDate() + 1)
+
+        const dateOffset = (days) => {{
+          const d = new Date(todayDate)
+          d.setUTCDate(d.getUTCDate() - days)
+          return d.toISOString().slice(0, 10)
+        }}
+
+        const filterFrom = (sinceIso) => ppl.filter((w) => w.date >= sinceIso)
+
+        function periodStats(list) {{
+          const stats = _computeMonthlyStats(list)
+          const uniqueDays = new Set(list.map((w) => w.date)).size
+          return {{
+            workouts: list.length,
+            tonnageKg: stats.tonnage,
+            sets: stats.sets,
+            days: uniqueDays,
+            avgPerWeek: list.length === 0 ? 0 : Math.round((list.length / Math.max(7, uniqueDays)) * 7 * 10) / 10,
+          }}
+        }}
+
+        const periods = {{
+          week: periodStats(filterFrom(dateOffset(7))),
+          month: periodStats(filterFrom(dateOffset(30))),
+          all: periodStats(ppl),
+        }}
+
+        // История тоннажа — последние 14 тренировок
+        const tonnageHistory = ppl.slice(-14).map((w) => {{
+          let tonnage = 0
+          for (const ex of w.exercises) {{
+            for (const s of ex.sets) {{
+              if ((s.weightKg || 0) > 0 && (s.reps || 0) > 0) {{
+                tonnage += s.weightKg * s.reps
+              }}
+            }}
+          }}
+          return {{
+            date: w.date,
+            name: w.name,
+            tonnageKg: Math.round(tonnage),
+            type: w.name.match(/\\.(\\d)/)?.[1] || '?',
+          }}
+        }})
+
+        // Топ-упражнения по числу сессий за последний месяц
+        const usage = new Map()
+        const monthList = filterFrom(dateOffset(60))
+        for (const w of monthList) {{
+          for (const ex of w.exercises) {{
+            const e = usage.get(ex.id) || {{
+              id: ex.id,
+              name: ex.name,
+              bodyweight: ex.bodyweight,
+              sessions: 0,
+            }}
+            e.sessions += 1
+            usage.set(ex.id, e)
+          }}
+        }}
+        const topIds = [...usage.values()]
+          .filter((e) => !e.bodyweight && e.sessions >= 4) // силовые с историей
+          .sort((a, b) => b.sessions - a.sessions)
+          .slice(0, 5)
+          .map((e) => e.id)
+
+        // Для каждого топ-упражнения — прогрессия за всё время
+        const exerciseProgress = topIds.map((id) => {{
+          const sessions = []
+          for (const w of all) {{
+            const ex = w.exercises.find((e) => e.id === id)
+            if (!ex) continue
+            const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+            if (!valid.length) continue
+            const maxW = ex.bodyweight ? 0 : Math.max(...valid.map((s) => s.weightKg || 0))
+            const maxReps = Math.max(...valid.map((s) => s.reps))
+            sessions.push({{ date: w.date, maxW, maxReps }})
+          }}
+          if (sessions.length < 2) return null
+          const first = sessions[0]
+          const last = sessions[sessions.length - 1]
+          const ex0 = all.flatMap((w) => w.exercises).find((e) => e.id === id)
+          const isBw = ex0?.bodyweight
+          const fromVal = isBw ? first.maxReps : first.maxW
+          const toVal = isBw ? last.maxReps : last.maxW
+          const delta = toVal - fromVal
+          const pct = fromVal > 0 ? Math.round((delta / fromVal) * 100) : 0
+          return {{
+            id,
+            name: ex0.name,
+            bodyweight: isBw,
+            sessions: sessions.slice(-10), // последние 10 точек для графика
+            from: fromVal,
+            to: toVal,
+            delta,
+            pct,
+          }}
+        }}).filter(Boolean)
+
+        // Рекорды: упражнения с заметным ростом в последние 30 дней.
+        // Используем тот же фильтр что и _findRecentPR (≤30% роста, ≥3 сессий до).
+        const records = []
+        const cutoffRecent = dateOffset(30)
+        const cutoffPrev = dateOffset(90)
+        const exMaxRecent = new Map()
+        const exMaxPrev = new Map()
+        const exSessionsPrev = new Map()
+        for (const w of ppl) {{
+          const isRecent = w.date >= cutoffRecent
+          const isPrev = !isRecent && w.date >= cutoffPrev
+          if (!isRecent && !isPrev) continue
+          for (const ex of w.exercises) {{
+            if (isPrev) {{
+              exSessionsPrev.set(ex.id, (exSessionsPrev.get(ex.id) || 0) + 1)
+            }}
+            for (const s of ex.sets) {{
+              if (!s.weightKg) continue
+              const tgt = isRecent ? exMaxRecent : exMaxPrev
+              const cur = tgt.get(ex.id) || 0
+              if (s.weightKg > cur) tgt.set(ex.id, s.weightKg)
+            }}
+          }}
+        }}
+        for (const [id, recent] of exMaxRecent) {{
+          const prev = exMaxPrev.get(id) || 0
+          const sessions = exSessionsPrev.get(id) || 0
+          if (sessions < 3 || prev <= 0 || recent <= prev) continue
+          const delta = recent - prev
+          const pct = (delta / prev) * 100
+          if (delta < 2.5 || pct > 30) continue
+          const ex = ppl.flatMap((w) => w.exercises).find((e) => e.id === id)
+          if (!ex) continue
+          // Когда был достигнут recent max
+          let achievedDate = lastDate
+          for (const w of ppl) {{
+            if (w.date < cutoffRecent) continue
+            const wEx = w.exercises.find((e) => e.id === id)
+            if (!wEx) continue
+            const maxW = Math.max(...wEx.sets.map((s) => s.weightKg || 0))
+            if (maxW >= recent) {{
+              achievedDate = w.date
+              break
+            }}
+          }}
+          records.push({{ id, name: ex.name, prevWeight: prev, weight: recent, delta, date: achievedDate }})
+        }}
+        records.sort((a, b) => b.date.localeCompare(a.date))
+
+        return {{ periods, tonnageHistory, exerciseProgress, records, today: todayDate.toISOString().slice(0, 10) }}
+      }}
+
+      const mockProgress = buildMockProgress()
+
       // ═══════════════════════════════════════════════════════════════
 """
 

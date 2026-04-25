@@ -725,11 +725,175 @@
 
       const mockProgram = buildMockProgram()
 
+      // ─── Данные для экрана "Прогресс" ──────────────────────────────
+      // Периоды (неделя/месяц/всё время), история тоннажа, прогрессия
+      // топ-упражнений и список рекордов. Считается раз при загрузке.
+      function buildMockProgress() {
+        const all = WORKOUTS_DATA.workouts
+        const ppl = all.filter((w) => w.programSlug === 'push-pull-legs-arms')
+        if (!ppl.length) return null
+
+        const lastDate = ppl[ppl.length - 1].date
+        const todayDate = new Date(lastDate + 'T00:00:00Z')
+        todayDate.setUTCDate(todayDate.getUTCDate() + 1)
+
+        const dateOffset = (days) => {
+          const d = new Date(todayDate)
+          d.setUTCDate(d.getUTCDate() - days)
+          return d.toISOString().slice(0, 10)
+        }
+
+        const filterFrom = (sinceIso) => ppl.filter((w) => w.date >= sinceIso)
+
+        function periodStats(list) {
+          const stats = _computeMonthlyStats(list)
+          const uniqueDays = new Set(list.map((w) => w.date)).size
+          return {
+            workouts: list.length,
+            tonnageKg: stats.tonnage,
+            sets: stats.sets,
+            days: uniqueDays,
+            avgPerWeek: list.length === 0 ? 0 : Math.round((list.length / Math.max(7, uniqueDays)) * 7 * 10) / 10,
+          }
+        }
+
+        const periods = {
+          week: periodStats(filterFrom(dateOffset(7))),
+          month: periodStats(filterFrom(dateOffset(30))),
+          all: periodStats(ppl),
+        }
+
+        // История тоннажа — последние 14 тренировок
+        const tonnageHistory = ppl.slice(-14).map((w) => {
+          let tonnage = 0
+          for (const ex of w.exercises) {
+            for (const s of ex.sets) {
+              if ((s.weightKg || 0) > 0 && (s.reps || 0) > 0) {
+                tonnage += s.weightKg * s.reps
+              }
+            }
+          }
+          return {
+            date: w.date,
+            name: w.name,
+            tonnageKg: Math.round(tonnage),
+            type: w.name.match(/\.(\d)/)?.[1] || '?',
+          }
+        })
+
+        // Топ-упражнения по числу сессий за последний месяц
+        const usage = new Map()
+        const monthList = filterFrom(dateOffset(60))
+        for (const w of monthList) {
+          for (const ex of w.exercises) {
+            const e = usage.get(ex.id) || {
+              id: ex.id,
+              name: ex.name,
+              bodyweight: ex.bodyweight,
+              sessions: 0,
+            }
+            e.sessions += 1
+            usage.set(ex.id, e)
+          }
+        }
+        const topIds = [...usage.values()]
+          .filter((e) => !e.bodyweight && e.sessions >= 4) // силовые с историей
+          .sort((a, b) => b.sessions - a.sessions)
+          .slice(0, 5)
+          .map((e) => e.id)
+
+        // Для каждого топ-упражнения — прогрессия за всё время
+        const exerciseProgress = topIds.map((id) => {
+          const sessions = []
+          for (const w of all) {
+            const ex = w.exercises.find((e) => e.id === id)
+            if (!ex) continue
+            const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
+            if (!valid.length) continue
+            const maxW = ex.bodyweight ? 0 : Math.max(...valid.map((s) => s.weightKg || 0))
+            const maxReps = Math.max(...valid.map((s) => s.reps))
+            sessions.push({ date: w.date, maxW, maxReps })
+          }
+          if (sessions.length < 2) return null
+          const first = sessions[0]
+          const last = sessions[sessions.length - 1]
+          const ex0 = all.flatMap((w) => w.exercises).find((e) => e.id === id)
+          const isBw = ex0?.bodyweight
+          const fromVal = isBw ? first.maxReps : first.maxW
+          const toVal = isBw ? last.maxReps : last.maxW
+          const delta = toVal - fromVal
+          const pct = fromVal > 0 ? Math.round((delta / fromVal) * 100) : 0
+          return {
+            id,
+            name: ex0.name,
+            bodyweight: isBw,
+            sessions: sessions.slice(-10), // последние 10 точек для графика
+            from: fromVal,
+            to: toVal,
+            delta,
+            pct,
+          }
+        }).filter(Boolean)
+
+        // Рекорды: упражнения с заметным ростом в последние 30 дней.
+        // Используем тот же фильтр что и _findRecentPR (≤30% роста, ≥3 сессий до).
+        const records = []
+        const cutoffRecent = dateOffset(30)
+        const cutoffPrev = dateOffset(90)
+        const exMaxRecent = new Map()
+        const exMaxPrev = new Map()
+        const exSessionsPrev = new Map()
+        for (const w of ppl) {
+          const isRecent = w.date >= cutoffRecent
+          const isPrev = !isRecent && w.date >= cutoffPrev
+          if (!isRecent && !isPrev) continue
+          for (const ex of w.exercises) {
+            if (isPrev) {
+              exSessionsPrev.set(ex.id, (exSessionsPrev.get(ex.id) || 0) + 1)
+            }
+            for (const s of ex.sets) {
+              if (!s.weightKg) continue
+              const tgt = isRecent ? exMaxRecent : exMaxPrev
+              const cur = tgt.get(ex.id) || 0
+              if (s.weightKg > cur) tgt.set(ex.id, s.weightKg)
+            }
+          }
+        }
+        for (const [id, recent] of exMaxRecent) {
+          const prev = exMaxPrev.get(id) || 0
+          const sessions = exSessionsPrev.get(id) || 0
+          if (sessions < 3 || prev <= 0 || recent <= prev) continue
+          const delta = recent - prev
+          const pct = (delta / prev) * 100
+          if (delta < 2.5 || pct > 30) continue
+          const ex = ppl.flatMap((w) => w.exercises).find((e) => e.id === id)
+          if (!ex) continue
+          // Когда был достигнут recent max
+          let achievedDate = lastDate
+          for (const w of ppl) {
+            if (w.date < cutoffRecent) continue
+            const wEx = w.exercises.find((e) => e.id === id)
+            if (!wEx) continue
+            const maxW = Math.max(...wEx.sets.map((s) => s.weightKg || 0))
+            if (maxW >= recent) {
+              achievedDate = w.date
+              break
+            }
+          }
+          records.push({ id, name: ex.name, prevWeight: prev, weight: recent, delta, date: achievedDate })
+        }
+        records.sort((a, b) => b.date.localeCompare(a.date))
+
+        return { periods, tonnageHistory, exerciseProgress, records, today: todayDate.toISOString().slice(0, 10) }
+      }
+
+      const mockProgress = buildMockProgress()
+
       // ═══════════════════════════════════════════════════════════════
       // ЭКРАН: ГЛАВНЫЙ "ПРОГРАММА"
       // ═══════════════════════════════════════════════════════════════
 
-      function HomeScreen({ onStartWorkout, onSwitchWorkout }) {
+      function HomeScreen({ onStartWorkout, onSwitchWorkout, onNav }) {
         const program = mockProgram
         const next = program.nextWorkout
         const monthly = program.monthly
@@ -957,7 +1121,7 @@
               </div>
             </div>
 
-            <${BottomNav} active="home" />
+            <${BottomNav} active="home" onChange=${onNav} />
             ${programMenuOpen &&
             html`
               <${ProgramMenuModal}
@@ -2326,7 +2490,278 @@
       // НИЖНИЙ ТАБ-БАР
       // ═══════════════════════════════════════════════════════════════
 
-      function BottomNav({ active }) {
+      // ═══════════════════════════════════════════════════════════════
+      // ЭКРАН: ПРОГРЕСС
+      // ═══════════════════════════════════════════════════════════════
+
+      function ProgressScreen({ onNav }) {
+        const [period, setPeriod] = useState('month') // week | month | all
+        const data = mockProgress
+        if (!data) {
+          return html`
+            <div class="h-full flex items-center justify-center text-muted">
+              Нет данных
+            </div>
+          `
+        }
+
+        const stats = data.periods[period]
+        const formatTonnage = (kg) =>
+          kg >= 1000 ? `${(kg / 1000).toFixed(1)}т` : `${kg} кг`
+
+        return html`
+          <div class="h-full flex flex-col overflow-hidden">
+            <!-- Top bar -->
+            <div class="px-4 pt-6 pb-3 flex items-center justify-between">
+              <div class="text-xl font-semibold">Прогресс</div>
+              <button
+                class="w-9 h-9 rounded-full bg-card flex items-center justify-center text-muted"
+              >
+                <${Icon} name="moreHorizontal" size=${18} />
+              </button>
+            </div>
+
+            <!-- Period tabs -->
+            <div class="px-4 pb-3">
+              <div class="flex gap-1 p-1 rounded-2xl bg-card border border-border">
+                ${[
+                  { k: 'week', l: 'Неделя' },
+                  { k: 'month', l: 'Месяц' },
+                  { k: 'all', l: 'Всё время' },
+                ].map(
+                  (opt) => html`
+                    <button
+                      key=${opt.k}
+                      onClick=${() => setPeriod(opt.k)}
+                      class=${`flex-1 h-9 rounded-xl text-xs font-medium transition-colors ${
+                        period === opt.k
+                          ? 'bg-accent text-white'
+                          : 'text-muted hover:text-white'
+                      }`}
+                    >
+                      ${opt.l}
+                    </button>
+                  `,
+                )}
+              </div>
+            </div>
+
+            <!-- Scrollable content -->
+            <div class="flex-1 overflow-y-auto scroll-hide px-4 pb-28">
+              <!-- Stats summary -->
+              <div class="grid grid-cols-2 gap-2 fade-up">
+                <${BigStat} value=${stats.workouts} label="тренировок" />
+                <${BigStat} value=${formatTonnage(stats.tonnageKg)} label="тоннаж" />
+                <${BigStat} value=${stats.sets} label="подходов" />
+                <${BigStat}
+                  value=${`~${stats.avgPerWeek}`}
+                  label="в неделю"
+                  hint=${period === 'week' ? null : 'среднее'}
+                />
+              </div>
+
+              <!-- Tonnage history chart -->
+              <div class="mt-6">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-xs uppercase tracking-wider text-subtle">
+                    тоннаж по тренировкам
+                  </div>
+                  <div class="text-[10px] text-subtle">
+                    последние ${data.tonnageHistory.length}
+                  </div>
+                </div>
+                <div class="rounded-2xl bg-card border border-border p-3">
+                  <${TonnageChart} data=${data.tonnageHistory} />
+                </div>
+              </div>
+
+              <!-- Exercise progress -->
+              <div class="mt-6">
+                <div class="text-xs uppercase tracking-wider text-subtle mb-2">
+                  прогресс в упражнениях
+                </div>
+                <div class="space-y-2">
+                  ${data.exerciseProgress.map(
+                    (ep) => html`
+                      <${ExerciseProgressRow} key=${ep.id} ep=${ep} />
+                    `,
+                  )}
+                </div>
+              </div>
+
+              <!-- Records -->
+              ${data.records.length > 0 &&
+              html`
+                <div class="mt-6">
+                  <div class="text-xs uppercase tracking-wider text-subtle mb-2">
+                    личные рекорды (за месяц)
+                  </div>
+                  <div class="space-y-2">
+                    ${data.records.map(
+                      (r) => html`
+                        <div
+                          key=${r.id}
+                          class="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border"
+                        >
+                          <div
+                            class="w-9 h-9 rounded-full bg-success/15 flex items-center justify-center text-success flex-shrink-0"
+                          >
+                            🏆
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium truncate">${r.name}</div>
+                            <div class="text-[11px] text-muted truncate">
+                              ${r.prevWeight} → ${r.weight} кг · +${r.delta} · ${r.date}
+                            </div>
+                          </div>
+                          <div
+                            class="text-success text-sm font-semibold tabular-nums flex-shrink-0"
+                          >
+                            +${r.delta}
+                          </div>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `}
+            </div>
+
+            <${BottomNav} active="progress" onChange=${onNav} />
+          </div>
+        `
+      }
+
+      // Большая стат-плашка для верха Прогресса
+      function BigStat({ value, label, hint }) {
+        return html`
+          <div class="rounded-2xl bg-card border border-border p-4">
+            <div class="text-2xl font-semibold leading-none">${value}</div>
+            <div class="text-[11px] text-muted uppercase tracking-wider mt-2">${label}</div>
+            ${hint && html`<div class="text-[10px] text-subtle mt-0.5">${hint}</div>`}
+          </div>
+        `
+      }
+
+      // Bar-chart тоннажа (SVG inline)
+      function TonnageChart({ data }) {
+        if (!data || !data.length)
+          return html`<div class="text-xs text-subtle text-center py-4">Нет данных</div>`
+        const W = 320
+        const H = 120
+        const padX = 4
+        const padY = 12
+        const maxT = Math.max(...data.map((d) => d.tonnageKg))
+        const barW = (W - padX * 2) / data.length - 2
+        const colors = {
+          1: '#7C5CFC', // chest
+          2: '#34D399', // back
+          3: '#F59E0B', // legs
+          4: '#EC4899', // shoulders
+        }
+
+        return html`
+          <svg viewBox="0 0 ${W} ${H}" class="w-full h-32">
+            ${data.map((d, i) => {
+              const h = maxT > 0 ? ((H - padY * 2) * d.tonnageKg) / maxT : 0
+              const x = padX + i * (barW + 2)
+              const y = H - padY - h
+              const color = colors[d.type] || '#7C5CFC'
+              return html`
+                <g key=${i}>
+                  <rect
+                    x=${x}
+                    y=${y}
+                    width=${barW}
+                    height=${h}
+                    rx="2"
+                    fill=${color}
+                    fill-opacity="0.7"
+                  />
+                </g>
+              `
+            })}
+            <!-- Baseline -->
+            <line
+              x1="0"
+              y1=${H - padY + 1}
+              x2=${W}
+              y2=${H - padY + 1}
+              stroke="rgba(255,255,255,0.06)"
+              stroke-width="1"
+            />
+          </svg>
+          <!-- Легенда: подписи дней -->
+          <div class="flex items-center gap-3 mt-2 text-[10px] text-muted flex-wrap">
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-sm" style=${{ background: colors[1] }}></span>
+              День 1
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-sm" style=${{ background: colors[2] }}></span>
+              День 2
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-sm" style=${{ background: colors[3] }}></span>
+              День 3
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-sm" style=${{ background: colors[4] }}></span>
+              День 4
+            </span>
+          </div>
+        `
+      }
+
+      // Строка прогресса упражнения с мини-line-чартом
+      function ExerciseProgressRow({ ep }) {
+        const W = 80
+        const H = 28
+        const sessions = ep.sessions
+        const values = sessions.map((s) => (ep.bodyweight ? s.maxReps : s.maxW))
+        const minV = Math.min(...values)
+        const maxV = Math.max(...values)
+        const range = maxV - minV || 1
+        const points = sessions
+          .map((s, i) => {
+            const x = (i / Math.max(1, sessions.length - 1)) * W
+            const v = ep.bodyweight ? s.maxReps : s.maxW
+            const y = H - ((v - minV) / range) * (H - 4) - 2
+            return `${x},${y}`
+          })
+          .join(' ')
+        const trendUp = ep.delta > 0
+        const trendColor = trendUp ? '#34D399' : ep.delta < 0 ? '#F87171' : 'rgba(255,255,255,0.4)'
+        const unit = ep.bodyweight ? 'повт.' : 'кг'
+
+        return html`
+          <div class="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border">
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">${ep.name}</div>
+              <div class="text-[11px] text-muted">
+                ${ep.from} → ${ep.to} ${unit} · ${ep.delta >= 0 ? '+' : ''}${ep.delta}
+                ${ep.delta !== 0 ? ` (${ep.pct >= 0 ? '+' : ''}${ep.pct}%)` : ''}
+              </div>
+            </div>
+            <svg
+              viewBox="0 0 ${W} ${H}"
+              class="w-20 h-7 flex-shrink-0"
+              preserveAspectRatio="none"
+            >
+              <polyline
+                points=${points}
+                fill="none"
+                stroke=${trendColor}
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+        `
+      }
+
+      function BottomNav({ active, onChange }) {
         const items = [
           { key: 'home', label: 'Программа', icon: 'dumbbell' },
           { key: 'progress', label: 'Прогресс', icon: 'trendingUp' },
@@ -2346,7 +2781,8 @@
                 (it) => html`
                   <button
                     key=${it.key}
-                    class=${`flex flex-col items-center gap-1 ${active === it.key ? 'text-accent' : 'text-subtle'}`}
+                    onClick=${() => onChange && onChange(it.key)}
+                    class=${`flex flex-col items-center gap-1 active:scale-95 transition-transform ${active === it.key ? 'text-accent' : 'text-subtle'}`}
                   >
                     <${Icon} name=${it.icon} size=${22} />
                     <span class="text-[10px] tracking-wide">${it.label}</span>
@@ -2428,8 +2864,18 @@
       // ═══════════════════════════════════════════════════════════════
 
       function App() {
-        const [screen, setScreen] = useState('home') // home | workout | summary
+        // home | workout | summary | progress | library | profile
+        const [screen, setScreen] = useState('home')
         const [switchModal, setSwitchModal] = useState(false)
+
+        const handleNav = (key) => {
+          if (key === 'home' || key === 'progress') {
+            setScreen(key)
+          } else {
+            // Library и Profile — пока заглушки
+            alert(`Экран "${key}" пока не реализован в прототипе`)
+          }
+        }
 
         return html`
           ${screen === 'home' &&
@@ -2437,6 +2883,7 @@
             <${HomeScreen}
               onStartWorkout=${() => setScreen('workout')}
               onSwitchWorkout=${() => setSwitchModal(true)}
+              onNav=${handleNav}
             />
           `}
           ${screen === 'workout' &&
@@ -2448,6 +2895,8 @@
           `}
           ${screen === 'summary' &&
           html`<${SummaryScreen} onHome=${() => setScreen('home')} />`}
+          ${screen === 'progress' &&
+          html`<${ProgressScreen} onNav=${handleNav} />`}
           ${switchModal &&
           html`
             <${SwitchWorkoutModal}
