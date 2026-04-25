@@ -3375,23 +3375,95 @@
       }
 
       // Строка объёма группы мышц
-      // Цвета по статусу — общие для группы и подмышц
+      // Цвета только для текстового счётчика; визуал бара — отдельно (см. VolumeBar).
       const MUSCLE_COLORS = {
-        none: { bar: 'bg-white/15', text: 'text-muted', dot: 'bg-white/20' },
-        low: { bar: 'bg-orange-400', text: 'text-orange-400', dot: 'bg-orange-400' },
-        optimal: { bar: 'bg-success', text: 'text-success', dot: 'bg-success' },
-        over: { bar: 'bg-yellow-400', text: 'text-yellow-400', dot: 'bg-yellow-400' },
-        overload: { bar: 'bg-red-400', text: 'text-red-400', dot: 'bg-red-400' },
+        none: { text: 'text-muted', dot: 'bg-white/20' },
+        low: { text: 'text-orange-400', dot: 'bg-orange-400' },
+        optimal: { text: 'text-success', dot: 'bg-success' },
+        over: { text: 'text-yellow-400', dot: 'bg-yellow-400' },
+        overload: { text: 'text-red-400', dot: 'bg-red-400' },
+      }
+
+      // Универсальный 3-сегментный бар, привязанный к смыслу:
+      //   ● low     → короткая ОРАНЖЕВАЯ полоска (не дотянул до цели)
+      //   ● optimal → серый "buildup" (0→min) + ЗЕЛЁНЫЙ "в зоне" (min→sets)
+      //   ● overload→ серый buildup + ЗЕЛЁНАЯ полная зона + КРАСНЫЙ хвост (max→sets)
+      // Сетка такая, что серая часть 0→min всегда одинакового веса,
+      // а красный хвост виден ровно тем "лишним", что вышло за max.
+      function VolumeBar({ sets, min, max, height = 'h-2' }) {
+        const safeSets = Math.max(0, sets || 0)
+        const safeMin = Math.max(0, min || 0)
+        const safeMax = Math.max(safeMin, max || 0)
+        // Шкала: всегда вмещает целевой диапазон + минимум 30% на overshoot
+        const overflowAllowance = Math.max(2, Math.ceil(safeMax * 0.4))
+        const scale = Math.max(safeSets, safeMax + overflowAllowance, safeMin + 1)
+        const pct = (s) => (s / scale) * 100
+
+        // Случай 1: ничего не сделано (или цель нулевая)
+        if (safeSets <= 0) {
+          return html`<div class=${`relative ${height} rounded-full bg-cardAlt`}></div>`
+        }
+
+        // Случай 2: low — не дотянул до min. Только оранжевый сегмент 0→sets.
+        if (safeSets < safeMin) {
+          return html`
+            <div class=${`relative ${height} rounded-full bg-cardAlt overflow-hidden`}>
+              <div
+                class="absolute inset-y-0 left-0 bg-orange-400 rounded-full"
+                style=${{ width: `${pct(safeSets)}%` }}
+              ></div>
+              <!-- Тонкий тик там, где должна быть min — чтобы видеть, докуда не достал -->
+              <div
+                class="absolute inset-y-0 w-px bg-white/30"
+                style=${{ left: `${pct(safeMin)}%` }}
+              ></div>
+            </div>
+          `
+        }
+
+        // Случай 3: optimal или overload. Серый buildup + зелёная зона + (опц.) красный хвост.
+        const greyW = pct(safeMin)
+        const greenL = pct(safeMin)
+        const greenEnd = Math.min(safeSets, safeMax)
+        const greenW = pct(greenEnd - safeMin)
+        const redL = pct(safeMax)
+        const redW = safeSets > safeMax ? pct(safeSets - safeMax) : 0
+
+        return html`
+          <div class=${`relative ${height} rounded-full bg-cardAlt overflow-hidden`}>
+            <!-- buildup до min: серый -->
+            <div
+              class="absolute inset-y-0 bg-white/25"
+              style=${{ left: 0, width: `${greyW}%` }}
+            ></div>
+            <!-- целевая зона min→max: зелёный (показано до текущего значения, но не дальше max) -->
+            <div
+              class="absolute inset-y-0 bg-success"
+              style=${{ left: `${greenL}%`, width: `${greenW}%` }}
+            ></div>
+            <!-- хвост сверх max: красный — visually torchsticking за зону -->
+            ${redW > 0 &&
+            html`
+              <div
+                class="absolute inset-y-0 bg-red-400"
+                style=${{ left: `${redL}%`, width: `${redW}%` }}
+              ></div>
+            `}
+            <!-- Тонкая отсечка справа от целевой зоны (max-граница) — визуальный якорь -->
+            ${safeMax > 0 &&
+            html`
+              <div
+                class="absolute inset-y-0 w-px bg-white/15"
+                style=${{ left: `${pct(safeMax)}%` }}
+              ></div>
+            `}
+          </div>
+        `
       }
 
       // Карточка мышечной группы — заголовок + общая шкала + детализация
       function MuscleGroupCard({ g }) {
         const c = MUSCLE_COLORS[g.status] || MUSCLE_COLORS.optimal
-        // Шкала группы
-        const scaleMax = Math.max(g.total, g.max + Math.ceil(g.max * 0.4))
-        const fillPct = Math.min(100, (g.total / scaleMax) * 100)
-        const minPct = (g.min / scaleMax) * 100
-        const maxPct = (g.max / scaleMax) * 100
 
         return html`
           <div
@@ -3410,16 +3482,9 @@
               </div>
             </div>
 
-            <!-- Group bar -->
-            <div class="mt-3 relative h-2 rounded-full bg-cardAlt overflow-hidden">
-              <div
-                class="absolute h-full bg-success/15"
-                style=${{ left: `${minPct}%`, width: `${maxPct - minPct}%` }}
-              ></div>
-              <div
-                class=${`absolute h-full rounded-full ${c.bar}`}
-                style=${{ width: `${fillPct}%` }}
-              ></div>
+            <!-- Group bar (3-сегментный) -->
+            <div class="mt-3">
+              <${VolumeBar} sets=${g.total} min=${g.min} max=${g.max} height="h-2" />
             </div>
             <div class=${`text-[11px] mt-1.5 ${c.text}`}>${g.hint}</div>
 
@@ -3437,11 +3502,6 @@
       // Строка одной подмышцы внутри карточки группы
       function SubMuscleRow({ sub }) {
         const c = MUSCLE_COLORS[sub.status] || MUSCLE_COLORS.optimal
-        const scaleMax = Math.max(sub.sets, sub.max + Math.ceil(sub.max * 0.4) || 4)
-        const fillPct = Math.min(100, (sub.sets / Math.max(1, scaleMax)) * 100)
-        const minPct = sub.max > 0 ? (sub.min / scaleMax) * 100 : 0
-        const maxPct = sub.max > 0 ? (sub.max / scaleMax) * 100 : 0
-
         return html`
           <div>
             <div class="flex items-center justify-between gap-2">
@@ -3454,18 +3514,8 @@
                 <span class="text-[10px] text-subtle">/${sub.min}–${sub.max}</span>
               </div>
             </div>
-            <div class="mt-1 relative h-1.5 rounded-full bg-cardAlt overflow-hidden">
-              ${sub.max > 0 &&
-              html`
-                <div
-                  class="absolute h-full bg-success/10"
-                  style=${{ left: `${minPct}%`, width: `${maxPct - minPct}%` }}
-                ></div>
-              `}
-              <div
-                class=${`absolute h-full rounded-full ${c.bar}`}
-                style=${{ width: `${fillPct}%` }}
-              ></div>
+            <div class="mt-1">
+              <${VolumeBar} sets=${sub.sets} min=${sub.min} max=${sub.max} height="h-1.5" />
             </div>
           </div>
         `
