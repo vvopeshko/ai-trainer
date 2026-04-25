@@ -3559,17 +3559,51 @@
                 />
               `}
             </svg>
-            <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="absolute inset-0 flex items-center justify-center">
               <div
-                class="text-base font-bold tabular-nums leading-none"
+                class="text-xl font-bold tabular-nums leading-none"
                 style=${{ color: counterColor }}
               >
                 ${sets}
               </div>
-              <div class="text-[9px] text-subtle leading-none mt-0.5">${min}–${max}</div>
             </div>
           </div>
         `
+      }
+
+      // Статус-чип для группы. Учитывает не только итог по группе,
+      // но и состояние подмышц: если общий итог optimal, но какая-то
+      // подмышца перегружена / недогружена — отдаём это в чип.
+      function computeGroupChip(g) {
+        if (g.status === 'overload')
+          return { tone: 'red', label: `Перебор +${g.total - g.max}` }
+        if (g.status === 'over')
+          return { tone: 'yellow', label: `Чуть выше +${g.total - g.max}` }
+        if (g.status === 'low')
+          return { tone: 'orange', label: `Недогруз −${g.min - g.total}` }
+        if (g.status === 'none') return { tone: 'grey', label: 'Не тренировал' }
+        // group optimal — смотрим внутрь
+        const overSubs = g.subs.filter(
+          (s) => s.status === 'over' || s.status === 'overload',
+        ).length
+        const lowSubs = g.subs.filter(
+          (s) => s.status === 'low' || s.status === 'none',
+        ).length
+        if (overSubs > 0 && lowSubs > 0)
+          return { tone: 'yellow', label: 'Оптимум · дисбаланс' }
+        if (overSubs > 0)
+          return { tone: 'yellow', label: 'Оптимум · перегруз внутри' }
+        if (lowSubs > 0)
+          return { tone: 'orange', label: 'Оптимум · не все мышцы' }
+        return { tone: 'green', label: '✓ Всё в норме' }
+      }
+
+      const CHIP_TONES = {
+        red: 'bg-red-400/15 text-red-400',
+        yellow: 'bg-yellow-400/15 text-yellow-400',
+        orange: 'bg-orange-400/15 text-orange-400',
+        green: 'bg-success/15 text-success',
+        grey: 'bg-white/10 text-muted',
       }
 
       // Точечная лесенка для подмышц: каждый подход = одна точка.
@@ -3612,30 +3646,38 @@
         `
       }
 
-      // Карточка мышечной группы: эмодзи + название + кольцо справа,
+      // Карточка мышечной группы: эмодзи + название + цель/чип + кольцо справа,
       // ниже — список подмышц с точечными лесенками.
       function MuscleGroupCard({ g }) {
-        const c = MUSCLE_COLORS[g.status] || MUSCLE_COLORS.optimal
+        const chip = computeGroupChip(g)
+        const chipCls = CHIP_TONES[chip.tone] || CHIP_TONES.grey
 
         return html`
           <div
             class="flex-shrink-0 rounded-3xl bg-card border border-border p-4"
             style=${{ width: '280px', scrollSnapAlign: 'center' }}
           >
-            <!-- Header: emoji + name + ring -->
+            <!-- Header: emoji + name + target + chip + ring -->
             <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1 pt-1">
+              <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="text-xl">${g.emoji}</span>
                   <div class="text-base font-semibold truncate">${g.label}</div>
                 </div>
-                <div class=${`text-[11px] mt-1 ${c.text}`}>${g.hint}</div>
+                <div class="text-[11px] text-muted mt-1">
+                  Цель: ${g.min}–${g.max} подх./нед
+                </div>
+                <div
+                  class=${`inline-flex items-center mt-2 px-2.5 py-1 rounded-full text-[11px] font-medium ${chipCls}`}
+                >
+                  ${chip.label}
+                </div>
               </div>
               <${GroupRing} sets=${g.total} min=${g.min} max=${g.max} size=${64} />
             </div>
 
             <!-- Divider -->
-            <div class="h-px bg-white/5 my-3"></div>
+            <div class="h-px bg-white/5 my-4"></div>
 
             <!-- Sub-muscles -->
             <div class="space-y-3">
