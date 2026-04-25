@@ -553,75 +553,129 @@ def build_block(data: dict) -> str:
 
       const mockProgram = buildMockProgram()
 
-      // ─── Карта мышечных групп ──────────────────────────────────────
-      // Минимально упрощённая модель: одна основная группа на упражнение.
-      // Целевые диапазоны подходов/нед для гипертрофии (Schoenfeld et al.):
-      //   крупные группы 12–18, мелкие 8–14, пресс 6–14.
-      // В реальном приложении будем считать с весом primary/secondary,
-      // но для прототипа — primary only.
-      const MUSCLE_GROUPS = {{
-        chest: {{ label: 'Грудь', target: [12, 18], order: 1 }},
-        back: {{ label: 'Спина', target: [12, 18], order: 2 }},
-        shoulders: {{ label: 'Плечи', target: [12, 18], order: 3 }},
-        biceps: {{ label: 'Бицепс', target: [8, 14], order: 4 }},
-        triceps: {{ label: 'Трицепс', target: [8, 14], order: 5 }},
-        legs: {{ label: 'Ноги', target: [12, 20], order: 6 }},
-        abs: {{ label: 'Пресс', target: [6, 14], order: 7 }},
+      // ─── Таксономия мышц (детальная, с подмышцами) ────────────────
+      // Каждая крупная зона разбита на конкретные мышцы со своими целями.
+      // Цифры — недельные подходы для гипертрофии.
+      // В реальном приложении будем считать с весом primary/secondary;
+      // для прототипа — primary only (одно упражнение → одна подмышца).
+      const MUSCLE_TAXONOMY = {{
+        chest: {{
+          label: 'Грудь',
+          emoji: '🛡',
+          targetTotal: [12, 18],
+          subMuscles: {{
+            upper: {{ label: 'Верх груди', target: [4, 8] }},
+            mid: {{ label: 'Середина груди', target: [4, 8] }},
+            lower: {{ label: 'Низ груди', target: [2, 6] }},
+          }},
+        }},
+        back: {{
+          label: 'Спина',
+          emoji: '🦅',
+          targetTotal: [12, 22],
+          subMuscles: {{
+            lats: {{ label: 'Широчайшие', target: [6, 12] }},
+            mid: {{ label: 'Ромбовидные / середина', target: [4, 10] }},
+            traps: {{ label: 'Трапеции', target: [2, 6] }},
+            lower: {{ label: 'Низ спины (разгибатели)', target: [2, 4] }},
+          }},
+        }},
+        shoulders: {{
+          label: 'Плечи',
+          emoji: '🪖',
+          targetTotal: [12, 22],
+          subMuscles: {{
+            front: {{ label: 'Передние дельты', target: [4, 8] }},
+            side: {{ label: 'Средние дельты', target: [6, 10] }},
+            rear: {{ label: 'Задние дельты', target: [4, 10] }},
+          }},
+        }},
+        arms: {{
+          label: 'Руки',
+          emoji: '💪',
+          targetTotal: [12, 24],
+          subMuscles: {{
+            biceps: {{ label: 'Бицепс', target: [6, 12] }},
+            triceps: {{ label: 'Трицепс', target: [6, 12] }},
+            forearms: {{ label: 'Предплечья', target: [2, 6] }},
+          }},
+        }},
+        legs: {{
+          label: 'Ноги',
+          emoji: '🦵',
+          targetTotal: [12, 22],
+          subMuscles: {{
+            quads: {{ label: 'Квадрицепс', target: [6, 12] }},
+            hamstrings: {{ label: 'Бицепс бедра', target: [4, 10] }},
+            glutes: {{ label: 'Ягодицы', target: [4, 8] }},
+            calves: {{ label: 'Икры', target: [2, 6] }},
+            adductors: {{ label: 'Приводящие', target: [0, 4] }},
+          }},
+        }},
+        core: {{
+          label: 'Кор',
+          emoji: '🔥',
+          targetTotal: [6, 14],
+          subMuscles: {{
+            abs: {{ label: 'Пресс (прямая)', target: [4, 10] }},
+            obliques: {{ label: 'Косые', target: [0, 4] }},
+          }},
+        }},
       }}
 
+      // Маппинг упражнения → 'group.subMuscle'
       const MUSCLE_MAP = {{
         // Грудь
-        'machine-chest-press': 'chest',
-        'smith-machine-incline-bench-press': 'chest',
-        'bench-press-db': 'chest',
-        'machine-incline-press': 'chest',
-        'machine-chest-fly': 'chest',
-        'pec-fly': 'chest',
-        'standing-cable-crossover': 'chest',
-        'dip': 'chest',
+        'machine-chest-press': 'chest.mid',
+        'smith-machine-incline-bench-press': 'chest.upper',
+        'machine-incline-press': 'chest.upper',
+        'bench-press-db': 'chest.mid',
+        'machine-chest-fly': 'chest.mid',
+        'pec-fly': 'chest.mid',
+        'standing-cable-crossover': 'chest.mid',
+        'dip': 'chest.lower',
         // Спина
-        'pull-up': 'back',
-        'chin-up': 'back',
-        'lat-pulldown-narrow': 'back',
-        'lat-pulldown-wide': 'back',
-        'straight-arm-pulldown': 'back',
-        'seated-row': 'back',
-        'seated-row-wide': 'back',
-        'incline-row-db': 'back',
-        'row-single-arm-l-db': 'back',
-        'row-single-arm-r-db': 'back',
+        'pull-up': 'back.lats',
+        'chin-up': 'back.lats',
+        'lat-pulldown-narrow': 'back.lats',
+        'lat-pulldown-wide': 'back.lats',
+        'straight-arm-pulldown': 'back.lats',
+        'seated-row': 'back.mid',
+        'seated-row-wide': 'back.mid',
+        'incline-row-db': 'back.mid',
+        'row-single-arm-l-db': 'back.lats',
+        'row-single-arm-r-db': 'back.lats',
         // Плечи
-        'lateral-raise-machine': 'shoulders',
-        'lateral-raise-db': 'shoulders',
-        'reverse-fly-db': 'shoulders',
-        'machine-shoulder-fly': 'shoulders',
-        'cable-face-pull': 'shoulders',
-        'upright-row-cable': 'shoulders',
-        'shoulder-press-machine': 'shoulders',
-        // Бицепс
-        'biceps-curl-cable': 'biceps',
-        'biceps-curl-db': 'biceps',
-        'hammer-curl-db': 'biceps',
-        'preacher-curl': 'biceps',
-        'reverse-curl-barbell': 'biceps',
-        // Трицепс
-        'triceps-extension-rope': 'triceps',
-        'triceps-pulldown-rope': 'triceps',
+        'lateral-raise-machine': 'shoulders.side',
+        'lateral-raise-db': 'shoulders.side',
+        'reverse-fly-db': 'shoulders.rear',
+        'machine-shoulder-fly': 'shoulders.rear',
+        'cable-face-pull': 'shoulders.rear',
+        'upright-row-cable': 'shoulders.side',
+        'shoulder-press-machine': 'shoulders.front',
+        // Руки
+        'biceps-curl-cable': 'arms.biceps',
+        'biceps-curl-db': 'arms.biceps',
+        'hammer-curl-db': 'arms.biceps',
+        'preacher-curl': 'arms.biceps',
+        'reverse-curl-barbell': 'arms.forearms',
+        'triceps-extension-rope': 'arms.triceps',
+        'triceps-pulldown-rope': 'arms.triceps',
         // Ноги
-        'leg-press': 'legs',
-        'seated-leg-extension': 'legs',
-        'prone-leg-curl': 'legs',
-        'box-jump': 'legs',
-        'rfess-l-db': 'legs',
-        'rfess-r-db': 'legs',
-        'adductor-machine': 'legs',
-        'abductor-machine': 'legs',
-        'hip-thrust': 'legs',
-        'calf-raise': 'legs',
-        // Пресс
-        'crunches': 'abs',
-        'hanging-leg-raises': 'abs',
-        'plank': 'abs',
+        'leg-press': 'legs.quads',
+        'seated-leg-extension': 'legs.quads',
+        'prone-leg-curl': 'legs.hamstrings',
+        'box-jump': 'legs.quads',
+        'rfess-l-db': 'legs.quads',
+        'rfess-r-db': 'legs.quads',
+        'adductor-machine': 'legs.adductors',
+        'abductor-machine': 'legs.glutes',
+        'hip-thrust': 'legs.glutes',
+        'calf-raise': 'legs.calves',
+        // Кор
+        'crunches': 'core.abs',
+        'hanging-leg-raises': 'core.abs',
+        'plank': 'core.abs',
       }}
 
       // ─── Данные для экрана "Прогресс" ──────────────────────────────
@@ -656,40 +710,54 @@ def build_block(data: dict) -> str:
         }}
 
         // ─── 2. Объём по мышцам за последнюю неделю ─────────────
-        const muscleSets = {{}}
-        for (const key of Object.keys(MUSCLE_GROUPS)) muscleSets[key] = 0
+        // Считаем подходы на каждую подмышцу, потом агрегируем в группы.
+        function _classify(sets, min, max) {{
+          if (sets === 0 && max > 0) return 'none'
+          if (sets < min) return 'low'
+          if (sets <= max) return 'optimal'
+          if (sets <= max + Math.max(2, Math.ceil(max * 0.3))) return 'over'
+          return 'overload'
+        }}
+        function _hint(sets, min, max, status) {{
+          if (status === 'none') return 'не тренировал'
+          if (status === 'low') return `до цели ещё ${{min - sets}}`
+          if (status === 'optimal') return 'в норме'
+          if (status === 'over') return `выше цели на ${{sets - max}}`
+          return `сильно выше цели на ${{sets - max}}`
+        }}
+
+        const subSets = {{}} // 'chest.upper' → N
         for (const w of weekWorkouts) {{
           for (const ex of w.exercises) {{
-            const muscle = MUSCLE_MAP[ex.id]
-            if (!muscle) continue
+            const path = MUSCLE_MAP[ex.id]
+            if (!path) continue
             const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
-            muscleSets[muscle] += valid.length
+            subSets[path] = (subSets[path] || 0) + valid.length
           }}
         }}
-        const muscleVolume = Object.entries(MUSCLE_GROUPS)
-          .map(([key, info]) => {{
-            const sets = muscleSets[key]
-            const [min, max] = info.target
-            let status, hint
-            if (sets === 0) {{
-              status = 'none'
-              hint = 'не тренировал'
-            }} else if (sets < min) {{
-              status = 'low'
-              hint = `до цели ещё ${{min - sets}}`
-            }} else if (sets <= max) {{
-              status = 'optimal'
-              hint = 'в норме'
-            }} else if (sets <= max + 4) {{
-              status = 'over'
-              hint = `выше цели на ${{sets - max}}`
-            }} else {{
-              status = 'overload'
-              hint = `сильно выше цели на ${{sets - max}}`
-            }}
-            return {{ key, label: info.label, sets, min, max, status, hint, order: info.order }}
+
+        const muscleGroups = Object.entries(MUSCLE_TAXONOMY).map(([groupKey, info]) => {{
+          const subs = Object.entries(info.subMuscles).map(([subKey, subInfo]) => {{
+            const sets = subSets[`${{groupKey}}.${{subKey}}`] || 0
+            const [min, max] = subInfo.target
+            const status = _classify(sets, min, max)
+            return {{ key: subKey, label: subInfo.label, sets, min, max, status, hint: _hint(sets, min, max, status) }}
           }})
-          .sort((a, b) => a.order - b.order)
+          const total = subs.reduce((s, x) => s + x.sets, 0)
+          const [min, max] = info.targetTotal
+          const status = _classify(total, min, max)
+          return {{
+            key: groupKey,
+            label: info.label,
+            emoji: info.emoji,
+            total,
+            min,
+            max,
+            status,
+            hint: _hint(total, min, max, status),
+            subs,
+          }}
+        }})
 
         // ─── 3. Прогрессивная перегрузка: insights ──────────────
         // Используем упрощённую версию _computeRecommendation, но
@@ -722,19 +790,22 @@ def build_block(data: dict) -> str:
         }})
 
         // ─── 4. Дисбалансы ───────────────────────────────────────
-        // Считаем за последний месяц, грубо. Chest/back и frontside/rearside.
-        const monthMuscleSets = {{}}
-        for (const key of Object.keys(MUSCLE_GROUPS)) monthMuscleSets[key] = 0
+        // Считаем за месяц на уровне подмышц, потом агрегируем в группы и пары.
+        const monthSubSets = {{}}
         for (const w of monthWorkouts) {{
           for (const ex of w.exercises) {{
-            const muscle = MUSCLE_MAP[ex.id]
-            if (!muscle) continue
-            monthMuscleSets[muscle] += ex.sets.filter((s) => (s.reps || 0) > 0).length
+            const path = MUSCLE_MAP[ex.id]
+            if (!path) continue
+            monthSubSets[path] = (monthSubSets[path] || 0) +
+              ex.sets.filter((s) => (s.reps || 0) > 0).length
           }}
         }}
+        const groupSum = (groupKey) =>
+          Object.keys(MUSCLE_TAXONOMY[groupKey].subMuscles)
+            .reduce((s, sk) => s + (monthSubSets[`${{groupKey}}.${{sk}}`] || 0), 0)
         const imbalances = []
-        const chest = monthMuscleSets.chest
-        const back = monthMuscleSets.back
+        const chest = groupSum('chest')
+        const back = groupSum('back')
         if (chest > 0 && back > 0) {{
           const ratio = chest / back
           if (ratio >= 1.4) {{
@@ -751,8 +822,8 @@ def build_block(data: dict) -> str:
             }})
           }}
         }}
-        const biceps = monthMuscleSets.biceps
-        const triceps = monthMuscleSets.triceps
+        const biceps = monthSubSets['arms.biceps'] || 0
+        const triceps = monthSubSets['arms.triceps'] || 0
         if (biceps > 0 && triceps > 0) {{
           const ratio = biceps / triceps
           if (ratio >= 1.5) {{
@@ -806,10 +877,25 @@ def build_block(data: dict) -> str:
         }}
         records.sort((a, b) => b.delta - a.delta)
 
+        // ─── Дисбалансы между передней / задней дельтой ───
+        // Передние и трицепс часто перерабатываются (жимы), задние дельты —
+        // отстают. Здоровье плеч сильно про этот баланс.
+        const frontDelts = monthSubSets['shoulders.front'] || 0
+        const rearDelts = monthSubSets['shoulders.rear'] || 0
+        if (frontDelts > 0 || rearDelts > 0) {{
+          if (rearDelts < 4 && (chest + frontDelts) > rearDelts * 3) {{
+            imbalances.push({{
+              tone: 'warn',
+              title: 'Задние дельты отстают',
+              body: `${{rearDelts}} подх./мес против ${{frontDelts + chest}} жимовых на передние дельты и грудь. Добавь face pulls и обратные разводки — иначе через год ноющее плечо.`,
+            }})
+          }}
+        }}
+
         return {{
           today: todayDate.toISOString().slice(0, 10),
           planAdherence,
-          muscleVolume,
+          muscleGroups,
           overloadInsights,
           imbalances,
           records,

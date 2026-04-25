@@ -725,75 +725,129 @@
 
       const mockProgram = buildMockProgram()
 
-      // ─── Карта мышечных групп ──────────────────────────────────────
-      // Минимально упрощённая модель: одна основная группа на упражнение.
-      // Целевые диапазоны подходов/нед для гипертрофии (Schoenfeld et al.):
-      //   крупные группы 12–18, мелкие 8–14, пресс 6–14.
-      // В реальном приложении будем считать с весом primary/secondary,
-      // но для прототипа — primary only.
-      const MUSCLE_GROUPS = {
-        chest: { label: 'Грудь', target: [12, 18], order: 1 },
-        back: { label: 'Спина', target: [12, 18], order: 2 },
-        shoulders: { label: 'Плечи', target: [12, 18], order: 3 },
-        biceps: { label: 'Бицепс', target: [8, 14], order: 4 },
-        triceps: { label: 'Трицепс', target: [8, 14], order: 5 },
-        legs: { label: 'Ноги', target: [12, 20], order: 6 },
-        abs: { label: 'Пресс', target: [6, 14], order: 7 },
+      // ─── Таксономия мышц (детальная, с подмышцами) ────────────────
+      // Каждая крупная зона разбита на конкретные мышцы со своими целями.
+      // Цифры — недельные подходы для гипертрофии.
+      // В реальном приложении будем считать с весом primary/secondary;
+      // для прототипа — primary only (одно упражнение → одна подмышца).
+      const MUSCLE_TAXONOMY = {
+        chest: {
+          label: 'Грудь',
+          emoji: '🛡',
+          targetTotal: [12, 18],
+          subMuscles: {
+            upper: { label: 'Верх груди', target: [4, 8] },
+            mid: { label: 'Середина груди', target: [4, 8] },
+            lower: { label: 'Низ груди', target: [2, 6] },
+          },
+        },
+        back: {
+          label: 'Спина',
+          emoji: '🦅',
+          targetTotal: [12, 22],
+          subMuscles: {
+            lats: { label: 'Широчайшие', target: [6, 12] },
+            mid: { label: 'Ромбовидные / середина', target: [4, 10] },
+            traps: { label: 'Трапеции', target: [2, 6] },
+            lower: { label: 'Низ спины (разгибатели)', target: [2, 4] },
+          },
+        },
+        shoulders: {
+          label: 'Плечи',
+          emoji: '🪖',
+          targetTotal: [12, 22],
+          subMuscles: {
+            front: { label: 'Передние дельты', target: [4, 8] },
+            side: { label: 'Средние дельты', target: [6, 10] },
+            rear: { label: 'Задние дельты', target: [4, 10] },
+          },
+        },
+        arms: {
+          label: 'Руки',
+          emoji: '💪',
+          targetTotal: [12, 24],
+          subMuscles: {
+            biceps: { label: 'Бицепс', target: [6, 12] },
+            triceps: { label: 'Трицепс', target: [6, 12] },
+            forearms: { label: 'Предплечья', target: [2, 6] },
+          },
+        },
+        legs: {
+          label: 'Ноги',
+          emoji: '🦵',
+          targetTotal: [12, 22],
+          subMuscles: {
+            quads: { label: 'Квадрицепс', target: [6, 12] },
+            hamstrings: { label: 'Бицепс бедра', target: [4, 10] },
+            glutes: { label: 'Ягодицы', target: [4, 8] },
+            calves: { label: 'Икры', target: [2, 6] },
+            adductors: { label: 'Приводящие', target: [0, 4] },
+          },
+        },
+        core: {
+          label: 'Кор',
+          emoji: '🔥',
+          targetTotal: [6, 14],
+          subMuscles: {
+            abs: { label: 'Пресс (прямая)', target: [4, 10] },
+            obliques: { label: 'Косые', target: [0, 4] },
+          },
+        },
       }
 
+      // Маппинг упражнения → 'group.subMuscle'
       const MUSCLE_MAP = {
         // Грудь
-        'machine-chest-press': 'chest',
-        'smith-machine-incline-bench-press': 'chest',
-        'bench-press-db': 'chest',
-        'machine-incline-press': 'chest',
-        'machine-chest-fly': 'chest',
-        'pec-fly': 'chest',
-        'standing-cable-crossover': 'chest',
-        'dip': 'chest',
+        'machine-chest-press': 'chest.mid',
+        'smith-machine-incline-bench-press': 'chest.upper',
+        'machine-incline-press': 'chest.upper',
+        'bench-press-db': 'chest.mid',
+        'machine-chest-fly': 'chest.mid',
+        'pec-fly': 'chest.mid',
+        'standing-cable-crossover': 'chest.mid',
+        'dip': 'chest.lower',
         // Спина
-        'pull-up': 'back',
-        'chin-up': 'back',
-        'lat-pulldown-narrow': 'back',
-        'lat-pulldown-wide': 'back',
-        'straight-arm-pulldown': 'back',
-        'seated-row': 'back',
-        'seated-row-wide': 'back',
-        'incline-row-db': 'back',
-        'row-single-arm-l-db': 'back',
-        'row-single-arm-r-db': 'back',
+        'pull-up': 'back.lats',
+        'chin-up': 'back.lats',
+        'lat-pulldown-narrow': 'back.lats',
+        'lat-pulldown-wide': 'back.lats',
+        'straight-arm-pulldown': 'back.lats',
+        'seated-row': 'back.mid',
+        'seated-row-wide': 'back.mid',
+        'incline-row-db': 'back.mid',
+        'row-single-arm-l-db': 'back.lats',
+        'row-single-arm-r-db': 'back.lats',
         // Плечи
-        'lateral-raise-machine': 'shoulders',
-        'lateral-raise-db': 'shoulders',
-        'reverse-fly-db': 'shoulders',
-        'machine-shoulder-fly': 'shoulders',
-        'cable-face-pull': 'shoulders',
-        'upright-row-cable': 'shoulders',
-        'shoulder-press-machine': 'shoulders',
-        // Бицепс
-        'biceps-curl-cable': 'biceps',
-        'biceps-curl-db': 'biceps',
-        'hammer-curl-db': 'biceps',
-        'preacher-curl': 'biceps',
-        'reverse-curl-barbell': 'biceps',
-        // Трицепс
-        'triceps-extension-rope': 'triceps',
-        'triceps-pulldown-rope': 'triceps',
+        'lateral-raise-machine': 'shoulders.side',
+        'lateral-raise-db': 'shoulders.side',
+        'reverse-fly-db': 'shoulders.rear',
+        'machine-shoulder-fly': 'shoulders.rear',
+        'cable-face-pull': 'shoulders.rear',
+        'upright-row-cable': 'shoulders.side',
+        'shoulder-press-machine': 'shoulders.front',
+        // Руки
+        'biceps-curl-cable': 'arms.biceps',
+        'biceps-curl-db': 'arms.biceps',
+        'hammer-curl-db': 'arms.biceps',
+        'preacher-curl': 'arms.biceps',
+        'reverse-curl-barbell': 'arms.forearms',
+        'triceps-extension-rope': 'arms.triceps',
+        'triceps-pulldown-rope': 'arms.triceps',
         // Ноги
-        'leg-press': 'legs',
-        'seated-leg-extension': 'legs',
-        'prone-leg-curl': 'legs',
-        'box-jump': 'legs',
-        'rfess-l-db': 'legs',
-        'rfess-r-db': 'legs',
-        'adductor-machine': 'legs',
-        'abductor-machine': 'legs',
-        'hip-thrust': 'legs',
-        'calf-raise': 'legs',
-        // Пресс
-        'crunches': 'abs',
-        'hanging-leg-raises': 'abs',
-        'plank': 'abs',
+        'leg-press': 'legs.quads',
+        'seated-leg-extension': 'legs.quads',
+        'prone-leg-curl': 'legs.hamstrings',
+        'box-jump': 'legs.quads',
+        'rfess-l-db': 'legs.quads',
+        'rfess-r-db': 'legs.quads',
+        'adductor-machine': 'legs.adductors',
+        'abductor-machine': 'legs.glutes',
+        'hip-thrust': 'legs.glutes',
+        'calf-raise': 'legs.calves',
+        // Кор
+        'crunches': 'core.abs',
+        'hanging-leg-raises': 'core.abs',
+        'plank': 'core.abs',
       }
 
       // ─── Данные для экрана "Прогресс" ──────────────────────────────
@@ -828,40 +882,54 @@
         }
 
         // ─── 2. Объём по мышцам за последнюю неделю ─────────────
-        const muscleSets = {}
-        for (const key of Object.keys(MUSCLE_GROUPS)) muscleSets[key] = 0
+        // Считаем подходы на каждую подмышцу, потом агрегируем в группы.
+        function _classify(sets, min, max) {
+          if (sets === 0 && max > 0) return 'none'
+          if (sets < min) return 'low'
+          if (sets <= max) return 'optimal'
+          if (sets <= max + Math.max(2, Math.ceil(max * 0.3))) return 'over'
+          return 'overload'
+        }
+        function _hint(sets, min, max, status) {
+          if (status === 'none') return 'не тренировал'
+          if (status === 'low') return `до цели ещё ${min - sets}`
+          if (status === 'optimal') return 'в норме'
+          if (status === 'over') return `выше цели на ${sets - max}`
+          return `сильно выше цели на ${sets - max}`
+        }
+
+        const subSets = {} // 'chest.upper' → N
         for (const w of weekWorkouts) {
           for (const ex of w.exercises) {
-            const muscle = MUSCLE_MAP[ex.id]
-            if (!muscle) continue
+            const path = MUSCLE_MAP[ex.id]
+            if (!path) continue
             const valid = ex.sets.filter((s) => (s.reps || 0) > 0)
-            muscleSets[muscle] += valid.length
+            subSets[path] = (subSets[path] || 0) + valid.length
           }
         }
-        const muscleVolume = Object.entries(MUSCLE_GROUPS)
-          .map(([key, info]) => {
-            const sets = muscleSets[key]
-            const [min, max] = info.target
-            let status, hint
-            if (sets === 0) {
-              status = 'none'
-              hint = 'не тренировал'
-            } else if (sets < min) {
-              status = 'low'
-              hint = `до цели ещё ${min - sets}`
-            } else if (sets <= max) {
-              status = 'optimal'
-              hint = 'в норме'
-            } else if (sets <= max + 4) {
-              status = 'over'
-              hint = `выше цели на ${sets - max}`
-            } else {
-              status = 'overload'
-              hint = `сильно выше цели на ${sets - max}`
-            }
-            return { key, label: info.label, sets, min, max, status, hint, order: info.order }
+
+        const muscleGroups = Object.entries(MUSCLE_TAXONOMY).map(([groupKey, info]) => {
+          const subs = Object.entries(info.subMuscles).map(([subKey, subInfo]) => {
+            const sets = subSets[`${groupKey}.${subKey}`] || 0
+            const [min, max] = subInfo.target
+            const status = _classify(sets, min, max)
+            return { key: subKey, label: subInfo.label, sets, min, max, status, hint: _hint(sets, min, max, status) }
           })
-          .sort((a, b) => a.order - b.order)
+          const total = subs.reduce((s, x) => s + x.sets, 0)
+          const [min, max] = info.targetTotal
+          const status = _classify(total, min, max)
+          return {
+            key: groupKey,
+            label: info.label,
+            emoji: info.emoji,
+            total,
+            min,
+            max,
+            status,
+            hint: _hint(total, min, max, status),
+            subs,
+          }
+        })
 
         // ─── 3. Прогрессивная перегрузка: insights ──────────────
         // Используем упрощённую версию _computeRecommendation, но
@@ -894,19 +962,22 @@
         })
 
         // ─── 4. Дисбалансы ───────────────────────────────────────
-        // Считаем за последний месяц, грубо. Chest/back и frontside/rearside.
-        const monthMuscleSets = {}
-        for (const key of Object.keys(MUSCLE_GROUPS)) monthMuscleSets[key] = 0
+        // Считаем за месяц на уровне подмышц, потом агрегируем в группы и пары.
+        const monthSubSets = {}
         for (const w of monthWorkouts) {
           for (const ex of w.exercises) {
-            const muscle = MUSCLE_MAP[ex.id]
-            if (!muscle) continue
-            monthMuscleSets[muscle] += ex.sets.filter((s) => (s.reps || 0) > 0).length
+            const path = MUSCLE_MAP[ex.id]
+            if (!path) continue
+            monthSubSets[path] = (monthSubSets[path] || 0) +
+              ex.sets.filter((s) => (s.reps || 0) > 0).length
           }
         }
+        const groupSum = (groupKey) =>
+          Object.keys(MUSCLE_TAXONOMY[groupKey].subMuscles)
+            .reduce((s, sk) => s + (monthSubSets[`${groupKey}.${sk}`] || 0), 0)
         const imbalances = []
-        const chest = monthMuscleSets.chest
-        const back = monthMuscleSets.back
+        const chest = groupSum('chest')
+        const back = groupSum('back')
         if (chest > 0 && back > 0) {
           const ratio = chest / back
           if (ratio >= 1.4) {
@@ -923,8 +994,8 @@
             })
           }
         }
-        const biceps = monthMuscleSets.biceps
-        const triceps = monthMuscleSets.triceps
+        const biceps = monthSubSets['arms.biceps'] || 0
+        const triceps = monthSubSets['arms.triceps'] || 0
         if (biceps > 0 && triceps > 0) {
           const ratio = biceps / triceps
           if (ratio >= 1.5) {
@@ -978,10 +1049,25 @@
         }
         records.sort((a, b) => b.delta - a.delta)
 
+        // ─── Дисбалансы между передней / задней дельтой ───
+        // Передние и трицепс часто перерабатываются (жимы), задние дельты —
+        // отстают. Здоровье плеч сильно про этот баланс.
+        const frontDelts = monthSubSets['shoulders.front'] || 0
+        const rearDelts = monthSubSets['shoulders.rear'] || 0
+        if (frontDelts > 0 || rearDelts > 0) {
+          if (rearDelts < 4 && (chest + frontDelts) > rearDelts * 3) {
+            imbalances.push({
+              tone: 'warn',
+              title: 'Задние дельты отстают',
+              body: `${rearDelts} подх./мес против ${frontDelts + chest} жимовых на передние дельты и грудь. Добавь face pulls и обратные разводки — иначе через год ноющее плечо.`,
+            })
+          }
+        }
+
         return {
           today: todayDate.toISOString().slice(0, 10),
           planAdherence,
-          muscleVolume,
+          muscleGroups,
           overloadInsights,
           imbalances,
           records,
@@ -3106,22 +3192,25 @@
                 </div>
               </div>
 
-              <!-- 2. Объём по группам мышц -->
-              <div class="mt-6">
-                <div class="flex items-center justify-between mb-3">
+              <!-- 2. Объём по мышцам — горизонтальный слайдер -->
+              <div class="mt-6 -mr-4">
+                <div class="flex items-center justify-between mb-3 pr-4">
                   <div class="text-xs uppercase tracking-wider text-subtle">
-                    подходы по группам · неделя
+                    подходы по мышцам · неделя
                   </div>
-                  <div class="text-[10px] text-subtle">цель в скобках</div>
+                  <div class="text-[10px] text-subtle">свайп →</div>
                 </div>
-                <div class="space-y-2">
-                  ${data.muscleVolume.map(
-                    (m) => html`<${MuscleVolumeRow} key=${m.key} m=${m} />`,
+                <div
+                  class="flex gap-3 overflow-x-auto scroll-hide pb-2 pr-4"
+                  style=${{ scrollSnapType: 'x mandatory' }}
+                >
+                  ${data.muscleGroups.map(
+                    (g) => html`<${MuscleGroupCard} key=${g.key} g=${g} />`,
                   )}
                 </div>
-                <div class="text-[10px] text-subtle mt-2 leading-relaxed">
-                  Целевой диапазон — для гипертрофии (Schoenfeld et al). Зелёная полоса —
-                  оптимум, оранжевый — недогруз, жёлтый — выше нормы, красный — перегрузка.
+                <div class="text-[10px] text-subtle mt-2 leading-relaxed pr-4">
+                  Большой счётчик — по группе целиком, разбивка — по конкретным пучкам мышц.
+                  Цели для гипертрофии (Schoenfeld et al). Зелёная полоса на шкале — оптимум.
                 </div>
               </div>
 
@@ -3286,44 +3375,98 @@
       }
 
       // Строка объёма группы мышц
-      function MuscleVolumeRow({ m }) {
-        // Шкалу растягиваем до max+50%, чтобы overload-кейсы не выходили за рамки
-        const scaleMax = Math.max(m.sets, m.max + Math.ceil(m.max * 0.5))
-        const fillPct = Math.min(100, (m.sets / scaleMax) * 100)
-        const minPct = (m.min / scaleMax) * 100
-        const maxPct = (m.max / scaleMax) * 100
+      // Цвета по статусу — общие для группы и подмышц
+      const MUSCLE_COLORS = {
+        none: { bar: 'bg-white/15', text: 'text-muted', dot: 'bg-white/20' },
+        low: { bar: 'bg-orange-400', text: 'text-orange-400', dot: 'bg-orange-400' },
+        optimal: { bar: 'bg-success', text: 'text-success', dot: 'bg-success' },
+        over: { bar: 'bg-yellow-400', text: 'text-yellow-400', dot: 'bg-yellow-400' },
+        overload: { bar: 'bg-red-400', text: 'text-red-400', dot: 'bg-red-400' },
+      }
 
-        const colors = {
-          none: { bar: 'bg-white/20', text: 'text-muted' },
-          low: { bar: 'bg-orange-400', text: 'text-orange-400' },
-          optimal: { bar: 'bg-success', text: 'text-success' },
-          over: { bar: 'bg-yellow-400', text: 'text-yellow-400' },
-          overload: { bar: 'bg-red-400', text: 'text-red-400' },
-        }
-        const c = colors[m.status] || colors.optimal
+      // Карточка мышечной группы — заголовок + общая шкала + детализация
+      function MuscleGroupCard({ g }) {
+        const c = MUSCLE_COLORS[g.status] || MUSCLE_COLORS.optimal
+        // Шкала группы
+        const scaleMax = Math.max(g.total, g.max + Math.ceil(g.max * 0.4))
+        const fillPct = Math.min(100, (g.total / scaleMax) * 100)
+        const minPct = (g.min / scaleMax) * 100
+        const maxPct = (g.max / scaleMax) * 100
 
         return html`
-          <div class="rounded-2xl bg-card border border-border p-3">
-            <div class="flex items-center justify-between gap-2 mb-2">
-              <div class="text-sm font-medium">${m.label}</div>
-              <div class="flex items-baseline gap-1.5">
-                <span class=${`text-base font-semibold tabular-nums ${c.text}`}>${m.sets}</span>
-                <span class="text-[11px] text-subtle">/ ${m.min}–${m.max}</span>
+          <div
+            class="flex-shrink-0 rounded-3xl bg-card border border-border p-4"
+            style=${{ width: '280px', scrollSnapAlign: 'center' }}
+          >
+            <!-- Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="text-xl">${g.emoji}</span>
+                <div class="text-base font-semibold truncate">${g.label}</div>
+              </div>
+              <div class="flex items-baseline gap-1 flex-shrink-0">
+                <span class=${`text-2xl font-semibold tabular-nums ${c.text}`}>${g.total}</span>
+                <span class="text-[11px] text-subtle">/ ${g.min}–${g.max}</span>
               </div>
             </div>
-            <div class="relative h-2 rounded-full bg-cardAlt overflow-hidden">
-              <!-- зелёная зона цели -->
+
+            <!-- Group bar -->
+            <div class="mt-3 relative h-2 rounded-full bg-cardAlt overflow-hidden">
               <div
                 class="absolute h-full bg-success/15"
                 style=${{ left: `${minPct}%`, width: `${maxPct - minPct}%` }}
               ></div>
-              <!-- бар -->
               <div
-                class=${`absolute h-full ${c.bar} rounded-full`}
+                class=${`absolute h-full rounded-full ${c.bar}`}
                 style=${{ width: `${fillPct}%` }}
               ></div>
             </div>
-            <div class=${`text-[11px] mt-1.5 ${c.text}`}>${m.hint}</div>
+            <div class=${`text-[11px] mt-1.5 ${c.text}`}>${g.hint}</div>
+
+            <!-- Divider -->
+            <div class="h-px bg-white/5 my-3"></div>
+
+            <!-- Sub-muscles -->
+            <div class="space-y-2.5">
+              ${g.subs.map((sub) => html`<${SubMuscleRow} key=${sub.key} sub=${sub} />`)}
+            </div>
+          </div>
+        `
+      }
+
+      // Строка одной подмышцы внутри карточки группы
+      function SubMuscleRow({ sub }) {
+        const c = MUSCLE_COLORS[sub.status] || MUSCLE_COLORS.optimal
+        const scaleMax = Math.max(sub.sets, sub.max + Math.ceil(sub.max * 0.4) || 4)
+        const fillPct = Math.min(100, (sub.sets / Math.max(1, scaleMax)) * 100)
+        const minPct = sub.max > 0 ? (sub.min / scaleMax) * 100 : 0
+        const maxPct = sub.max > 0 ? (sub.max / scaleMax) * 100 : 0
+
+        return html`
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                <span class=${`w-1.5 h-1.5 rounded-full ${c.dot} flex-shrink-0`}></span>
+                <span class="text-[12px] truncate">${sub.label}</span>
+              </div>
+              <div class="flex items-baseline gap-1 flex-shrink-0">
+                <span class=${`text-[13px] font-semibold tabular-nums ${c.text}`}>${sub.sets}</span>
+                <span class="text-[10px] text-subtle">/${sub.min}–${sub.max}</span>
+              </div>
+            </div>
+            <div class="mt-1 relative h-1.5 rounded-full bg-cardAlt overflow-hidden">
+              ${sub.max > 0 &&
+              html`
+                <div
+                  class="absolute h-full bg-success/10"
+                  style=${{ left: `${minPct}%`, width: `${maxPct - minPct}%` }}
+                ></div>
+              `}
+              <div
+                class=${`absolute h-full rounded-full ${c.bar}`}
+                style=${{ width: `${fillPct}%` }}
+              ></div>
+            </div>
           </div>
         `
       }
