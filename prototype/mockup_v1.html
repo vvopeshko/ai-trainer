@@ -3461,7 +3461,159 @@
         `
       }
 
-      // Карточка мышечной группы — заголовок + общая шкала + детализация
+      // Двойное кольцо для группы:
+      //   ВНУТРЕННЕЕ (меньший радиус) — "целевая зона". Заполняется от 0 до max,
+      //     цвет: оранжевый при недогрузе, зелёный при оптимуме/перегрузе.
+      //   ВНЕШНЕЕ (больший радиус) — появляется только при перегрузе.
+      //     Заполняется в красном тоне на величину overshoot. Чем дальше за max,
+      //     тем длиннее красная дуга вокруг.
+      // Этот паттерн читается как "цель закрыта, и вот столько лишнего сверх".
+      function GroupRing({ sets, min, max, size = 64 }) {
+        const innerR = size / 2 - 11
+        const outerR = size / 2 - 4
+        const cx = size / 2
+        const cy = size / 2
+        const innerCirc = 2 * Math.PI * innerR
+        const outerCirc = 2 * Math.PI * outerR
+
+        // Внутреннее кольцо: прогресс к max (capped)
+        const innerProgress = max > 0 ? Math.min(sets, max) / max : 0
+        const innerFillLen = innerCirc * innerProgress
+
+        const isOverload = sets > max && max > 0
+        // Внешнее кольцо: насколько сверх max. Шкала — ещё один полный max сверху.
+        const overshoot = Math.max(0, sets - max)
+        const outerProgress = max > 0 ? Math.min(1, overshoot / max) : 0
+        const outerFillLen = outerCirc * outerProgress
+
+        // Цвет внутреннего кольца
+        const innerStatus = sets === 0 ? 'none' : sets < min ? 'low' : 'optimal'
+        const innerColor = {
+          none: '#3a3a48',
+          low: '#FB923C',
+          optimal: '#34D399',
+        }[innerStatus]
+        const counterColor = isOverload ? '#F87171' : innerColor
+
+        return html`
+          <div class="relative flex-shrink-0" style=${{ width: `${size}px`, height: `${size}px` }}>
+            <svg width=${size} height=${size} style=${{ transform: 'rotate(-90deg)' }}>
+              <!-- Внешнее кольцо — фон + красная дуга (только если overload) -->
+              ${isOverload &&
+              html`
+                <circle
+                  cx=${cx}
+                  cy=${cy}
+                  r=${outerR}
+                  stroke="rgba(248,113,113,0.12)"
+                  stroke-width="3"
+                  fill="none"
+                />
+                <circle
+                  cx=${cx}
+                  cy=${cy}
+                  r=${outerR}
+                  stroke="#F87171"
+                  stroke-width="3"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-dasharray=${`${outerFillLen} ${outerCirc}`}
+                />
+              `}
+              <!-- Внутреннее кольцо: трек -->
+              <circle
+                cx=${cx}
+                cy=${cy}
+                r=${innerR}
+                stroke="#22222E"
+                stroke-width="5"
+                fill="none"
+              />
+              <!-- Внутреннее кольцо: заполнение -->
+              ${sets > 0 &&
+              html`
+                <circle
+                  cx=${cx}
+                  cy=${cy}
+                  r=${innerR}
+                  stroke=${innerColor}
+                  stroke-width="5"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-dasharray=${`${innerFillLen} ${innerCirc}`}
+                />
+              `}
+              <!-- Тонкая отсечка на min внутреннего кольца -->
+              ${min > 0 &&
+              max > 0 &&
+              html`
+                <circle
+                  cx=${cx}
+                  cy=${cy}
+                  r=${innerR}
+                  stroke="rgba(255,255,255,0.4)"
+                  stroke-width="5"
+                  fill="none"
+                  stroke-dasharray=${`1 ${innerCirc - 1}`}
+                  stroke-dashoffset=${`-${innerCirc * (min / max) - 0.5}`}
+                />
+              `}
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <div
+                class="text-base font-bold tabular-nums leading-none"
+                style=${{ color: counterColor }}
+              >
+                ${sets}
+              </div>
+              <div class="text-[9px] text-subtle leading-none mt-0.5">${min}–${max}</div>
+            </div>
+          </div>
+        `
+      }
+
+      // Точечная лесенка для подмышц: каждый подход = одна точка.
+      // Min/max обрамлены тонкими вертикальными отсечками.
+      // До min — серый, в зоне — зелёный, выше max — красный.
+      // При большом overload (>max+8) последние подходы сжимаются в "+N".
+      function DotLadder({ sets, min, max }) {
+        const safeSets = Math.max(0, sets || 0)
+        const safeMin = Math.max(0, min || 0)
+        const safeMax = Math.max(safeMin, max || 0)
+        const visualMax = Math.min(Math.max(safeSets, safeMax), safeMax + 8)
+        const overflow = safeSets > visualMax ? safeSets - visualMax : 0
+
+        const dots = []
+        for (let i = 1; i <= Math.max(visualMax, safeMax); i++) {
+          let cls
+          if (i > safeSets) cls = 'bg-cardAlt'
+          else if (i < safeMin) cls = 'bg-white/30'
+          else if (i <= safeMax) cls = 'bg-success'
+          else cls = 'bg-red-400'
+          dots.push({ idx: i, cls })
+        }
+
+        return html`
+          <div class="flex items-center gap-[3px] flex-wrap">
+            ${dots.map(
+              (d) => html`
+                <div key=${d.idx} class="flex items-center">
+                  ${d.idx === safeMin && safeMin > 0 &&
+                  html`<div class="h-2.5 w-px bg-white/40 mr-[3px]"></div>`}
+                  <div class=${`w-1.5 h-1.5 rounded-full ${d.cls}`}></div>
+                  ${d.idx === safeMax && safeMax > 0 &&
+                  html`<div class="h-2.5 w-px bg-white/40 ml-[3px]"></div>`}
+                </div>
+              `,
+            )}
+            ${overflow > 0 &&
+            html`<div class="text-[10px] text-red-400 ml-1 font-semibold">+${overflow}</div>`}
+          </div>
+        `
+      }
+
+      // Карточка мышечной группы: эмодзи + название + кольцо справа,
+      // ниже — список подмышц с точечными лесенками.
       function MuscleGroupCard({ g }) {
         const c = MUSCLE_COLORS[g.status] || MUSCLE_COLORS.optimal
 
@@ -3470,52 +3622,43 @@
             class="flex-shrink-0 rounded-3xl bg-card border border-border p-4"
             style=${{ width: '280px', scrollSnapAlign: 'center' }}
           >
-            <!-- Header -->
+            <!-- Header: emoji + name + ring -->
             <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-2 min-w-0 flex-1">
-                <span class="text-xl">${g.emoji}</span>
-                <div class="text-base font-semibold truncate">${g.label}</div>
+              <div class="min-w-0 flex-1 pt-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">${g.emoji}</span>
+                  <div class="text-base font-semibold truncate">${g.label}</div>
+                </div>
+                <div class=${`text-[11px] mt-1 ${c.text}`}>${g.hint}</div>
               </div>
-              <div class="flex items-baseline gap-1 flex-shrink-0">
-                <span class=${`text-2xl font-semibold tabular-nums ${c.text}`}>${g.total}</span>
-                <span class="text-[11px] text-subtle">/ ${g.min}–${g.max}</span>
-              </div>
+              <${GroupRing} sets=${g.total} min=${g.min} max=${g.max} size=${64} />
             </div>
-
-            <!-- Group bar (3-сегментный) -->
-            <div class="mt-3">
-              <${VolumeBar} sets=${g.total} min=${g.min} max=${g.max} height="h-2" />
-            </div>
-            <div class=${`text-[11px] mt-1.5 ${c.text}`}>${g.hint}</div>
 
             <!-- Divider -->
             <div class="h-px bg-white/5 my-3"></div>
 
             <!-- Sub-muscles -->
-            <div class="space-y-2.5">
+            <div class="space-y-3">
               ${g.subs.map((sub) => html`<${SubMuscleRow} key=${sub.key} sub=${sub} />`)}
             </div>
           </div>
         `
       }
 
-      // Строка одной подмышцы внутри карточки группы
+      // Строка одной подмышцы: подпись и счётчик сверху, точечная лесенка снизу
       function SubMuscleRow({ sub }) {
         const c = MUSCLE_COLORS[sub.status] || MUSCLE_COLORS.optimal
         return html`
           <div>
             <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                <span class=${`w-1.5 h-1.5 rounded-full ${c.dot} flex-shrink-0`}></span>
-                <span class="text-[12px] truncate">${sub.label}</span>
-              </div>
+              <span class="text-[12px] truncate">${sub.label}</span>
               <div class="flex items-baseline gap-1 flex-shrink-0">
                 <span class=${`text-[13px] font-semibold tabular-nums ${c.text}`}>${sub.sets}</span>
                 <span class="text-[10px] text-subtle">/${sub.min}–${sub.max}</span>
               </div>
             </div>
-            <div class="mt-1">
-              <${VolumeBar} sets=${sub.sets} min=${sub.min} max=${sub.max} height="h-1.5" />
+            <div class="mt-1.5">
+              <${DotLadder} sets=${sub.sets} min=${sub.min} max=${sub.max} />
             </div>
           </div>
         `
