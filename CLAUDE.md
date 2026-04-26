@@ -18,6 +18,7 @@
 | **[NEXT_PLANS.md](NEXT_PLANS.md)** | Живой бэклог: приоритеты, фичи, баги, техдолг |
 | **[UPDATES.md](UPDATES.md)** | Changelog по датам |
 | **[docs/machine-scanning.md](docs/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
+| **[docs/implementation-plan.md](docs/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
 
 ## Стек (коротко)
 
@@ -41,6 +42,7 @@
 ├── vercel.json
 └── server/          # Express + Telegraf + Prisma
     ├── src/
+    ├── data/        # seed-данные (enriched-exercises.json)
     └── prisma/schema.prisma
 ```
 

@@ -2,10 +2,11 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-04-24
+**Последнее обновление:** 2026-04-26
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
+- [План реализации экранов](docs/implementation-plan.md) — фазы, API-карта, Prisma-изменения
 
 ---
 
@@ -213,6 +214,9 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
 └── server/            # Express + Telegraf + Prisma
     ├── package.json
     ├── .env           # DATABASE_URL, BOT_TOKEN, ANTHROPIC_API_KEY, ...
+    ├── data/
+    │   ├── enriched-exercises.json   # 57 обогащённых упражнений (seed-данные)
+    │   └── fetch-missing-gifs.js     # скрипт дозагрузки GIF из ExerciseDB OSS
     ├── prisma/
     │   └── schema.prisma
     └── src/
@@ -849,16 +853,51 @@ server/src/services/aiTrainer/
 5. Результат возвращается в чат с inline-клавиатурой "начать упражнение" / "показать альтернативы" / "открыть в мини-аппе".
 6. Событие `exercise_identified` (или `exercise_identification_failed` при низком `confidence`).
 
-### 6.4 Seed упражнений (скрипт)
+### 6.4 База упражнений и seed
 
-`server/scripts/seedExercises.js`:
-1. Скачивает [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (MIT).
-2. Фильтрует до силовых в зале (~100–150 упражнений).
-3. Дополняет недостающие поля через LLM (typical_mistakes, russian_name, youtube_url).
-4. Ручная проверка ключевых записей (базовые движения — жим/присед/тяга).
-5. Вставка в таблицу `Exercise`.
+#### Источники данных (комбинация двух баз)
 
-Запускается как `cd server && node scripts/seedExercises.js` — не на каждом деплое, а по необходимости.
+| База | Что берём | Лицензия | Размер |
+|------|----------|----------|--------|
+| [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) | Основа: slug, name, primaryMuscles, secondaryMuscles, equipment, level, mechanic, force, instructions, images | Public Domain | 873 упр. |
+| [ExerciseDB OSS](https://oss.exercisedb.dev) | Обогащение: анимированная GIF-демонстрация (`gifUrl`) | AGPL-3.0 | ~1500 упр. |
+
+#### Обогащённый датасет (`server/data/enriched-exercises.json`)
+
+57 упражнений из реальных тренировок автора прошли 3-шаговое обогащение:
+1. **Матч с Free Exercise DB:** автоматический (exact/all-words/key-words) + ручные маппинги для 13 несовпадений → muscles, equipment, instructions, images
+2. **Коррекция + русификация:** русские названия (nameRu), aliases (3–6 синонимов рус/eng), исправление неточных матчей
+3. **GIF из ExerciseDB OSS:** animated GIF URLs через API-поиск (rate limiting на free tier ограничил покрытие)
+
+**Покрытие:**
+| Поле | Покрытие |
+|------|----------|
+| nameRu | 57/57 |
+| primaryMuscles | 57/57 |
+| equipment | 57/57 |
+| instructions | 57/57 |
+| images (static) | 53/57 |
+| aliases | 57/57 |
+| gifUrl (animated) | 21/57 |
+
+Скрипт `server/data/fetch-missing-gifs.js` дозагружает оставшиеся GIF при сбросе rate limit.
+
+#### Resolve-слой (Вариант C: seed + auto-create)
+
+LLM возвращает упражнения как свободный текст. `exerciseResolver.js` — единая точка привязки к каноничной базе:
+
+```
+LLM → resolveExercise() → slug-match → alias-search → auto-create (source: 'ai_generated')
+```
+
+Подробности resolve-слоя и seed-скрипта — в [docs/implementation-plan.md](docs/implementation-plan.md#11-resolve-слой-упражнений-вариант-c-seed--auto-create).
+
+#### Seed-скрипт
+
+`server/scripts/seedExercises.js` (будет создан):
+1. Читает `server/data/enriched-exercises.json`
+2. Upsert в таблицу `Exercise` по slug, `source: 'seed'`
+3. Запускается разово: `cd server && node scripts/seedExercises.js`
 
 ---
 
@@ -1003,7 +1042,7 @@ curl https://<railway-url>/api/health
 | 5 | ORM | Prisma 6 без миграций, `db push` + ручной SQL | Паттерн из daily balancer |
 | 6 | Структура репо | Плоская (frontend в корне, `/server`) | Из daily balancer, минимум конфигурации |
 | 7 | Язык | JavaScript на старте; TypeScript рассматривается для AI-сервисов | Соло-разработка, как в референсе. TS — если заметно упрощает работу с JSON-схемами |
-| 8 | База упражнений | Free Exercise DB (MIT) + LLM для пробелов | Быстрый старт, качество под контролем |
+| 8 | База упражнений | Free Exercise DB (Public Domain, основа) + ExerciseDB OSS (AGPL-3.0, GIF-ки) + ручная русификация | Комбинация двух баз: Free DB для метаданных, OSS для анимаций. 57 упражнений обогащены и готовы к seed |
 | 9 | Видео | Ссылки на YouTube | Бесплатно, большой выбор |
 | 10 | Аналитика | Самописная `AnalyticsEvent` + fire-and-forget `track()` | Ноль внешних зависимостей, паттерн из daily balancer |
 

@@ -4,6 +4,74 @@
 
 ---
 
+## 2026-04-26 — Дизайн-система, план реализации экранов, обогащение базы упражнений
+
+### Дизайн-система
+
+Реализованы UI-компоненты из дизайн-хэндоффа (Claude Design → код):
+- `Glass`, `Button`, `Icon` (44 иконки), `StatTile`, `ActivePill`, `GlassNav`, `GlassAINote`, `RestCard`, `Mesh`
+- Дизайн-токены (CSS custom properties) в `src/theme/tokens.css`
+- Демо-страница: `src/pages/Demo/DesignSystemDemo.jsx` (доступна по `/demo`)
+
+### План реализации экранов (BRD §12)
+
+Создан `docs/implementation-plan.md` — 6 фаз реализации мини-аппа на основе спецификации экранов:
+- Фаза 1: Сквозной скелет (seed + resolve + API + минимальный Workout)
+- Фаза 2: Home-экран
+- Фаза 3: Полный Workout
+- Фаза 4: Summary + Progress
+- Фаза 5: Programs
+- Фаза 6: Cross-cutting + polish
+
+Архитектурные решения в плане:
+- **Resolve-слой упражнений (Вариант C):** seed + auto-create через `exerciseResolver.js`
+- **Два режима layout:** TabLayout (GlassNav) и FlowLayout (TopBar + back)
+- **ActiveWorkoutProvider:** React Context для состояния тренировки
+- **planJson формализация:** Zod-схема для структуры программы
+- **Новые поля Prisma:** `source` (ExerciseSource enum) и `gifUrl` (String?) на Exercise
+
+### Исследование баз упражнений
+
+Протестированы 4 базы упражнений:
+| База | Упражнений | Лицензия | Матч с нашими 57 |
+|------|-----------|----------|------------------|
+| Free Exercise DB | 873 | Public Domain | 67% (38/57) |
+| Exercemus | 872 | MIT | 68% (39/57) |
+| ExerciseDB OSS | ~1500 | AGPL-3.0 | Качественные GIF, жёсткий rate limit |
+| wger API | ~885 | AGPL | Не тестировали детально |
+
+**Решение:** Free Exercise DB как основа метаданных + ExerciseDB OSS для animated GIF.
+
+### Обогащение 57 упражнений (3-шаговый pipeline)
+
+Все 57 упражнений из реальных тренировок автора (`prototype/mock_data/workouts.json`) прошли полное обогащение:
+
+**Шаг 1 — Матч с Free Exercise DB:**
+- Автоматический матч (exact/all-words/key-words): 32/57
+- Ручные маппинги для 13 упражнений: 45/57
+- Ручное заполнение для 4 оставшихся (RFESS, Machine Shoulder Fly, Side Plank): 57/57
+
+**Шаг 2 — Коррекция + русификация:**
+- Исправлены 3 неточных key-words матча (Seated Row Wide, Lateral Raise DB, Incline Row DB)
+- Добавлены 57 русских названий (nameRu)
+- Добавлены aliases (3–6 синонимов рус/eng на каждое)
+
+**Шаг 3 — GIF из ExerciseDB OSS:**
+- 21/57 GIF URL получены (rate limit на free tier ограничил покрытие)
+- Скрипт `server/data/fetch-missing-gifs.js` для дозагрузки
+
+**Финальное покрытие:** nameRu 57/57, muscles 57/57, equipment 57/57, instructions 57/57, images 53/57, aliases 57/57, gifUrl 21/57.
+
+**Сохранено:** `server/data/enriched-exercises.json`
+
+### Решения
+
+- **Комбинация баз:** Free Exercise DB для метаданных, ExerciseDB OSS для GIF. К OSS API обращаемся только при seed, не в runtime
+- **Plié Squat slug fix:** символ `é` создавал slug `pli-squat` вместо `plie-squat`. Обработан в скрипте обогащения
+- **ExerciseDB OSS rate limiting:** free tier блокирует после ~25-50 запросов (503). Стратегия: запросы с паузой 2-4 сек, повторные запуски при сбросе лимита
+
+---
+
 ## 2026-04-24 — Итерация 4 MVP: сканирование тренажёра по фото
 
 ### Что сделано
