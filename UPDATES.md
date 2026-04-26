@@ -4,6 +4,95 @@
 
 ---
 
+## 2026-04-26 (вечер) — Home-экран, программы, полный Workout-редизайн
+
+### Фаза 1 завершена — сквозной скелет
+
+**Seed + resolve + import:**
+- `server/scripts/seedExercises.js` — upsert 57 упражнений в Neon по slug
+- `server/src/services/exerciseResolver.js` — slug → alias → auto-create pipeline
+- `server/scripts/importWorkouts.js` — 60 тренировок, 1687 подходов, 57/57 slug-match (0 auto-created!)
+- Prisma: `ExerciseSource` enum, `source`, `gifUrl` на Exercise
+
+**API для тренировок (7 эндпоинтов):**
+- `GET /exercises`, `GET /exercises/search?q=`
+- `POST /workouts` (create/resume), `GET /workouts/active`, `GET /workouts/:id`
+- `POST /workouts/:id/sets`, `PATCH /workouts/:id` (finish/delete)
+
+**Workout-экран (минимальный):**
+- BigStepper, TopBar — новые UI-компоненты
+- WorkoutPage — exercise picker → stepper → log → finish
+- SummaryPage — "Готово!" + stat-tiles (подходов, время, тоннаж)
+- Haptic feedback, optimistic updates
+- E2E в Telegram — работает
+
+### Фаза 2 — Home-экран
+
+**API:**
+- `GET /programs/active` — активная программа с днями
+- `GET /programs/active/next-workout` — следующая тренировка (день, упражнения, restSec)
+- `GET /stats/month` — `{ workouts, tonnage, streak }`
+- `GET /workouts/recent?limit=4` — недавние тренировки с упражнениями
+
+**Home-экран (BRD §12.1):**
+- TabLayout с GlassNav (4 таба: Главная, Прогресс, Каталог, Профиль)
+- Programme strip + hero card (следующая/продолжить тренировку)
+- Active workout state — пульс-точка + live-таймер + "Продолжить"
+- Stat-tiles 2×2: тренировок, тоннаж, серия, рекорды
+- Недавние тренировки (список с датой, упражнениями, подходами)
+- Роутинг: `/` → Home (вместо redirect на /workout)
+
+**Программы:**
+- `server/scripts/seedProgram.js` — генерация программы из исторических тренировок
+- Programme strip на Home с навигацией по дням
+
+### Program-aware Workout flow
+
+- PlanQueue — показ плана тренировки (список упражнений из программы)
+- Авто-навигация: после завершения упражнения → переход к следующему по плану
+- Показ запланированного количества подходов ("Подход 1 / 3")
+- Pre-fill повторов из программы (repsMin)
+- Отмена тренировки (кнопка "Отменить" когда 0 подходов)
+- Предотвращение пустых тренировок ("Завершить" только когда есть подходы)
+
+### Workout redesign — glass_v3 prototype
+
+Полный редизайн WorkoutPage по прототипу из Claude Design (3 экрана: активный подход, отдых, прошлые свёрнуты).
+
+**Новые sub-components в WorkoutPage.jsx:**
+- `WorkoutTopBar` — Glass strong, live-таймер (mono accent), прогресс "упр 1/9 · 2/3 подх", ГОТОВО/ОТМЕНИТЬ
+- `CollapsedExercise` — свёрнутая строка завершённого упражнения (accent check + name + "3×10")
+- `DoneSetRow` — компактная строка выполненного подхода внутри карточки
+- `ActiveSetInput` — accent-tinted sub-card с BigStepper (вес + повторы) + "СДЕЛАЛ"
+- `UpcomingExerciseItem` — предстоящее упражнение (circle number + name + sets×reps + мышцы)
+
+**Rest timer между подходами:**
+- После "Сделал" → RestCard (отдых с обратным отсчётом, breathing radial, progress bar)
+- `restSec` из плана программы или default 90
+- Пропустить / автозавершение → следующий подход
+- После всех подходов → авто-переход к следующему упражнению
+
+**Единый scrollable экран:**
+- Заменены три отдельных режима (PlanQueue, ExercisePicker, ActiveWorkout) на один layout
+- "Сделано" секция: CollapsedExercise для завершённых
+- Активная карточка: header + done sets + ActiveSetInput/RestCard
+- "Далее" секция: upcoming exercises
+
+**RestCard русифицирован:**
+- "rest" → `t('workout.rest')`, "Skip rest" → `t('workout.skipRest')`, breathing text через i18n
+
+**12 новых i18n-ключей:** `workout.now`, `exerciseOf`, `setsProgress`, `ready`, `upcoming`, `addSetExtra`, `targetReps`, `rest`, `skipRest`, `breathe`, `doneLabel`, `setsScheme`
+
+### Багфиксы
+
+- **Lazy workout creation** — тренировка создаётся только при первом "Сделал", не при открытии экрана
+- **Одно упражнение вместо списка** — PlanQueue показывается при старте, не авто-выбирается первое
+- **Повтор того же дня** — предотвращение завершения пустой тренировки (бэкенд удалял → тот же next-workout)
+- **Количество подходов = 1** — добавлен `plannedSets` prop, формат "Подход 1 / 3"
+- **Seed программы для wrong user** — привязка к пользователю с наибольшим количеством тренировок
+
+---
+
 ## 2026-04-26 — Дизайн-система, план реализации экранов, обогащение базы упражнений
 
 ### Дизайн-система

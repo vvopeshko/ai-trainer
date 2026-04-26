@@ -3,7 +3,7 @@
 На основе [BRD §12](../BRD.md#12-спецификация-экранов-мини-аппа). Учитывает текущее состояние кодовой базы и принятые архитектурные решения.
 
 **Создан:** 2026-04-24
-**Обновлён:** 2026-04-26
+**Обновлён:** 2026-04-26 (вечер)
 
 ---
 
@@ -13,20 +13,21 @@
 
 | Слой | Готово |
 |------|--------|
-| **Prisma-схема** | 9 моделей (User, UserProfile, Exercise, Program, Workout, WorkoutSet, ChatMessage, MachineIdentification, AnalyticsEvent) |
-| **Сервер** | Auth middleware (HMAC-SHA256), `POST /api/v1/auth/init`, бот (`/start`, `/workout`, `/help`, `on('photo')`), LLM-абстракция (`llm.js`), analytics (`track()`), identifyMachine |
-| **Фронт UI-кит** | Glass, Button, Icon (44 иконки), StatTile, ActivePill, GlassNav, GlassAINote, RestCard, Mesh |
-| **Фронт инфра** | i18n (`t()`), TelegramProvider, api.js (fetch + auth header), роутер, splash, дизайн-токены |
+| **Prisma-схема** | 9 моделей + `ExerciseSource` enum, `source`, `gifUrl` на Exercise |
+| **Сервер** | Auth middleware, бот, LLM-абстракция, analytics, identifyMachine, **exerciseResolver**, **seed/import скрипты**, **7 workout API**, **4 home API** (programs, stats, recent), **seedProgram** |
+| **БД** | 57 упражнений seeded, 60 тренировок + 1687 подходов imported, 1 программа |
+| **Фронт UI-кит** | Glass, Button, Icon (44), StatTile, ActivePill, GlassNav, GlassAINote, RestCard, Mesh, **BigStepper**, **TopBar** |
+| **Фронт страницы** | **HomePage** (programme strip, hero, stats, recent), **WorkoutPage** (glass_v3 redesign: единый scrollable layout, rest timer, collapsed/active/upcoming), **SummaryPage** |
+| **Фронт инфра** | i18n (`t()`), TelegramProvider, api.js, роутер, splash, токены, **TabLayout + GlassNav**, **FlowLayout** |
 
 ### Чего не хватает
 
 | Слой | Не готово |
 |------|-----------|
-| **Сервер** | CRUD workouts, exercises, programs, stats, insights, progress — все закомментированные стабы |
-| **БД** | Таблица Exercise пустая. Seed-данные подготовлены (`server/data/enriched-exercises.json`, 57 упр.), но seed-скрипт ещё не написан |
-| **Фронт компоненты** | BigStepper, BottomSheet, Toast, Skeleton, TopBar |
-| **Фронт страницы** | Home, Workout (полный), Summary, Progress, ProgramEdit, ProgramLibrary |
-| **Фронт инфра** | Глобальный стейт (активная тренировка), deep-link парсер, haptic utils, layout с условным GlassNav |
+| **Сервер** | Edit/delete sets, AI-замена упражнений, progress/insights API, program CRUD, AI-генерация программ |
+| **Фронт компоненты** | BottomSheet, Toast, Skeleton |
+| **Фронт страницы** | Progress, ProgramEdit, ProgramLibrary |
+| **Фронт инфра** | `ActiveWorkoutProvider` (React Context), deep-link парсер, offline-очередь |
 
 ---
 
@@ -223,102 +224,62 @@ const planJsonSchema = z.object({
 
 ## 2. Фазы реализации
 
-### Фаза 1 — Сквозной скелет (завершение итерации 1)
+### Фаза 1 — Сквозной скелет ✅ ЗАВЕРШЕНА
 
-**Цель:** открываю бота в зале → мини-апп → логирую реальный подход → данные в Neon.
+**Цель:** открываю бота в зале → мини-апп → логирую реальный подход → данные в Neon. **Пройден.**
 
-#### 1a. Seed + resolve + import
+#### 1a. Seed + resolve + import ✅
 
-**Сервер:**
-- [ ] Добавить `source` enum + `gifUrl` поле в `Exercise` модель (Prisma schema)
-- [ ] `prisma db push` (nullable, безопасно)
-- [x] ~~Создать `server/data/exercises.json`~~ → Готово: `server/data/enriched-exercises.json` (57 упр., 57/57 muscles+equipment+instructions+nameRu+aliases, 21/57 gifUrl)
-- [ ] Создать `server/scripts/seedExercises.js` — upsert по slug из enriched-exercises.json
-- [ ] Создать `server/src/services/exerciseResolver.js` — resolve pipeline
-- [ ] Запустить seed
-- [ ] Создать `server/scripts/importWorkouts.js` — импорт 60 тренировок из `prototype/mock_data/workouts.json` через resolveExercise
-- [ ] Запустить import, проверить resolve-отчёт (цель: 80%+ match с seed-базой)
-- [ ] Итерировать aliases в seed по результатам resolve-отчёта
-- [ ] Запустить seed + import на проде
+- [x] `source` enum + `gifUrl` в Exercise (Prisma schema)
+- [x] `server/data/enriched-exercises.json` (57 упр., полное покрытие, 21/57 gifUrl)
+- [x] `server/scripts/seedExercises.js` — upsert по slug
+- [x] `server/src/services/exerciseResolver.js` — slug → alias → auto-create
+- [x] `server/scripts/importWorkouts.js` — 60 тренировок, 1687 подходов, 57/57 slug-match
+- [x] Seed + import на проде
 
-#### 1b. API для тренировок
+#### 1b. API для тренировок ✅
 
-**Сервер:**
-- [ ] `GET /api/v1/exercises` — список упражнений (с фильтром по muscle group)
-- [ ] `GET /api/v1/exercises/search?q=...` — текстовый поиск
-- [ ] `POST /api/v1/workouts` — создать тренировку `{ programId?, programDayIndex? }`
-- [ ] `GET /api/v1/workouts/:id` — тренировка с подходами и упражнениями
-- [ ] `GET /api/v1/workouts/active` — незавершённая тренировка текущего юзера
-- [ ] `POST /api/v1/workouts/:id/sets` — залогировать подход `{ exerciseId, weightKg, reps, rpe? }`
-- [ ] `PATCH /api/v1/workouts/:id` — завершить `{ finishedAt, feltRating? }`
+- [x] `GET /exercises` + `GET /exercises/search?q=`
+- [x] `POST /workouts` (create/resume) + `GET /workouts/:id` + `GET /workouts/active`
+- [x] `POST /workouts/:id/sets` + `PATCH /workouts/:id` (finish/delete)
 
-**Файлы:**
-- `server/src/routes/exercises.js`
-- `server/src/routes/workouts.js`
-- `server/src/controllers/exerciseController.js`
-- `server/src/controllers/workoutController.js`
+#### 1c. Минимальный Workout-экран ✅
 
-#### 1c. Минимальный Workout-экран
-
-**Фронт:**
-- [ ] `BigStepper` компонент
-- [ ] `TopBar` компонент
-- [ ] `FlowLayout` обёртка
-- [ ] `WorkoutPage` переписать:
-  - Список упражнений из плана (или выбор из списка если без программы)
-  - Текущее упражнение: название + мышцы
-  - Active set: BigStepper (вес) + BigStepper (повторы) + кнопка "Сделал"
-  - Done sets: компактный список "60×10 · 60×10 · 60×8"
-  - Кнопка "Завершить тренировку"
-- [ ] Интеграция с api.js — реальные запросы
-- [ ] Haptic: `notificationOccurred('success')` при "Сделал"
-
-**Критерий готовности:** открываю мини-апп → выбираю упражнение → ввожу 60×10 → "Сделал" → данные в WorkoutSet в Neon.
+- [x] BigStepper, TopBar, FlowLayout
+- [x] WorkoutPage — picker → stepper → log → finish
+- [x] SummaryPage — "Готово!" + stat-tiles
+- [x] Haptic feedback, optimistic updates
+- [x] E2E в Telegram — работает
 
 ---
 
-### Фаза 2 — Home-экран (BRD §12.1)
+### Фаза 2 — Home-экран (BRD §12.1) ✅ ЗАВЕРШЕНА
 
-**Цель:** главная страница с полной информацией: программа, статистика, инсайт, недавние тренировки.
+**Цель:** главная страница с полной информацией: программа, статистика, инсайт, недавние тренировки. **Пройден.**
 
-#### 2a. API для Home
+#### 2a. API для Home ✅
 
-**Сервер:**
-- [ ] `GET /api/v1/programs/active` — активная программа с днями
-- [ ] `GET /api/v1/programs/active/next-workout` — следующая тренировка (какой день по плану + рекомендации)
-- [ ] `GET /api/v1/stats/year` — `{ year, done, target }`
-- [ ] `GET /api/v1/stats/month` — `{ workouts, tonnage, streak, recordsCount, recentRecord }`
-- [ ] `GET /api/v1/workouts/recent?limit=4` — недавние тренировки
-- [ ] `GET /api/v1/insights/today` — AI-инсайт (кэшированный, генерится раз в день)
+- [x] `GET /programs/active` — активная программа с днями
+- [x] `GET /programs/active/next-workout` — следующая тренировка (день, упражнения, restSec)
+- [x] `GET /stats/month` — `{ workouts, tonnage, streak }`
+- [x] `GET /workouts/recent?limit=4` — недавние тренировки
+- [ ] `GET /stats/year` — годовая статистика (отложено)
+- [ ] `GET /insights/today` — AI-инсайт (отложено)
 
-**Файлы:**
-- `server/src/routes/programs.js` + `server/src/routes/stats.js`
-- `server/src/controllers/programController.js` + `server/src/controllers/statsController.js`
+#### 2b. Home-экран ✅
 
-#### 2b. Home-экран
-
-**Фронт:**
-- [ ] `TabLayout` обёртка с GlassNav
-- [ ] `src/pages/Main/HomePage.jsx`:
-  - Header: аватар + годовой счётчик
-  - Объединённая карточка (programme strip + hero)
-  - Default-состояние: "Следующая" + название + мета + "Начать тренировку"
-  - Active-состояние: пульс-точка + live-таймер + "Продолжить"
-  - Stat-tiles 2×2: тренировок, тоннаж, streak, рекорды
-  - AI-инсайт (GlassAINote)
-  - Недавние тренировки (список)
-- [ ] `ActiveWorkoutProvider` — контекст
-- [ ] Роутинг: `/` → Home (заменить текущий redirect на /workout)
-
-**Состояния по BRD:**
-- [ ] Default (нет активной)
-- [ ] Active workout (live-таймер)
-- [ ] Empty state (новый юзер без программы) — CTA "Собрать программу с тренером"
-- [ ] Loading (skeleton)
+- [x] TabLayout с GlassNav (4 таба)
+- [x] HomePage — programme strip + hero + stat-tiles + недавние
+- [x] Default / Active workout state (пульс + live-таймер + "Продолжить")
+- [x] Роутинг: `/` → Home
+- [x] `seedProgram.js` — генерация программы из исторических тренировок
+- [ ] Empty state (новый юзер без программы)
+- [ ] Loading skeleton
+- [ ] `ActiveWorkoutProvider` (React Context) — отложено в техдолг
 
 ---
 
-### Фаза 3 — Workout полный (BRD §12.2)
+### Фаза 3 — Workout полный (BRD §12.2) — ЧАСТИЧНО ЗАВЕРШЕНА
 
 **Цель:** полноценный экран тренировки — главный экран в зале.
 
@@ -329,20 +290,27 @@ const planJsonSchema = z.object({
 - [ ] `POST /api/v1/workouts/:id/exercises` — добавить внеплановое упражнение (через exerciseResolver)
 - [ ] `POST /api/v1/exercises/:id/replace-suggest` — AI-предложения замены
 
-#### 3b. Полный Workout-экран
+#### 3b. Workout-экран (glass_v3 redesign) — частично ✅
 
-**Фронт:**
-- [ ] Workout-таймер карточка (live от startedAt)
-- [ ] Done exercises (collapsible, зелёный бейдж)
-- [ ] Active exercise: шапка + RecommendationCard + подходы (done/active/future)
-- [ ] Rest timer overlay (RestCard в full-screen режиме)
-- [ ] "К следующему упражнению" / навигация по списку
-- [ ] "Далее" — оставшиеся упражнения
+**Сделано:**
+- [x] WorkoutTopBar (Glass strong, live-таймер, прогресс "упр 1/9 · 2/3 подх", ГОТОВО/ОТМЕНИТЬ)
+- [x] Единый scrollable layout (вместо трёх отдельных режимов)
+- [x] CollapsedExercise (свёрнутые завершённые упражнения с accent check)
+- [x] ActiveSetInput (accent-tinted sub-card с BigStepper)
+- [x] DoneSetRow (компактные строки выполненных подходов)
+- [x] UpcomingExerciseItem (предстоящие упражнения с circle number)
+- [x] Rest timer между подходами (RestCard с breathing radial, progress bar)
+- [x] Авто-переход к следующему упражнению после всех подходов
+- [x] Program-aware flow (PlanQueue, planned sets, pre-fill reps)
+- [x] Cancel workout (0 подходов → "Отменить")
+- [x] "+ Добавить подход"
+- [x] Optimistic updates + haptic feedback
+
+**Осталось:**
+- [ ] Редактирование/удаление отдельных подходов
 - [ ] BottomSheet: альтернативы, суперсет, AI-замена
-- [ ] "+ Добавить подход", "+ Упражнение"
 - [ ] Quick actions: "Спросить тренера", "Фото тренажёра"
-- [ ] Optimistic updates + rollback при ошибке
-- [ ] Haptic feedback (light на тап, success на "Сделал", medium на рекорд)
+- [ ] Автоподстановка веса/повторов из прошлого подхода
 
 ---
 
@@ -509,22 +477,18 @@ gifUrl  String?                          // анимированная GIF из 
 ## 5. Зависимости между фазами
 
 ```
-Фаза 1a (seed + resolve)
+Фаза 1 ✅ (seed + API + Workout UI)
     │
-    ├──▶ Фаза 1b (API workouts) ──▶ Фаза 1c (Workout UI)
-    │                                      │
-    │                                      ▼
-    │                               Фаза 3 (Workout полный)
-    │
-    ├──▶ Фаза 2 (Home) ── требует: программы, статистика
+    ├──▶ Фаза 2 ✅ (Home + programs)
     │         │
     │         ▼
-    │    Фаза 5 (Programs) ── можно параллельно с 3-4
+    │    Фаза 5 (Programs CRUD + AI-генерация)
     │
-    └──▶ Фаза 4 (Summary + Progress) ── требует: N тренировок в БД
-              │
-              ▼
-         Фаза 6 (polish)
+    ├──▶ Фаза 3 ⚡ (Workout: glass_v3 done, API edit/AI-замена осталось)
+    │
+    ├──▶ Фаза 4 (Summary + Progress) ── требует: N тренировок в БД
+    │
+    └──▶ Фаза 6 (polish)
 ```
 
-**Критический путь:** 1a → 1b → 1c → залогировать первый реальный подход → всё остальное.
+**Следующий шаг:** Фаза 3 остаток (edit sets API, AI-замена) + Фаза 4 (Progress).

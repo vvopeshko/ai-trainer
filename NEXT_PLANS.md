@@ -7,32 +7,34 @@
 
 ---
 
-## 🎯 Следующий заход: Фаза 2 — Home-экран
+## 🎯 Следующий заход: Фаза 3 (остаток) + Фаза 4
 
 Полный план реализации — в [docs/implementation-plan.md](docs/implementation-plan.md).
 
-**Цель:** полноценная главная страница — "что делать дальше", статистика, недавние тренировки.
+**Цель:** доделать Workout-экран (edit/delete sets, альтернативы, суперсеты) + Summary + Progress-аналитика.
 
-### Фаза 2a — API для Home
+### Фаза 3 (остаток) — Workout полный
 
-- [ ] `GET /api/v1/programs/active` — активная программа с днями
-- [ ] `GET /api/v1/programs/active/next-workout` — следующая тренировка
-- [ ] `GET /api/v1/stats/month` — `{ workouts, tonnage, streak }`
-- [ ] `GET /api/v1/workouts/recent?limit=4` — недавние тренировки
+- [ ] `PATCH /api/v1/workouts/:id/sets/:setId` — редактировать/удалить подход
+- [ ] `POST /api/v1/workouts/:id/exercises` — внеплановое упражнение (через exerciseResolver)
+- [ ] `POST /api/v1/exercises/:id/replace-suggest` — AI-предложения замены
+- [ ] Редактирование/удаление подходов в UI (свайп или tap)
+- [ ] BottomSheet: альтернативы, суперсет, AI-замена
+- [ ] Quick actions: "Спросить тренера", "Фото тренажёра"
+- [ ] Автоподстановка веса/повторов из прошлой тренировки
 
-### Фаза 2b — Home-экран (BRD §12.1)
+### Фаза 4 — Summary + Progress
 
-- [ ] `TabLayout` обёртка с GlassNav (bottom-nav)
-- [ ] `HomePage` — programme strip + hero + stat-tiles + недавние
-- [ ] Роутинг: `/` → Home (вместо redirect на /workout)
-- [ ] Default / Active workout / Empty state
+- [ ] Progress API: plan-adherence, muscle-volume, insights, imbalances, records
+- [ ] Summary-экран: улучшить (сейчас минимальный)
+- [ ] Progress-экран (BRD §12.4): графики, плато, дисбалансы
 
-### Параллельно: улучшения Workout
+### Параллельно: инфра и улучшения
 
 - [ ] Railway автодеплой — починить (GitHub Repo not found)
-- [ ] Автоподстановка веса/повторов из прошлой тренировки
-- [ ] Rest timer между подходами
 - [ ] Дозагрузить GIF (36 упражнений без анимации)
+- [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
+- [ ] Loading states — скелетоны при загрузке данных
 
 ---
 
@@ -40,14 +42,41 @@
 
 | Фаза | Что | Зависит от |
 |------|-----|-----------|
-| **3** | Полный Workout (rest timer, альтернативы, суперсет, AI-замена) | 1 |
-| **4** | Progress (аналитика прогресса, плато, дисбалансы) | 1, нужны данные |
 | **5** | Programs (редактор, библиотека, AI-генерация) | 2 |
 | **6** | Cross-cutting + polish (deep-links, toast, empty/loading/error states, offline) | 3-5 |
 
 ---
 
 ## ✅ Выполнено
+
+### Фаза 3 (частично) — Workout redesign (2026-04-26) ✅
+
+**Glass_v3 prototype адаптация:**
+- [x] WorkoutTopBar (Glass strong, live-таймер, прогресс, ГОТОВО/ОТМЕНИТЬ)
+- [x] Единый scrollable layout (вместо трёх отдельных режимов)
+- [x] CollapsedExercise (свёрнутые завершённые упражнения)
+- [x] ActiveSetInput (accent-tinted stepper)
+- [x] UpcomingExerciseItem (предстоящие упражнения)
+- [x] Rest timer между подходами (RestCard)
+- [x] DoneSetRow (компактные строки подходов)
+- [x] RestCard русифицирован через i18n
+- [x] 12 новых i18n-ключей
+
+### Фаза 2 — Home-экран (2026-04-26) ✅
+
+- [x] `GET /programs/active` + `GET /programs/active/next-workout`
+- [x] `GET /stats/month` + `GET /workouts/recent?limit=4`
+- [x] TabLayout с GlassNav (4 таба)
+- [x] HomePage — programme strip + hero + stat-tiles + недавние
+- [x] Active workout state (пульс + live-таймер + "Продолжить")
+- [x] Programme strip с навигацией по дням
+- [x] Роутинг: `/` → Home
+
+### Программы (2026-04-26)
+
+- [x] Programs API (`GET /programs/active`, `GET /programs/active/next-workout`)
+- [x] `seedProgram.js` — генерация из исторических тренировок
+- [x] Program-aware Workout flow (PlanQueue, auto-навигация, planned sets)
 
 ### Фаза 1 — Сквозной скелет (2026-04-26) ✅
 
@@ -109,6 +138,8 @@
 - `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию Home ↔ Workout
 - Error handling в WorkoutPage — сейчас ошибки молча глотаются (пустой экран при сбое API)
 - Loading states — нет скелетонов/спиннеров при загрузке данных
+- Автоподстановка веса/повторов из прошлого подхода того же упражнения
+- Редактирование/удаление отдельных подходов
 
 ---
 
