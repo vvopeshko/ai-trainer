@@ -33,6 +33,19 @@ export async function apiPost(path, body) {
   return res.json()
 }
 
+export async function apiPatch(path, body) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader(),
+    },
+    body: JSON.stringify(body ?? {}),
+  })
+  if (!res.ok) throw await makeError(res)
+  return res.json()
+}
+
 async function makeError(res) {
   let payload = null
   try {

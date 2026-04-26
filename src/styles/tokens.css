@@ -1,0 +1,120 @@
+/* AI Trainer · Glass — Design Tokens
+ * CSS Custom Properties. Scoped to :root. Override on any subtree.
+ *
+ * Hue is the single tunable: --accent-h drives all accent surfaces.
+ * Default 158 = mint-teal. Try 340 (magenta), 30 (orange), 220 (blue).
+ */
+
+:root {
+  /* --- Accent ---------------------------------------------------- */
+  --accent-h: 158;
+  --accent-s: 65%;
+  --accent-l: 56%;
+
+  --accent-color:        hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --accent-color-soft:   hsla(var(--accent-h), 55%, 50%, 0.18);
+  --accent-color-strong: hsl(var(--accent-h), 70%, 60%);
+  --accent-fg-on-light:  hsl(var(--accent-h), 50%, 22%);
+
+  /* --- Surface (dark only) --------------------------------------- */
+  --bg-base:        #050507;
+  --bg-app:         #08080B;
+  --surface-0:      rgba(22, 22, 28, 0.55);
+  --surface-1:      rgba(28, 28, 34, 0.70);
+  --surface-tint:   linear-gradient(180deg, hsla(var(--accent-h),70%,22%,0.55) 0%, rgba(22,22,28,0.6) 100%);
+
+  /* --- Borders --------------------------------------------------- */
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-medium:  rgba(255,255,255,0.08);
+  --border-accent:  hsla(var(--accent-h),70%,50%,0.20);
+
+  /* --- Text ------------------------------------------------------ */
+  --fg-primary:     #ECEAEF;
+  --fg-secondary:   rgba(236,234,239,0.70);
+  --fg-tertiary:    rgba(236,234,239,0.50);
+  --fg-disabled:    rgba(236,234,239,0.30);
+  --fg-on-accent:   #0a1815;
+
+  /* --- Semantic -------------------------------------------------- */
+  --success-h: 140;
+  --success:      hsl(140, 55%, 55%);
+  --success-soft: hsla(140, 55%, 55%, 0.15);
+  --warning-h: 38;
+  --warning:      hsl(38, 90%, 60%);
+  --warning-soft: hsla(38, 90%, 60%, 0.18);
+  --danger-h: 0;
+  --danger:       hsl(0, 70%, 62%);
+  --danger-soft:  hsla(0, 70%, 62%, 0.18);
+  --info:         hsl(210, 70%, 65%);
+
+  /* --- Glass tuning ---------------------------------------------- */
+  --glass-blur: 16px;
+  --glass-sat:  1.25;
+
+  /* --- Spacing scale (4-px base) --------------------------------- */
+  --space-1:  4px;
+  --space-2:  6px;
+  --space-3:  8px;
+  --space-4:  10px;
+  --space-5:  12px;
+  --space-6:  14px;
+  --space-7:  18px;
+  --space-8:  22px;
+  --space-9:  28px;
+  --space-10: 36px;
+
+  /* --- Radii ----------------------------------------------------- */
+  --radius-xs:  6px;
+  --radius-sm:  8px;
+  --radius-md:  10px;
+  --radius-lg:  12px;
+  --radius-xl:  14px;
+  --radius-2xl: 18px;
+  --radius-pill: 999px;
+
+  /* --- Shadows --------------------------------------------------- */
+  --shadow-flat:    inset 0 1px 0 rgba(255,255,255,0.05);
+  --shadow-card:    inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 14px rgba(0,0,0,0.35);
+  --shadow-strong:  inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 22px rgba(0,0,0,0.40);
+  --shadow-hero:    0 10px 28px hsla(var(--accent-h),60%,40%,0.50), inset 0 1px 0 rgba(255,255,255,0.25);
+
+  /* --- Typography ------------------------------------------------ */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs:    9.5px;
+  --text-sm:    11px;
+  --text-base:  12.5px;
+  --text-md:    13.5px;
+  --text-lg:    15px;
+  --text-xl:    18px;
+  --text-2xl:   21px;
+  --text-3xl:   28px;
+  --text-display: 46px;
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semi:    600;
+  --weight-bold:    700;
+
+  --leading-tight:  1.15;
+  --leading-snug:   1.35;
+  --leading-normal: 1.5;
+
+  --tracking-tight: -0.022em;
+  --tracking-caps:  0.16em;
+
+  /* --- Motion ---------------------------------------------------- */
+  --ease-out:     cubic-bezier(.22,1,.36,1);
+  --ease-in-out:  cubic-bezier(.4,0,.2,1);
+  --duration-fast:    150ms;
+  --duration-normal:  300ms;
+  --duration-slow:    450ms;
+  --duration-breath:  3000ms;
+
+  /* --- Z-index --------------------------------------------------- */
+  --z-nav:     5;
+  --z-overlay: 10;
+  --z-modal:   20;
+}
