@@ -422,8 +422,9 @@ export default function WorkoutPage() {
     return workout.id
   }
 
-  // Computed: done exercise IDs
+  // Computed
   const doneExerciseIds = new Set(allExercises.map(e => e.exercise.id))
+  const hasAnySets = allExercises.length > 0 || doneSets.length > 0
 
   // ── Handlers ──
 
@@ -524,6 +525,15 @@ export default function WorkoutPage() {
     }
   }
 
+  const handleCancel = async () => {
+    if (workoutId) {
+      try {
+        await apiPatch(`/api/v1/workouts/${workoutId}`, {})
+      } catch {}
+    }
+    navigate('/')
+  }
+
   const handleBack = () => navigate('/')
 
   // ── Render: ExercisePicker ──
@@ -533,8 +543,8 @@ export default function WorkoutPage() {
         <TopBar
           title={t('workout.selectExercise')}
           onBack={hasPlan ? () => { setPicking(false); setShowingQueue(true) } : handleBack}
-          rightLabel={workoutId && allExercises.length > 0 ? t('workout.finish') : undefined}
-          onRight={workoutId && allExercises.length > 0 ? handleFinish : undefined}
+          rightLabel={hasAnySets ? t('workout.finish') : workoutId ? t('workout.cancel') : undefined}
+          onRight={hasAnySets ? handleFinish : workoutId ? handleCancel : undefined}
         />
 
         {startedAt && (
@@ -568,8 +578,8 @@ export default function WorkoutPage() {
         <TopBar
           title={planDayTitle || t('workout.title')}
           onBack={handleBack}
-          rightLabel={allExercises.length > 0 ? t('workout.finish') : undefined}
-          onRight={allExercises.length > 0 ? handleFinish : undefined}
+          rightLabel={hasAnySets ? t('workout.finish') : t('workout.cancel')}
+          onRight={hasAnySets ? handleFinish : handleCancel}
         />
 
         {startedAt && (
@@ -623,8 +633,8 @@ export default function WorkoutPage() {
       <TopBar
         title={planDayTitle || t('workout.title')}
         onBack={handleBack}
-        rightLabel={(allExercises.length > 0 || doneSets.length > 0) ? t('workout.finish') : undefined}
-        onRight={(allExercises.length > 0 || doneSets.length > 0) ? handleFinish : undefined}
+        rightLabel={hasAnySets ? t('workout.finish') : t('workout.cancel')}
+        onRight={hasAnySets ? handleFinish : handleCancel}
       />
 
       <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>

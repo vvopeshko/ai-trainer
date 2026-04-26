@@ -28,6 +28,7 @@ export const translations = {
     'workout.exercises': 'упр.',
     'workout.sets': 'подх.',
     'workout.completed': 'Выполнено',
+    'workout.cancel': 'Отменить',
     'workout.addOther': '+ Добавить другое',
     'workout.setsScheme': '{{sets}}×{{reps}}',
 
