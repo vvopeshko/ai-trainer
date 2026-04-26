@@ -45,6 +45,9 @@ export const translations = {
     'home.daysAgo': '{{n}} дн. назад',
     'home.exercises': '{{n}} упр.',
     'home.sets': '{{n}} подх.',
+    'home.next': 'СЛЕДУЮЩАЯ',
+    'home.nExercises': '{{n}} упр.',
+    'home.nDays': '{{n}} дн.',
 
     // Nav
     'nav.home': 'Главная',

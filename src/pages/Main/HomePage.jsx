@@ -1,7 +1,7 @@
 /**
  * Home Page — главный экран мини-аппа (BRD §12.1).
  *
- * Секции: YearHeader → Hero (start/continue) → Month stats → Recent workouts.
+ * Секции: YearHeader → ProgrammeStrip → Hero (start/continue) → Month stats → Recent workouts.
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -63,20 +63,93 @@ function YearHeader({ done, target }) {
   )
 }
 
+// ─── Programme Strip ────────────────────────────────────────────────────
+
+function ProgrammeStrip({ program }) {
+  const { t } = useTranslation()
+
+  if (!program) return null
+
+  const daysCount = program.planJson?.days?.length || 0
+
+  return (
+    <Glass padding="12px 14px" style={{ marginBottom: 'var(--space-3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 8,
+          background: 'rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'hsl(var(--accent-h,158),55%,72%)',
+          flexShrink: 0,
+        }}>
+          <Icon name="list" size={16} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 'var(--text-sm)',
+            fontWeight: 600,
+            color: 'var(--fg-primary)',
+          }}>
+            {program.name}
+          </div>
+          {daysCount > 0 && (
+            <div style={{
+              fontSize: 'var(--text-2xs)',
+              color: 'var(--fg-tertiary)',
+              marginTop: 1,
+            }}>
+              {t('home.nDays', { n: daysCount })}
+            </div>
+          )}
+        </div>
+        <Icon name="chevronRight" size={14} style={{ color: 'var(--fg-disabled)' }} />
+      </div>
+    </Glass>
+  )
+}
+
 // ─── Hero: default (start workout) ─────────────────────────────────────
 
-function HeroDefault({ onStart, loading }) {
+function HeroDefault({ nextDay, programId, dayIndex, onStart, loading }) {
   const { t } = useTranslation()
 
   return (
     <Glass padding="20px" style={{ marginBottom: 'var(--space-5)' }}>
+      {nextDay && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{
+            fontSize: 'var(--text-2xs)',
+            fontWeight: 700,
+            letterSpacing: 'var(--tracking-caps)',
+            textTransform: 'uppercase',
+            color: 'hsl(var(--accent-h,158),55%,72%)',
+            marginBottom: 4,
+          }}>
+            {t('home.next')}
+          </div>
+          <div style={{
+            fontSize: 'var(--text-base)',
+            fontWeight: 600,
+            color: 'var(--fg-primary)',
+          }}>
+            {nextDay.title}
+          </div>
+          <div style={{
+            fontSize: 'var(--text-2xs)',
+            color: 'var(--fg-tertiary)',
+            marginTop: 2,
+          }}>
+            {t('home.nExercises', { n: nextDay.exercises?.length || 0 })}
+          </div>
+        </div>
+      )}
       <Button
         variant="primary"
         size="lg"
         block
         icon="play"
         loading={loading}
-        onClick={onStart}
+        onClick={() => onStart(programId, dayIndex)}
       >
         {t('home.startWorkout')}
       </Button>
@@ -229,6 +302,8 @@ export default function HomePage() {
   const [monthStats, setMonthStats] = useState({ workouts: 0, tonnageKg: 0, streak: 0 })
   const [recent, setRecent] = useState([])
   const [activeWorkout, setActiveWorkout] = useState(null)
+  const [program, setProgram] = useState(null)
+  const [nextWorkout, setNextWorkout] = useState(null)
   const [starting, setStarting] = useState(false)
 
   useEffect(() => {
@@ -239,21 +314,30 @@ export default function HomePage() {
       apiGet('/api/v1/stats/month').catch(() => null),
       apiGet('/api/v1/workouts/recent?limit=4').catch(() => null),
       apiGet('/api/v1/workouts/active').catch(() => null),
-    ]).then(([year, month, recentData, active]) => {
+      apiGet('/api/v1/programs/active').catch(() => null),
+      apiGet('/api/v1/programs/active/next-workout').catch(() => null),
+    ]).then(([year, month, recentData, active, prog, next]) => {
       if (cancelled) return
       if (year) setYearStats(year)
       if (month) setMonthStats(month)
       if (recentData?.workouts) setRecent(recentData.workouts)
       if (active?.workout) setActiveWorkout(active.workout)
+      if (prog?.program) setProgram(prog.program)
+      if (next?.day) setNextWorkout(next)
     })
 
     return () => { cancelled = true }
   }, [])
 
-  const handleStart = async () => {
+  const handleStart = async (programId, dayIndex) => {
     setStarting(true)
     try {
-      await apiPost('/api/v1/workouts', {})
+      const body = {}
+      if (programId) {
+        body.programId = programId
+        body.programDayIndex = dayIndex
+      }
+      await apiPost('/api/v1/workouts', body)
       navigate('/workout')
     } catch (err) {
       console.error('Failed to start workout:', err)
@@ -267,9 +351,17 @@ export default function HomePage() {
     <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
       <YearHeader done={yearStats.done} target={yearStats.target} />
 
+      <ProgrammeStrip program={program} />
+
       {activeWorkout
         ? <HeroActive workout={activeWorkout} onContinue={handleContinue} />
-        : <HeroDefault onStart={handleStart} loading={starting} />
+        : <HeroDefault
+            nextDay={nextWorkout?.day}
+            programId={nextWorkout?.programId}
+            dayIndex={nextWorkout?.dayIndex}
+            onStart={handleStart}
+            loading={starting}
+          />
       }
 
       {/* Month stats */}
