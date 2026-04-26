@@ -21,3 +21,6 @@ export { GlassNav } from './GlassNav.jsx'
 
 // Notify
 export { GlassAINote } from './GlassAINote.jsx'
+
+// Dialogs
+export { ConfirmDialog } from './ConfirmDialog.jsx'

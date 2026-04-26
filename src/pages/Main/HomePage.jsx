@@ -8,12 +8,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
-import { apiPost, apiPatch } from '../../utils/api.js'
+import { apiPost, apiPatch, apiDelete } from '../../utils/api.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { StatTile } from '../../components/ui/StatTile.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 
 // ─── Year Header ────────────────────────────────────────────────────────
@@ -448,7 +449,7 @@ function RecentListSkeleton() {
   )
 }
 
-function RecentList({ workouts }) {
+function RecentList({ workouts, onDelete }) {
   const { t } = useTranslation()
 
   if (!workouts || workouts.length === 0) return null
@@ -501,6 +502,18 @@ function RecentList({ workouts }) {
             }}>
               {relativeDate(w.finishedAt, t)}
             </div>
+            <button
+              onClick={() => onDelete(w.id)}
+              style={{
+                width: 28, height: 28, borderRadius: 7,
+                background: 'none', border: 'none',
+                color: 'var(--fg-disabled)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              <Icon name="trash" size={14} />
+            </button>
           </div>
         ))}
       </Glass>
@@ -529,6 +542,8 @@ export default function HomePage() {
   const { yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData } = useHomeData()
 
   const [starting, setStarting] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [deletingWorkoutId, setDeletingWorkoutId] = useState(null)
 
   // Stale-while-revalidate: показываем кэш сразу, обновляем в фоне
   useEffect(() => { refresh() }, [refresh])
@@ -570,10 +585,16 @@ export default function HomePage() {
 
   const handleCancel = async () => {
     if (!activeWorkout) return
-    try {
-      await apiPatch(`/api/v1/workouts/${activeWorkout.id}`, { action: 'finish' })
-    } catch { /* ignore */ }
+    setConfirmCancel(false)
     setData(prev => ({ ...prev, activeWorkout: null }))
+    try { await apiDelete(`/api/v1/workouts/${activeWorkout.id}`) } catch { /* ignore */ }
+  }
+
+  const handleDeleteRecent = async () => {
+    const id = deletingWorkoutId
+    setDeletingWorkoutId(null)
+    setData(prev => ({ ...prev, recent: prev.recent.filter(w => w.id !== id) }))
+    try { await apiDelete(`/api/v1/workouts/${id}`) } catch { /* ignore */ }
   }
 
   const showSkeletons = !loaded
@@ -597,7 +618,7 @@ export default function HomePage() {
           onStart={handleStart}
           onContinue={handleContinue}
           onResume={handleResume}
-          onCancel={handleCancel}
+          onCancel={() => setConfirmCancel(true)}
           loading={starting}
         />
       )}
@@ -633,8 +654,28 @@ export default function HomePage() {
       {showSkeletons ? (
         <RecentListSkeleton />
       ) : (
-        <RecentList workouts={recent} />
+        <RecentList workouts={recent} onDelete={id => setDeletingWorkoutId(id)} />
       )}
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title={t('workout.cancelWorkoutTitle')}
+        message={t('workout.cancelWorkoutMessage')}
+        confirmLabel={t('workout.cancelWorkoutConfirm')}
+        variant="danger"
+        onConfirm={handleCancel}
+        onCancel={() => setConfirmCancel(false)}
+      />
+
+      <ConfirmDialog
+        open={!!deletingWorkoutId}
+        title={t('home.deleteWorkoutTitle')}
+        message={t('home.deleteWorkoutMessage')}
+        confirmLabel={t('home.deleteWorkoutConfirm')}
+        variant="danger"
+        onConfirm={handleDeleteRecent}
+        onCancel={() => setDeletingWorkoutId(null)}
+      />
     </div>
   )
 }

@@ -327,3 +327,26 @@ export async function update(req, res) {
 
   res.json({ workout: updated })
 }
+
+/**
+ * DELETE /api/v1/workouts/:id
+ *
+ * Удалить тренировку (любую — активную или завершённую).
+ * WorkoutSets удаляются каскадом (onDelete: Cascade в schema).
+ */
+export async function destroy(req, res) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+
+  const workout = await prisma.workout.findFirst({
+    where: { id, userId: req.user.id },
+  })
+
+  if (!workout) {
+    return res.status(404).json({ error: 'Workout not found' })
+  }
+
+  await prisma.workout.delete({ where: { id } })
+
+  track(req.user.id, 'workout_deleted', { workoutId: id })
+  res.json({ deleted: true })
+}

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { telegramAuth } from '../middleware/telegramAuth.js'
-import { create, getActive, getRecent, getById, logSet, deleteSet, update } from '../controllers/workoutController.js'
+import { create, getActive, getRecent, getById, logSet, deleteSet, update, destroy } from '../controllers/workoutController.js'
 
 const router = Router()
 
@@ -13,5 +13,6 @@ router.get('/:id', getById)
 router.post('/:id/sets', logSet)
 router.delete('/:id/sets/:setId', deleteSet)
 router.patch('/:id', update)
+router.delete('/:id', destroy)
 
 export default router

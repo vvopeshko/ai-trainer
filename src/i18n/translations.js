@@ -52,6 +52,9 @@ export const translations = {
     'workout.resume': 'Продолжить',
     'workout.paused': 'На паузе',
     'workout.tapToResume': 'Нажми, чтобы продолжить',
+    'workout.cancelWorkoutTitle': 'Прервать тренировку?',
+    'workout.cancelWorkoutMessage': 'Все подходы будут удалены.',
+    'workout.cancelWorkoutConfirm': 'Прервать',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',
@@ -81,6 +84,12 @@ export const translations = {
     'home.continueWorkoutFull': 'Продолжить тренировку',
     'home.estimatedMin': '~{{n}} мин',
     'home.startFreeform': 'сделать другую вместо этой',
+    'home.deleteWorkoutTitle': 'Удалить тренировку?',
+    'home.deleteWorkoutMessage': 'Это действие нельзя отменить.',
+    'home.deleteWorkoutConfirm': 'Удалить',
+
+    // Confirm dialog
+    'confirm.cancel': 'Отмена',
 
     // Nav
     'nav.home': 'Главная',

@@ -19,6 +19,7 @@ import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { RestCard } from '../../components/ui/RestCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 
 // ─── WorkoutTopBar (glass_v3: Glass strong, timer, progress, ГОТОВО) ────
@@ -621,6 +622,7 @@ export default function WorkoutPage() {
   const [allExercises, setAllExercises] = useState([])
   const [picking, setPicking] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [startedAt, setStartedAt] = useState(null)
   const [resting, setResting] = useState(false)
@@ -1031,7 +1033,21 @@ export default function WorkoutPage() {
     navigate('/')
   }
 
-  const handleBack = () => navigate('/')
+  const handleCancelWorkout = async () => {
+    setConfirmCancel(false)
+    if (workoutId) {
+      try { await apiDelete(`/api/v1/workouts/${workoutId}`) } catch {}
+    }
+    navigate('/')
+  }
+
+  const handleBack = () => {
+    if (hasAnySets) {
+      setConfirmCancel(true)
+    } else {
+      handleCancel()
+    }
+  }
 
   // ── Helper ──
   function exerciseScheme(pe) {
@@ -1415,6 +1431,16 @@ export default function WorkoutPage() {
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title={t('workout.cancelWorkoutTitle')}
+        message={t('workout.cancelWorkoutMessage')}
+        confirmLabel={t('workout.cancelWorkoutConfirm')}
+        variant="danger"
+        onConfirm={handleCancelWorkout}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   )
 }
