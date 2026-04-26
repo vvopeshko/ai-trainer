@@ -5,13 +5,16 @@ import './styles/index.css'
 import App from './App.jsx'
 import { TranslationProvider } from './i18n/TranslationProvider.jsx'
 import { TelegramProvider } from './components/TelegramProvider.jsx'
+import { HomeDataProvider } from './contexts/HomeDataContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <TranslationProvider>
         <TelegramProvider>
-          <App />
+          <HomeDataProvider>
+            <App />
+          </HomeDataProvider>
         </TelegramProvider>
       </TranslationProvider>
     </BrowserRouter>

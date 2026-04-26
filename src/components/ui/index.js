@@ -4,6 +4,7 @@
 export { Glass } from './Glass.jsx'
 export { Mesh } from './Mesh.jsx'
 export { Button } from './Button.jsx'
+export { Skeleton } from './Skeleton.jsx'
 
 // Icons
 export { Icon, ICON_PATHS } from './Icon.jsx'

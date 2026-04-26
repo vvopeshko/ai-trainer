@@ -1,26 +1,41 @@
 /**
  * Home Page — главный экран мини-аппа (BRD §12.1).
  *
- * Секции: YearHeader → ProgrammeStrip → Hero (start/continue) → Month stats → Recent workouts.
+ * Секции: YearHeader → ProgrammeHero → Month stats → Recent workouts.
+ * Данные кэшируются в HomeDataContext (stale-while-revalidate).
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
-import { apiGet, apiPost, apiPatch } from '../../utils/api.js'
+import { apiPost, apiPatch } from '../../utils/api.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { StatTile } from '../../components/ui/StatTile.jsx'
+import { Skeleton } from '../../components/ui/Skeleton.jsx'
+import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 
 // ─── Year Header ────────────────────────────────────────────────────────
 
-function YearHeader({ done, target }) {
+function YearHeader({ done, target, loading }) {
   const { t } = useTranslation()
   const { user } = useTelegram()
 
   const initial = (user?.firstName || 'U')[0].toUpperCase()
   const pct = target > 0 ? Math.min(done / target, 1) : 0
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+        <Skeleton width={44} height={44} radius="50%" />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <Skeleton width="55%" height={12} />
+          <Skeleton height={6} radius={3} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
@@ -81,6 +96,34 @@ function getRelativeStart(startedAt, t) {
   if (mins < 60) return t('home.startedMinAgo', { n: mins })
   const hours = Math.floor(mins / 60)
   return t('home.startedHourAgo', { n: hours })
+}
+
+function ProgrammeHeroSkeleton() {
+  return (
+    <Glass padding={0} style={{
+      marginBottom: 'var(--space-5)',
+      overflow: 'hidden',
+      background: 'linear-gradient(160deg, hsla(var(--accent-h,158),40%,18%,0.55) 0%, transparent 50%), var(--surface-0)',
+    }}>
+      {/* Programme header skeleton */}
+      <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <Skeleton width={32} height={32} radius={8} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Skeleton width="50%" height={13} />
+          <Skeleton width="25%" height={10} />
+        </div>
+      </div>
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+      {/* Hero section skeleton */}
+      <div style={{ padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Skeleton width="30%" height={10} />
+        <Skeleton width="75%" height={20} />
+        <Skeleton width="40%" height={10} />
+        <Skeleton height={44} radius={10} style={{ marginTop: 8 }} />
+      </div>
+    </Glass>
+  )
 }
 
 function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onStart, onContinue, onResume, onCancel, loading }) {
@@ -149,7 +192,7 @@ function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onSta
               </div>
               {daysCount > 0 && (
                 <div style={{
-                  fontSize: 'var(--text-2xs)',
+                  fontSize: 'var(--text-xs)',
                   color: 'var(--fg-tertiary)',
                   marginTop: 1,
                 }}>
@@ -355,7 +398,55 @@ function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onSta
   )
 }
 
+// ─── Month Stats Skeleton ─────────────────────────────────────────────
+
+function MonthStatsSkeleton() {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: 'var(--space-3)',
+    }}>
+      {[0, 1, 2, 3].map(i => (
+        <Glass key={i} style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Skeleton width={20} height={20} radius={6} />
+          <Skeleton width="40%" height={18} />
+          <Skeleton width="60%" height={10} />
+        </Glass>
+      ))}
+    </div>
+  )
+}
+
 // ─── Recent Workouts List ──────────────────────────────────────────────
+
+function RecentListSkeleton() {
+  return (
+    <div style={{ marginTop: 'var(--space-5)' }}>
+      <Skeleton width="25%" height={13} style={{ marginBottom: 'var(--space-3)' }} />
+      <Glass padding={0}>
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            style={{
+              padding: '12px 14px',
+              borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <Skeleton width="70%" height={13} />
+              <Skeleton width="30%" height={10} />
+            </div>
+            <Skeleton width={50} height={10} />
+          </div>
+        ))}
+      </Glass>
+    </div>
+  )
+}
 
 function RecentList({ workouts }) {
   const { t } = useTranslation()
@@ -396,7 +487,7 @@ function RecentList({ workouts }) {
                 {w.exercises.join(', ')}
               </div>
               <div style={{
-                fontSize: 'var(--text-2xs)',
+                fontSize: 'var(--text-xs)',
                 color: 'var(--fg-tertiary)',
                 marginTop: 2,
               }}>
@@ -404,7 +495,7 @@ function RecentList({ workouts }) {
               </div>
             </div>
             <div style={{
-              fontSize: 'var(--text-2xs)',
+              fontSize: 'var(--text-xs)',
               color: 'var(--fg-tertiary)',
               whiteSpace: 'nowrap',
             }}>
@@ -435,37 +526,12 @@ function relativeDate(dateStr, t) {
 export default function HomePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData } = useHomeData()
 
-  const [yearStats, setYearStats] = useState({ done: 0, target: 208 })
-  const [monthStats, setMonthStats] = useState({ workouts: 0, tonnageKg: 0, streak: 0 })
-  const [recent, setRecent] = useState([])
-  const [activeWorkout, setActiveWorkout] = useState(null)
-  const [program, setProgram] = useState(null)
-  const [nextWorkout, setNextWorkout] = useState(null)
   const [starting, setStarting] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-
-    Promise.all([
-      apiGet('/api/v1/stats/year').catch(() => null),
-      apiGet('/api/v1/stats/month').catch(() => null),
-      apiGet('/api/v1/workouts/recent?limit=4').catch(() => null),
-      apiGet('/api/v1/workouts/active').catch(() => null),
-      apiGet('/api/v1/programs/active').catch(() => null),
-      apiGet('/api/v1/programs/active/next-workout').catch(() => null),
-    ]).then(([year, month, recentData, active, prog, next]) => {
-      if (cancelled) return
-      if (year) setYearStats(year)
-      if (month) setMonthStats(month)
-      if (recentData?.workouts) setRecent(recentData.workouts)
-      if (active?.workout) setActiveWorkout(active.workout)
-      if (prog?.program) setProgram(prog.program)
-      if (next?.day) setNextWorkout(next)
-    })
-
-    return () => { cancelled = true }
-  }, [])
+  // Stale-while-revalidate: показываем кэш сразу, обновляем в фоне
+  useEffect(() => { refresh() }, [refresh])
 
   const handleStart = async (programId, dayIndex) => {
     setStarting(true)
@@ -488,10 +554,13 @@ export default function HomePage() {
   const handleResume = async () => {
     if (!activeWorkout?.pausedAt) return
     const pauseDuration = Date.now() - new Date(activeWorkout.pausedAt).getTime()
-    setActiveWorkout(prev => ({
+    setData(prev => ({
       ...prev,
-      pausedAt: null,
-      totalPausedMs: (prev.totalPausedMs || 0) + pauseDuration,
+      activeWorkout: {
+        ...prev.activeWorkout,
+        pausedAt: null,
+        totalPausedMs: (prev.activeWorkout.totalPausedMs || 0) + pauseDuration,
+      },
     }))
     try {
       await apiPatch(`/api/v1/workouts/${activeWorkout.id}`, { action: 'resume' })
@@ -504,24 +573,34 @@ export default function HomePage() {
     try {
       await apiPatch(`/api/v1/workouts/${activeWorkout.id}`, { action: 'finish' })
     } catch { /* ignore */ }
-    setActiveWorkout(null)
+    setData(prev => ({ ...prev, activeWorkout: null }))
   }
+
+  const showSkeletons = !loaded
 
   return (
     <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
-      <YearHeader done={yearStats.done} target={yearStats.target} />
-
-      <ProgrammeHero
-        program={program}
-        activeWorkout={activeWorkout}
-        nextDay={nextWorkout?.day}
-        nextWorkoutData={nextWorkout}
-        onStart={handleStart}
-        onContinue={handleContinue}
-        onResume={handleResume}
-        onCancel={handleCancel}
-        loading={starting}
+      <YearHeader
+        done={yearStats?.done ?? 0}
+        target={yearStats?.target ?? 208}
+        loading={showSkeletons}
       />
+
+      {showSkeletons ? (
+        <ProgrammeHeroSkeleton />
+      ) : (
+        <ProgrammeHero
+          program={program}
+          activeWorkout={activeWorkout}
+          nextDay={nextWorkout?.day}
+          nextWorkoutData={nextWorkout}
+          onStart={handleStart}
+          onContinue={handleContinue}
+          onResume={handleResume}
+          onCancel={handleCancel}
+          loading={starting}
+        />
+      )}
 
       {/* Month stats */}
       <div style={{
@@ -532,22 +611,30 @@ export default function HomePage() {
       }}>
         {t('home.thisMonth')}
       </div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: 'var(--space-3)',
-      }}>
-        <StatTile label={t('home.workouts')} value={monthStats.workouts} icon="calendar" />
-        <StatTile
-          label={t('home.tonnage')}
-          value={monthStats.tonnageKg >= 1000 ? `${(monthStats.tonnageKg / 1000).toFixed(1)}т` : `${monthStats.tonnageKg}кг`}
-          icon="trendingUp"
-        />
-        <StatTile label={t('home.streak')} value={monthStats.streak} icon="flame" />
-        <StatTile label={t('home.records')} value="—" icon="trophy" />
-      </div>
+      {showSkeletons ? (
+        <MonthStatsSkeleton />
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 'var(--space-3)',
+        }}>
+          <StatTile label={t('home.workouts')} value={monthStats?.workouts ?? 0} icon="calendar" />
+          <StatTile
+            label={t('home.tonnage')}
+            value={monthStats?.tonnageKg >= 1000 ? `${(monthStats.tonnageKg / 1000).toFixed(1)}т` : `${monthStats?.tonnageKg ?? 0}кг`}
+            icon="trendingUp"
+          />
+          <StatTile label={t('home.streak')} value={monthStats?.streak ?? 0} icon="flame" />
+          <StatTile label={t('home.records')} value="—" icon="trophy" />
+        </div>
+      )}
 
-      <RecentList workouts={recent} />
+      {showSkeletons ? (
+        <RecentListSkeleton />
+      ) : (
+        <RecentList workouts={recent} />
+      )}
     </div>
   )
 }
