@@ -32,6 +32,17 @@ export const translations = {
     'workout.cancel': 'Отменить',
     'workout.addOther': '+ Добавить другое',
     'workout.setsScheme': '{{sets}}×{{reps}}',
+    'workout.now': 'сейчас',
+    'workout.exerciseOf': 'упр {{n}}/{{total}}',
+    'workout.setsProgress': '{{done}}/{{total}} подх',
+    'workout.ready': 'ГОТОВО',
+    'workout.upcoming': 'далее',
+    'workout.addSetExtra': '+ добавить подход',
+    'workout.targetReps': 'цель {{reps}}',
+    'workout.rest': 'отдых',
+    'workout.skipRest': 'Пропустить отдых',
+    'workout.breathe': 'Вдох носом 4с → выдох 6с. Расслабь плечи.',
+    'workout.doneLabel': 'сделано',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',

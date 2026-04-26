@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Glass } from './Glass.jsx'
 import { Icon } from './Icon.jsx'
+import { useTranslation } from '../../i18n/useTranslation.js'
 
 /**
  * Rest timer between sets. Breathing radial background, mm:ss countdown,
  * progress bar, breathing instruction, skip button.
  */
 export function RestCard({ seconds = 90, onSkip, onComplete }) {
+  const { t: tr } = useTranslation()
   const [t, setT] = useState(seconds)
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function RestCard({ seconds = 90, onSkip, onComplete }) {
             letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
           }}>
-            <Icon name="pause" size={10} /> rest
+            <Icon name="pause" size={10} /> {tr('workout.rest')}
           </div>
           <div style={{
             fontFamily: 'var(--font-mono)',
@@ -47,14 +49,14 @@ export function RestCard({ seconds = 90, onSkip, onComplete }) {
             <div style={{ height: '100%', width: `${pct}%`, background: '#fff', borderRadius: 2, transition: 'width 1s linear' }} />
           </div>
           <div style={{ fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,0.75)', marginTop: 11, lineHeight: 1.45, padding: '0 8px' }}>
-            Breathe in 4s through nose, exhale 6s. Relax shoulders.
+            {tr('workout.breathe')}
           </div>
           {onSkip && (
             <button onClick={onSkip} style={{
               marginTop: 12, height: 36, padding: '0 18px', borderRadius: 10,
               background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.18)',
               color: '#fff', fontSize: 'var(--text-base)', fontWeight: 600, cursor: 'pointer',
-            }}>Skip rest</button>
+            }}>{tr('workout.skipRest')}</button>
           )}
         </div>
       </Glass>
