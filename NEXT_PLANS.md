@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-26 (ночь)
+**Последнее обновление:** 2026-04-26 (день)
 
 ---
 
@@ -27,6 +27,7 @@
 - [ ] `PATCH /api/v1/workouts/:id/sets/:setId` — редактировать подход (вес/повторы)
 - [ ] `POST /api/v1/workouts/:id/exercises` — внеплановое упражнение (через exerciseResolver)
 - [ ] `POST /api/v1/exercises/:id/replace-suggest` — AI-предложения замены
+- [x] BottomSheet компонент (переиспользуемый) ✅
 - [ ] BottomSheet: альтернативы, суперсет, AI-замена
 - [ ] Quick actions: "Спросить тренера", "Фото тренажёра"
 - [ ] Автоподстановка веса/повторов из прошлой тренировки
@@ -42,7 +43,12 @@
 - [ ] Railway автодеплой — починить (GitHub Repo not found)
 - [ ] Дозагрузить GIF (36 упражнений без анимации)
 - [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
-- [ ] Loading states — скелетоны при загрузке данных
+- [x] Loading states — скелетоны при загрузке данных ✅
+- [x] HomeDataContext — кэш Home-данных (stale-while-revalidate) ✅
+- [x] Cancel active workout + Delete past workout ✅
+- [x] Pause/Resume на Home-экране ✅
+- [x] Day picker — шторка выбора тренировки из программы ✅
+- [x] Recent list redesign (название дня, длительность, свайп-удаление) ✅
 
 ---
 
@@ -150,7 +156,7 @@
 - Дополнить aliases в seed по результатам реального использования
 - `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию Home ↔ Workout
 - Error handling в WorkoutPage — сейчас ошибки молча глотаются (пустой экран при сбое API)
-- Loading states — нет скелетонов/спиннеров при загрузке данных
+- ~~Loading states — нет скелетонов/спиннеров при загрузке данных~~ ✅ скелетоны + HomeDataContext
 - Автоподстановка веса/повторов из прошлого подхода того же упражнения
 - ~~Редактирование/удаление отдельных подходов~~ ✅ удаление реализовано
 - Partial progress не сохраняется при перезаходе (только в рамках сессии)

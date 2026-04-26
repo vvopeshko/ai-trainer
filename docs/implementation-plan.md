@@ -3,7 +3,7 @@
 На основе [BRD §12](../BRD.md#12-спецификация-экранов-мини-аппа). Учитывает текущее состояние кодовой базы и принятые архитектурные решения.
 
 **Создан:** 2026-04-24
-**Обновлён:** 2026-04-26 (вечер)
+**Обновлён:** 2026-04-26 (день)
 
 ---
 
@@ -16,16 +16,16 @@
 | **Prisma-схема** | 9 моделей + `ExerciseSource` enum, `source`, `gifUrl` на Exercise |
 | **Сервер** | Auth middleware, бот, LLM-абстракция, analytics, identifyMachine, **exerciseResolver**, **seed/import скрипты**, **7 workout API**, **4 home API** (programs, stats, recent), **seedProgram** |
 | **БД** | 57 упражнений seeded, 60 тренировок + 1687 подходов imported, 1 программа |
-| **Фронт UI-кит** | Glass, Button, Icon (44), StatTile, ActivePill, GlassNav, GlassAINote, RestCard, Mesh, **BigStepper**, **TopBar** |
-| **Фронт страницы** | **HomePage** (programme strip, hero, stats, recent), **WorkoutPage** (glass_v3 redesign: единый scrollable layout, rest timer, collapsed/active/upcoming), **SummaryPage** |
-| **Фронт инфра** | i18n (`t()`), TelegramProvider, api.js, роутер, splash, токены, **TabLayout + GlassNav**, **FlowLayout** |
+| **Фронт UI-кит** | Glass, Button, Icon (44), StatTile, ActivePill, GlassNav, GlassAINote, RestCard, Mesh, **BigStepper**, **TopBar**, **Skeleton**, **ConfirmDialog**, **BottomSheet** |
+| **Фронт страницы** | **HomePage** (programme hero, stats, recent with swipe-delete, day picker sheet, skeletons, cancel/delete), **WorkoutPage** (glass_v3 redesign: единый scrollable layout, rest timer, collapsed/active/upcoming, pause/resume, cancel confirm), **SummaryPage** |
+| **Фронт инфра** | i18n (`t()`), TelegramProvider, **HomeDataProvider** (stale-while-revalidate cache), api.js (`apiGet/Post/Patch/Delete`), роутер, splash, токены, **TabLayout + GlassNav**, **FlowLayout** |
 
 ### Чего не хватает
 
 | Слой | Не готово |
 |------|-----------|
-| **Сервер** | Edit/delete sets, AI-замена упражнений, progress/insights API, program CRUD, AI-генерация программ |
-| **Фронт компоненты** | BottomSheet, Toast, Skeleton |
+| **Сервер** | Edit sets, AI-замена упражнений, progress/insights API, program CRUD, AI-генерация программ |
+| **Фронт компоненты** | Toast |
 | **Фронт страницы** | Progress, ProgramEdit, ProgramLibrary |
 | **Фронт инфра** | `ActiveWorkoutProvider` (React Context), deep-link парсер, offline-очередь |
 
@@ -216,9 +216,10 @@ const planJsonSchema = z.object({
 |-----------|----------|------|
 | `BigStepper` | ± кнопки для веса (шаг 2.5 кг) и повторов (шаг 1). Центральное значение крупным моно-шрифтом | 1 |
 | `TopBar` | ← back + title + optional right action (⋯ / "Готово") | 1 |
-| `BottomSheet` | Модалка снизу, backdrop blur, drag-handle | 3 |
+| `BottomSheet` | Модалка снизу, backdrop blur, drag-handle, slide-up/down animation | ✅ |
 | `Toast` | Уведомление поверх контента, auto-dismiss 2-3с | 3 |
-| `Skeleton` | Загрузочные плейсхолдеры | 6 |
+| `Skeleton` | Загрузочные shimmer-плейсхолдеры | ✅ |
+| `ConfirmDialog` | Диалог подтверждения (danger variant), Glass-стиль | ✅ |
 
 ---
 
@@ -274,7 +275,12 @@ const planJsonSchema = z.object({
 - [x] Роутинг: `/` → Home
 - [x] `seedProgram.js` — генерация программы из исторических тренировок
 - [ ] Empty state (новый юзер без программы)
-- [ ] Loading skeleton
+- [x] Loading skeleton ✅
+- [x] HomeDataContext (stale-while-revalidate) ✅
+- [x] Cancel active workout + Delete past workout ✅
+- [x] BottomSheet day picker ✅
+- [x] Recent list redesign (day title, duration, swipe-to-delete) ✅
+- [x] Pause/Resume state on Home ✅
 - [ ] `ActiveWorkoutProvider` (React Context) — отложено в техдолг
 
 ---
@@ -307,7 +313,7 @@ const planJsonSchema = z.object({
 - [x] Optimistic updates + haptic feedback
 
 **Осталось:**
-- [ ] Редактирование/удаление отдельных подходов
+- [ ] Редактирование отдельных подходов
 - [ ] BottomSheet: альтернативы, суперсет, AI-замена
 - [ ] Quick actions: "Спросить тренера", "Фото тренажёра"
 - [ ] Автоподстановка веса/повторов из прошлого подхода
@@ -384,7 +390,7 @@ const planJsonSchema = z.object({
 - [ ] Deep-link парсер (`src/utils/deepLink.js`) + роутинг по start_param
 - [ ] Toast система (React Context + Portal)
 - [ ] Empty states (универсальный паттерн: иконка + текст + CTA)
-- [ ] Loading states (Skeleton-компоненты)
+- [x] Loading states (Skeleton-компоненты) ✅
 - [ ] Error states (toast "Нет связи" + retry)
 - [ ] Offline-очередь pending подходов (localStorage)
 - [ ] Bot ↔ mini-app handoffs ("Спросить тренера", "Сфоткать тренажёр")
@@ -408,7 +414,8 @@ POST   /api/v1/workouts                    — создать тренировк
 GET    /api/v1/workouts/:id                — тренировка с подходами
 GET    /api/v1/workouts/active             — незавершённая тренировка
 POST   /api/v1/workouts/:id/sets           — залогировать подход
-PATCH  /api/v1/workouts/:id                — завершить тренировку
+PATCH  /api/v1/workouts/:id                — завершить / pause / resume тренировку
+DELETE /api/v1/workouts/:id                — удалить тренировку (каскад sets)
 ```
 
 ### Фаза 2
@@ -479,16 +486,16 @@ gifUrl  String?                          // анимированная GIF из 
 ```
 Фаза 1 ✅ (seed + API + Workout UI)
     │
-    ├──▶ Фаза 2 ✅ (Home + programs)
+    ├──▶ Фаза 2 ✅ (Home + programs + skeletons + cache + cancel/delete + day picker)
     │         │
     │         ▼
     │    Фаза 5 (Programs CRUD + AI-генерация)
     │
-    ├──▶ Фаза 3 ⚡ (Workout: glass_v3 done, API edit/AI-замена осталось)
+    ├──▶ Фаза 3 ⚡ (Workout: glass_v3 done, edit sets/AI-замена осталось)
     │
     ├──▶ Фаза 4 (Summary + Progress) ── требует: N тренировок в БД
     │
-    └──▶ Фаза 6 (polish)
+    └──▶ Фаза 6 (polish — skeletons ✅, toast/empty/error/offline осталось)
 ```
 
 **Следующий шаг:** Фаза 3 остаток (edit sets API, AI-замена) + Фаза 4 (Progress).

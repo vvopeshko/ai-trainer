@@ -4,6 +4,64 @@
 
 ---
 
+## 2026-04-26 (день) — Скелетоны, кэш, cancel/delete, day picker, recent list
+
+### HomeDataContext — кэширование данных Home-экрана
+
+- `src/contexts/HomeDataContext.jsx` — React Context выше Routes, stale-while-revalidate
+- Данные (yearStats, monthStats, recent, activeWorkout, program, nextWorkout) переживают переключение табов
+- `refresh()` для фонового обновления, `setData()` для optimistic updates
+- `HomeDataProvider` добавлен в цепочку провайдеров (`main.jsx`)
+
+### Skeleton-загрузчики
+
+- `src/components/ui/Skeleton.jsx` — shimmer-компонент с pulse-анимацией
+- `YearHeader`, `ProgrammeHeroSkeleton`, `MonthStatsSkeleton`, `RecentListSkeleton` — на Home-экране
+- `WorkoutSkeleton` — на экране тренировки
+
+### Cancel active + Delete past workout
+
+- `DELETE /api/v1/workouts/:id` — удаление тренировки (каскад WorkoutSet)
+- `src/components/ui/ConfirmDialog.jsx` — Glass-диалог подтверждения (danger variant)
+- WorkoutPage: кнопка "назад" показывает confirm если есть подходы
+- HomePage: "Прервать" для активной тренировки с confirm, trash-иконка (позже свайп) для недавних
+
+### Pause/Resume на Home-экране
+
+- Unified `ProgrammeHero` — показывает active/paused/default состояния в одной Glass-карточке
+- Live-таймер с учётом пауз (`totalPausedMs`, `pausedAt`)
+- Статус: пульсирующая точка (active) / оранжевая точка (paused)
+- "Продолжить" из Home вызывает resume + навигацию на /workout
+
+### Day Picker — шторка выбора тренировки
+
+- `src/components/ui/BottomSheet.jsx` — переиспользуемый bottom sheet с анимацией open/close (slide-up/down + backdrop fade)
+- "сделать другую вместо этой" → открывает шторку со списком дней из программы
+- Клик на день → обновляет `nextWorkout` в контексте (НЕ начинает тренировку)
+- "Внеплановая" (dashed border) → начинает freeform тренировку
+- Акцентная рамка + бейдж "ПО ПЛАНУ" на текущем дне
+
+### Recent List — редизайн
+
+- Бэкенд: `getRecent` теперь возвращает `dayTitle`, `durationSec`, `programDayIndex`
+- Формат строки: "День 2 · Pull" (название из программы) или список упражнений (freeform)
+- Подстрока: день недели + относительная дата + длительность + подходы
+- Удаление свайпом влево (SwipeRow — touch-based, delete-кнопка выезжает справа)
+
+### Новые UI-компоненты
+
+| Компонент | Файл |
+|-----------|------|
+| `Skeleton` | `src/components/ui/Skeleton.jsx` |
+| `ConfirmDialog` | `src/components/ui/ConfirmDialog.jsx` |
+| `BottomSheet` | `src/components/ui/BottomSheet.jsx` |
+
+### Новые i18n-ключи
+
+`workout.cancelWorkoutTitle/Message/Confirm`, `home.deleteWorkoutTitle/Message/Confirm`, `confirm.cancel`, `home.workoutPaused`, `home.cancelWorkout`, `home.workoutDuration`, `home.startedJustNow/MinAgo/HourAgo`, `home.continueWorkoutFull`, `home.startFreeform`, `home.pickDayTitle/Subtitle/Planned`, `home.pickFreeform/Desc`, `home.freeformWorkout`, `home.dayN`, `home.durationMin`
+
+---
+
 ## 2026-04-26 (ночь, позже) — Интерактивный Workout UX
 
 Большой набор фич и фиксов для экрана тренировки.

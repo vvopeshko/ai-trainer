@@ -108,14 +108,15 @@ cd server && npx prisma studio
 
 ### Фронтенд: провайдеры
 
-Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `App`.
+Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `HomeDataProvider` → `App`.
 
 - **TelegramProvider** — `useTelegram()` → `{ user, webApp, isDev }`. В dev-режиме отдаёт мок-юзера.
 - **TranslationProvider** — `useTranslation()` → `{ t, language, setLanguage }`.
+- **HomeDataProvider** — `useHomeData()` → `{ yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData }`. Кэш Home-данных выше Routes, stale-while-revalidate, optimistic updates через `setData`.
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)
 
-`apiGet(path)`, `apiPost(path, body)`, `apiPatch(path, body)` — thin wrapper над `fetch`. Автоматически аттачит `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`.
+`apiGet(path)`, `apiPost(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrapper над `fetch`. Автоматически аттачит `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`.
 
 ### Бэкенд: архитектура
 
@@ -138,7 +139,7 @@ cd server && npx prisma studio
 Все компоненты — **named exports** через barrel `src/components/ui/index.js`. **Исключения:** `TopBar` и `BigStepper` — default export, импортировать напрямую.
 
 ```js
-import { Glass, Button, Icon } from '../../components/ui/index.js'
+import { Glass, Button, Icon, Skeleton, ConfirmDialog, BottomSheet } from '../../components/ui/index.js'
 import TopBar from '../../components/ui/TopBar.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 ```
