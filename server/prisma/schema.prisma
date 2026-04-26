@@ -116,9 +116,13 @@ model Exercise {
 
   youtubeUrl       String?
   imageUrl         String?
+  gifUrl           String?            // анимированная GIF-демонстрация (ExerciseDB OSS, кэшируется при seed)
 
   // Синонимы для подбора по распознаванию тренажёра и текстового поиска.
   aliases          String[]           @default([])
+
+  // Откуда пришло упражнение: seed (из базы), ai_generated (auto-created при resolve), user_created (юзер добавил).
+  source           ExerciseSource     @default(seed)
 
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -141,6 +145,12 @@ enum ExerciseCategory {
   warmup
   stretch
   mobility
+}
+
+enum ExerciseSource {
+  seed           // из seed-скрипта (Free Exercise DB + обогащение)
+  ai_generated   // auto-created через exerciseResolver при LLM resolve
+  user_created   // юзер добавил вручную (будущее)
 }
 
 // ═══════════════════════════════════════════════
