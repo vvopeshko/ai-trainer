@@ -358,7 +358,11 @@ export default function WorkoutPage() {
     async function checkActive() {
       try {
         const data = await apiGet('/api/v1/workouts/active')
-        if (cancelled || !data.workout) return
+        if (cancelled) return
+        if (!data.workout) {
+          setPicking(true)
+          return
+        }
 
         const workout = data.workout
         setWorkoutId(workout.id)
@@ -393,11 +397,12 @@ export default function WorkoutPage() {
             }
           }
         } else if (data.planExercises) {
-          // Нет выполненных подходов — авто-выбираем первое из плана
-          const first = data.planExercises[0]
+          // Нет выполненных подходов — показываем PlanQueue
           setPlanIndex(0)
-          setCurrentExercise({ id: first.exerciseId, nameRu: first.nameRu })
-          setShowingQueue(false)
+          setShowingQueue(true)
+        } else {
+          // Нет плана и нет подходов — показываем picker
+          setPicking(true)
         }
       } catch {
         // Нет активной тренировки — покажем picker
@@ -501,8 +506,15 @@ export default function WorkoutPage() {
     const totalExercises = allExercises.length + (doneSets.length > 0 ? 1 : 0)
 
     try {
-      await apiPatch(`/api/v1/workouts/${workoutId}`, {})
+      const result = await apiPatch(`/api/v1/workouts/${workoutId}`, {})
       try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
+
+      // Бэкенд удалил пустую тренировку — возврат на Home
+      if (result.deleted) {
+        navigate('/')
+        return
+      }
+
       navigate(`/summary/${workoutId}`, {
         state: { totalSets, totalExercises, elapsedSec },
       })
@@ -611,8 +623,8 @@ export default function WorkoutPage() {
       <TopBar
         title={planDayTitle || t('workout.title')}
         onBack={handleBack}
-        rightLabel={t('workout.finish')}
-        onRight={handleFinish}
+        rightLabel={(allExercises.length > 0 || doneSets.length > 0) ? t('workout.finish') : undefined}
+        onRight={(allExercises.length > 0 || doneSets.length > 0) ? handleFinish : undefined}
       />
 
       <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
