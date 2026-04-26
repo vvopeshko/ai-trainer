@@ -87,6 +87,14 @@ export const translations = {
     'home.deleteWorkoutTitle': 'Удалить тренировку?',
     'home.deleteWorkoutMessage': 'Это действие нельзя отменить.',
     'home.deleteWorkoutConfirm': 'Удалить',
+    'home.pickDayTitle': 'Какую тренировку сделать?',
+    'home.pickDaySubtitle': 'Чередование автоматическое, но можешь выбрать',
+    'home.pickDayPlanned': 'ПО ПЛАНУ',
+    'home.pickFreeform': 'Внеплановая',
+    'home.pickFreeformDesc': 'Выбрать упражнения вручную',
+    'home.freeformWorkout': 'Свободная тренировка',
+    'home.dayN': 'День {{n}}',
+    'home.durationMin': '{{n}} мин',
 
     // Confirm dialog
     'confirm.cancel': 'Отмена',

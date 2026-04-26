@@ -4,7 +4,7 @@
  * Секции: YearHeader → ProgrammeHero → Month stats → Recent workouts.
  * Данные кэшируются в HomeDataContext (stale-while-revalidate).
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -15,6 +15,7 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { StatTile } from '../../components/ui/StatTile.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
+import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 
 // ─── Year Header ────────────────────────────────────────────────────────
@@ -127,7 +128,7 @@ function ProgrammeHeroSkeleton() {
   )
 }
 
-function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onStart, onContinue, onResume, onCancel, loading }) {
+function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onStart, onContinue, onResume, onCancel, onPickDay, loading }) {
   const { t } = useTranslation()
 
   const isPaused = activeWorkout?.pausedAt != null
@@ -377,7 +378,7 @@ function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onSta
             </Button>
             {nextDay && (
               <button
-                onClick={() => onStart()}
+                onClick={onPickDay}
                 style={{
                   marginTop: 'var(--space-3)',
                   width: '100%',
@@ -449,6 +450,102 @@ function RecentListSkeleton() {
   )
 }
 
+const WEEKDAYS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+
+function formatDuration(sec, t) {
+  if (sec == null) return null
+  const mins = Math.round(sec / 60)
+  if (mins < 1) return '< 1 мин'
+  return t('home.durationMin', { n: mins })
+}
+
+function formatDateLine(dateStr, t) {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const diffDays = Math.round((todayStart - dateStart) / 86400000)
+
+  const weekday = WEEKDAYS_RU[date.getDay()]
+  if (diffDays === 0) return `${weekday}, ${t('home.today').toLowerCase()}`
+  if (diffDays === 1) return `${weekday}, ${t('home.yesterday').toLowerCase()}`
+  return `${weekday}, ${t('home.daysAgo', { n: diffDays })}`
+}
+
+function SwipeRow({ children, onDelete }) {
+  const trackRef = useRef(null)
+  const startX = useRef(0)
+  const currentX = useRef(0)
+  const opened = useRef(false)
+  const DELETE_W = 72
+
+  const handleTouchStart = useCallback((e) => {
+    startX.current = e.touches[0].clientX
+    currentX.current = opened.current ? -DELETE_W : 0
+  }, [])
+
+  const handleTouchMove = useCallback((e) => {
+    const dx = e.touches[0].clientX - startX.current
+    let offset = opened.current ? dx - DELETE_W : dx
+    offset = Math.min(0, Math.max(-DELETE_W - 20, offset))
+
+    if (trackRef.current) {
+      trackRef.current.style.transition = 'none'
+      trackRef.current.style.transform = `translateX(${offset}px)`
+    }
+    currentX.current = offset
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    if (!trackRef.current) return
+    trackRef.current.style.transition = 'transform 0.25s ease-out'
+
+    if (currentX.current < -DELETE_W / 2) {
+      trackRef.current.style.transform = `translateX(-${DELETE_W}px)`
+      opened.current = true
+    } else {
+      trackRef.current.style.transform = 'translateX(0)'
+      opened.current = false
+    }
+  }, [])
+
+  return (
+    <div style={{ overflow: 'hidden' }}>
+      {/* Track: content + delete button side by side, shifts left */}
+      <div
+        ref={trackRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          display: 'flex',
+          transition: 'transform 0.25s ease-out',
+        }}
+      >
+        {/* Content — full width */}
+        <div style={{ flex: '0 0 100%', minWidth: 0 }}>
+          {children}
+        </div>
+
+        {/* Delete action — sits off-screen to the right */}
+        <div
+          onClick={onDelete}
+          style={{
+            flex: `0 0 ${DELETE_W}px`,
+            background: 'var(--danger, hsl(0,65%,50%))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <Icon name="trash" size={18} style={{ color: '#fff' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RecentList({ workouts, onDelete }) {
   const { t } = useTranslation()
 
@@ -464,74 +561,59 @@ function RecentList({ workouts, onDelete }) {
       }}>
         {t('home.recent')}
       </div>
-      <Glass padding={0}>
-        {workouts.map((w, i) => (
-          <div
-            key={w.id}
-            style={{
-              padding: '12px 14px',
-              borderBottom: i < workouts.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-3)',
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
+      <Glass padding={0} style={{ overflow: 'hidden' }}>
+        {workouts.map((w, i) => {
+          const title = w.dayTitle
+            ? `${t('home.dayN', { n: (w.programDayIndex ?? 0) + 1 })} · ${w.dayTitle}`
+            : (w.exercises?.length > 0 ? w.exercises.join(', ') : t('home.freeformWorkout'))
+          const duration = formatDuration(w.durationSec, t)
+          const dateLine = formatDateLine(w.startedAt, t)
+
+          return (
+            <SwipeRow key={w.id} onDelete={() => onDelete(w.id)}>
               <div style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: 500,
-                color: 'var(--fg-primary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                padding: '12px 14px',
+                borderBottom: i < workouts.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
               }}>
-                {w.exercises.join(', ')}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 500,
+                    color: 'var(--fg-primary)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                    {title}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--space-2)',
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--fg-tertiary)',
+                    marginTop: 2,
+                  }}>
+                    <span>{dateLine}</span>
+                    {duration && (
+                      <>
+                        <span style={{ opacity: 0.4 }}>·</span>
+                        <span>{duration}</span>
+                      </>
+                    )}
+                    <span style={{ opacity: 0.4 }}>·</span>
+                    <span>{t('home.sets', { n: w.setsCount })}</span>
+                  </div>
+                </div>
               </div>
-              <div style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--fg-tertiary)',
-                marginTop: 2,
-              }}>
-                {t('home.sets', { n: w.setsCount })}
-              </div>
-            </div>
-            <div style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--fg-tertiary)',
-              whiteSpace: 'nowrap',
-            }}>
-              {relativeDate(w.finishedAt, t)}
-            </div>
-            <button
-              onClick={() => onDelete(w.id)}
-              style={{
-                width: 28, height: 28, borderRadius: 7,
-                background: 'none', border: 'none',
-                color: 'var(--fg-disabled)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0,
-              }}
-            >
-              <Icon name="trash" size={14} />
-            </button>
-          </div>
-        ))}
+            </SwipeRow>
+          )
+        })}
       </Glass>
     </div>
   )
-}
-
-function relativeDate(dateStr, t) {
-  const date = new Date(dateStr)
-  const now = new Date()
-
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const diffDays = Math.round((todayStart - dateStart) / 86400000)
-
-  if (diffDays === 0) return t('home.today')
-  if (diffDays === 1) return t('home.yesterday')
-  return t('home.daysAgo', { n: diffDays })
 }
 
 // ─── Main Component ────────────────────────────────────────────────────
@@ -544,6 +626,7 @@ export default function HomePage() {
   const [starting, setStarting] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [deletingWorkoutId, setDeletingWorkoutId] = useState(null)
+  const [showDayPicker, setShowDayPicker] = useState(false)
 
   // Stale-while-revalidate: показываем кэш сразу, обновляем в фоне
   useEffect(() => { refresh() }, [refresh])
@@ -597,6 +680,25 @@ export default function HomePage() {
     try { await apiDelete(`/api/v1/workouts/${id}`) } catch { /* ignore */ }
   }
 
+  const handlePickDay = (dayIndex) => {
+    const day = program.planJson.days[dayIndex]
+    setData(prev => ({
+      ...prev,
+      nextWorkout: {
+        programId: program.id,
+        day,
+        dayIndex,
+        totalDays: program.planJson.days.length,
+      },
+    }))
+    setShowDayPicker(false)
+  }
+
+  const handlePickFreeform = () => {
+    setShowDayPicker(false)
+    handleStart()
+  }
+
   const showSkeletons = !loaded
 
   return (
@@ -619,6 +721,7 @@ export default function HomePage() {
           onContinue={handleContinue}
           onResume={handleResume}
           onCancel={() => setConfirmCancel(true)}
+          onPickDay={() => setShowDayPicker(true)}
           loading={starting}
         />
       )}
@@ -676,6 +779,141 @@ export default function HomePage() {
         onConfirm={handleDeleteRecent}
         onCancel={() => setDeletingWorkoutId(null)}
       />
+
+      {/* Day picker bottom sheet */}
+      <BottomSheet open={showDayPicker} onClose={() => setShowDayPicker(false)}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{
+            fontSize: 'var(--text-lg)',
+            fontWeight: 600,
+            color: 'var(--fg-primary)',
+            marginBottom: 4,
+          }}>
+            {t('home.pickDayTitle')}
+          </div>
+          <div style={{
+            fontSize: 'var(--text-sm)',
+            color: 'var(--fg-tertiary)',
+          }}>
+            {t('home.pickDaySubtitle')}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {program?.planJson?.days?.map((day, idx) => {
+            const isPlanned = nextWorkout?.dayIndex === idx
+            const exCount = day.exercises?.length || 0
+            const muscles = day.exercises
+              ?.map(ex => ex.muscleGroup)
+              .filter((v, i, a) => v && a.indexOf(v) === i)
+              .join(', ')
+
+            return (
+              <button
+                key={idx}
+                onClick={() => handlePickDay(idx)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'var(--surface-0, rgba(255,255,255,0.04))',
+                  backdropFilter: 'blur(12px)',
+                  border: isPlanned
+                    ? '1.5px solid hsl(var(--accent-h,158),55%,55%)'
+                    : '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon name="dumbbell" size={16} style={{ color: 'hsl(var(--accent-h,158),55%,72%)', flexShrink: 0 }} />
+                  <span style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    color: 'var(--fg-primary)',
+                    flex: 1,
+                  }}>
+                    {`День ${idx + 1} · ${day.title}`}
+                  </span>
+                  {isPlanned && (
+                    <span style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: 'var(--tracking-caps)',
+                      color: 'hsl(var(--accent-h,158),55%,72%)',
+                      background: 'hsla(var(--accent-h,158),40%,30%,0.3)',
+                      padding: '2px 8px',
+                      borderRadius: 6,
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {t('home.pickDayPlanned')}
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--fg-tertiary)',
+                  marginTop: 4,
+                  marginLeft: 24,
+                }}>
+                  {muscles || t('home.nExercises', { n: exCount })}
+                </div>
+              </button>
+            )
+          })}
+
+          {/* Freeform option */}
+          <button
+            onClick={handlePickFreeform}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              background: 'transparent',
+              border: '1px dashed rgba(255,255,255,0.15)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="plus" size={16} style={{ color: 'var(--fg-tertiary)', flexShrink: 0 }} />
+              <span style={{
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: 'var(--fg-primary)',
+              }}>
+                {t('home.pickFreeform')}
+              </span>
+            </div>
+            <div style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--fg-tertiary)',
+              marginTop: 4,
+              marginLeft: 24,
+            }}>
+              {t('home.pickFreeformDesc')}
+            </div>
+          </button>
+        </div>
+
+        {/* Cancel button */}
+        <button
+          onClick={() => setShowDayPicker(false)}
+          style={{
+            marginTop: 'var(--space-4)',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            color: 'var(--fg-tertiary)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: '8px 0',
+          }}
+        >
+          {t('confirm.cancel')}
+        </button>
+      </BottomSheet>
     </div>
   )
 }

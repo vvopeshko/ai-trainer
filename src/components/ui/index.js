@@ -24,3 +24,4 @@ export { GlassAINote } from './GlassAINote.jsx'
 
 // Dialogs
 export { ConfirmDialog } from './ConfirmDialog.jsx'
+export { BottomSheet } from './BottomSheet.jsx'

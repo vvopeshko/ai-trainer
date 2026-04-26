@@ -95,6 +95,7 @@ export async function getRecent(req, res) {
     take: limit,
     include: {
       _count: { select: { sets: true } },
+      program: { select: { planJson: true } },
       sets: {
         select: { exerciseId: true, exercise: { select: { nameRu: true } } },
         orderBy: { exerciseOrder: 'asc' },
@@ -102,7 +103,7 @@ export async function getRecent(req, res) {
     },
   })
 
-  // Для каждой тренировки — уникальные упражнения
+  // Для каждой тренировки — уникальные упражнения + название дня
   const result = workouts.map(w => {
     const uniqueExercises = []
     const seen = new Set()
@@ -112,12 +113,24 @@ export async function getRecent(req, res) {
         uniqueExercises.push(s.exercise.nameRu)
       }
     }
+
+    // Название из программы (напр. "День 2 · Pull")
+    const dayTitle = w.program?.planJson?.days?.[w.programDayIndex]?.title || null
+
+    // Чистая длительность в секундах (без пауз)
+    const durationSec = w.finishedAt && w.startedAt
+      ? Math.max(0, Math.floor((new Date(w.finishedAt) - new Date(w.startedAt) - (w.totalPausedMs || 0)) / 1000))
+      : null
+
     return {
       id: w.id,
       startedAt: w.startedAt,
       finishedAt: w.finishedAt,
       setsCount: w._count.sets,
       exercises: uniqueExercises,
+      dayTitle,
+      durationSec,
+      programDayIndex: w.programDayIndex,
     }
   })
 
