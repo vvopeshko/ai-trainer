@@ -192,6 +192,8 @@ model Workout {
 
   startedAt       DateTime     @default(now())
   finishedAt      DateTime?
+  pausedAt        DateTime?                  // timestamp начала текущей паузы (null = не на паузе)
+  totalPausedMs   Int          @default(0)   // суммарное время на паузе в мс
 
   feltRating      Int? // 1..5 — как прошла тренировка
   notes           String?

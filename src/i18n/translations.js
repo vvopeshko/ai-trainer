@@ -48,6 +48,10 @@ export const translations = {
     'workout.restSec': 'отдых {{sec}}с',
     'workout.noHistory': 'первый раз',
     'workout.cancelExercise': 'Отменить упражнение',
+    'workout.pause': 'Пауза',
+    'workout.resume': 'Продолжить',
+    'workout.paused': 'На паузе',
+    'workout.tapToResume': 'Нажми, чтобы продолжить',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',
@@ -68,6 +72,15 @@ export const translations = {
     'home.next': 'СЛЕДУЮЩАЯ',
     'home.nExercises': '{{n}} упр.',
     'home.nDays': '{{n}} дн.',
+    'home.workoutPaused': 'НА ПАУЗЕ',
+    'home.cancelWorkout': 'Прервать',
+    'home.workoutDuration': 'ВРЕМЯ ТРЕНИРОВКИ',
+    'home.startedJustNow': 'Стартовала только что',
+    'home.startedMinAgo': '{{n}} мин назад',
+    'home.startedHourAgo': '{{n}} ч назад',
+    'home.continueWorkoutFull': 'Продолжить тренировку',
+    'home.estimatedMin': '~{{n}} мин',
+    'home.startFreeform': 'сделать другую вместо этой',
 
     // Nav
     'nav.home': 'Главная',

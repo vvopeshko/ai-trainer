@@ -176,6 +176,10 @@ export async function logSet(req, res) {
     return res.status(404).json({ error: 'Active workout not found' })
   }
 
+  if (workout.pausedAt) {
+    return res.status(400).json({ error: 'Workout is paused' })
+  }
+
   const set = await prisma.workoutSet.create({
     data: {
       workoutId: id,
@@ -234,13 +238,15 @@ export async function deleteSet(req, res) {
 /**
  * PATCH /api/v1/workouts/:id
  *
- * Завершить тренировку. Вызывается при нажатии "Завершить".
+ * Обновить тренировку: поставить на паузу, возобновить или завершить.
+ * action: 'pause' | 'resume' | 'finish' (default: 'finish')
  */
-export async function finish(req, res) {
+export async function update(req, res) {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
 
   const data = z
     .object({
+      action: z.enum(['pause', 'resume', 'finish']).default('finish'),
       feltRating: z.number().int().min(1).max(5).optional(),
       notes: z.string().max(500).optional(),
     })
@@ -254,6 +260,43 @@ export async function finish(req, res) {
     return res.status(404).json({ error: 'Active workout not found' })
   }
 
+  // ── Pause ──
+  if (data.action === 'pause') {
+    if (workout.pausedAt) {
+      return res.status(400).json({ error: 'Workout is already paused' })
+    }
+    const updated = await prisma.workout.update({
+      where: { id },
+      data: { pausedAt: new Date() },
+    })
+    track(req.user.id, 'workout_paused', { workoutId: id })
+    return res.json({ workout: updated })
+  }
+
+  // ── Resume ──
+  if (data.action === 'resume') {
+    if (!workout.pausedAt) {
+      return res.status(400).json({ error: 'Workout is not paused' })
+    }
+    const pauseDuration = Date.now() - new Date(workout.pausedAt).getTime()
+    const updated = await prisma.workout.update({
+      where: { id },
+      data: {
+        pausedAt: null,
+        totalPausedMs: workout.totalPausedMs + pauseDuration,
+      },
+    })
+    track(req.user.id, 'workout_resumed', { workoutId: id })
+    return res.json({ workout: updated })
+  }
+
+  // ── Finish ──
+  // Если на паузе — авто-resume перед завершением
+  let totalPausedMs = workout.totalPausedMs
+  if (workout.pausedAt) {
+    totalPausedMs += Date.now() - new Date(workout.pausedAt).getTime()
+  }
+
   // Если 0 подходов — удаляем вместо завершения (пустая тренировка)
   const setsCount = await prisma.workoutSet.count({ where: { workoutId: id } })
   if (setsCount === 0) {
@@ -265,6 +308,8 @@ export async function finish(req, res) {
     where: { id },
     data: {
       finishedAt: new Date(),
+      pausedAt: null,
+      totalPausedMs,
       feltRating: data.feltRating ?? null,
       notes: data.notes ?? workout.notes,
     },
@@ -273,10 +318,11 @@ export async function finish(req, res) {
     },
   })
 
+  const netDurationMs = updated.finishedAt - updated.startedAt - totalPausedMs
   track(req.user.id, 'workout_completed', {
     workoutId: id,
     setsCount: updated.sets.length,
-    durationMin: Math.round((updated.finishedAt - updated.startedAt) / 60000),
+    durationMin: Math.round(netDurationMs / 60000),
   })
 
   res.json({ workout: updated })

@@ -22,7 +22,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 // ─── WorkoutTopBar (glass_v3: Glass strong, timer, progress, ГОТОВО) ────
 
-function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, totalSetCount, onBack, onFinish, onCancel, hasAnySets }) {
+function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, totalSetCount, onBack, onFinish, onCancel, hasAnySets, paused, onPause, onResume }) {
   const { t } = useTranslation()
   const mm = String(Math.floor(elapsed / 60)).padStart(1, '0')
   const ss = String(elapsed % 60).padStart(2, '0')
@@ -42,7 +42,8 @@ function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, tot
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 21, fontWeight: 600,
-            lineHeight: 1, color: 'hsl(var(--accent-h,158),55%,75%)',
+            lineHeight: 1,
+            color: paused ? 'var(--warning, hsl(45,80%,60%))' : 'hsl(var(--accent-h,158),55%,75%)',
             fontVariantNumeric: 'tabular-nums',
           }}>
             {mm}:{ss}
@@ -51,12 +52,26 @@ function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, tot
             fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.5)',
             textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3,
           }}>
-            {totalExercises > 0
-              ? `${t('workout.exerciseOf', { n: exerciseNum, total: totalExercises })} · ${t('workout.setsProgress', { done: doneSetCount, total: totalSetCount })}`
-              : `${doneSetCount} ${t('workout.sets')}`
+            {paused
+              ? t('workout.paused')
+              : totalExercises > 0
+                ? `${t('workout.exerciseOf', { n: exerciseNum, total: totalExercises })} · ${t('workout.setsProgress', { done: doneSetCount, total: totalSetCount })}`
+                : `${doneSetCount} ${t('workout.sets')}`
             }
           </div>
         </div>
+
+        {/* Pause / Resume button */}
+        <button onClick={paused ? onResume : onPause} style={{
+          width: 32, height: 32, borderRadius: 9,
+          background: paused ? 'hsla(var(--accent-h,158),55%,55%,0.15)' : 'rgba(255,255,255,0.04)',
+          border: 'none',
+          color: paused ? 'hsl(var(--accent-h,158),55%,75%)' : 'rgba(236,234,239,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+        }}>
+          <Icon name={paused ? 'play' : 'pause'} size={14} />
+        </button>
 
         <button onClick={hasAnySets ? onFinish : onCancel} style={{
           height: 32, padding: '0 13px', borderRadius: 9, border: 'none',
@@ -542,6 +557,8 @@ export default function WorkoutPage() {
   const [elapsedSec, setElapsedSec] = useState(0)
   const [startedAt, setStartedAt] = useState(null)
   const [resting, setResting] = useState(false)
+  const [pausedAt, setPausedAt] = useState(null)
+  const [totalPausedMs, setTotalPausedMs] = useState(0)
   const [expandedExerciseId, setExpandedExerciseId] = useState(null)
   const [expandedDoneIndex, setExpandedDoneIndex] = useState(null)
   const [lastResultsCache, setLastResultsCache] = useState({})
@@ -626,14 +643,14 @@ export default function WorkoutPage() {
     }
   }, [draggingId])
 
-  // ── Timer ──
+  // ── Timer (accounts for pause) ──
   useEffect(() => {
-    if (!startedAt) return
-    const interval = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000))
-    }, 1000)
+    if (!startedAt || pausedAt) return
+    const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - startedAt - totalPausedMs) / 1000)))
+    tick()
+    const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [startedAt])
+  }, [startedAt, pausedAt, totalPausedMs])
 
   // ── Mount: check active workout ──
   useEffect(() => {
@@ -647,6 +664,8 @@ export default function WorkoutPage() {
         const workout = data.workout
         setWorkoutId(workout.id)
         setStartedAt(new Date(workout.startedAt).getTime())
+        setTotalPausedMs(workout.totalPausedMs || 0)
+        if (workout.pausedAt) setPausedAt(new Date(workout.pausedAt).getTime())
 
         if (data.planExercises) {
           setPlanExercises(data.planExercises)
@@ -890,6 +909,24 @@ export default function WorkoutPage() {
     }
   }
 
+  const handlePause = async () => {
+    if (!workoutId || pausedAt) return
+    const now = Date.now()
+    setPausedAt(now)
+    setElapsedSec(Math.max(0, Math.floor((now - startedAt - totalPausedMs) / 1000)))
+    apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'pause' })
+      .catch(err => console.error('Failed to pause workout:', err))
+  }
+
+  const handleResume = async () => {
+    if (!workoutId || !pausedAt) return
+    const pauseDuration = Date.now() - pausedAt
+    setTotalPausedMs(prev => prev + pauseDuration)
+    setPausedAt(null)
+    try { await apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'resume' }) }
+    catch { /* optimistic update already applied */ }
+  }
+
   const handleFinish = async () => {
     if (!workoutId) return
     setFinishing(true)
@@ -903,7 +940,7 @@ export default function WorkoutPage() {
     const totalExercises = allExercises.length + (doneSets.length > 0 ? 1 : 0) + Object.keys(partialSets).length
 
     try {
-      const result = await apiPatch(`/api/v1/workouts/${workoutId}`, {})
+      const result = await apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'finish' })
       try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
 
       if (result.deleted) { navigate('/'); return }
@@ -974,6 +1011,9 @@ export default function WorkoutPage() {
         onFinish={handleFinish}
         onCancel={handleCancel}
         hasAnySets={hasAnySets}
+        paused={!!pausedAt}
+        onPause={handlePause}
+        onResume={handleResume}
       />
 
       <div style={{ position: 'relative', zIndex: 1, overflow: 'auto', padding: '4px 12px 22px' }}>
@@ -1075,8 +1115,37 @@ export default function WorkoutPage() {
               </div>
             )}
 
+            {/* Pause overlay */}
+            {pausedAt && (
+              <div
+                onClick={handleResume}
+                style={{
+                  margin: '0 12px 8px',
+                  padding: '20px 14px',
+                  borderRadius: 13,
+                  background: 'rgba(0,0,0,0.5)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon name="pause" size={24} style={{ color: 'var(--warning, hsl(45,80%,60%))', marginBottom: 8 }} />
+                <div style={{
+                  fontSize: 14, fontWeight: 600, color: 'var(--fg-primary)',
+                  marginBottom: 4,
+                }}>
+                  {t('workout.paused')}
+                </div>
+                <div style={{
+                  fontSize: 12, color: 'var(--fg-tertiary)',
+                }}>
+                  {t('workout.tapToResume')}
+                </div>
+              </div>
+            )}
+
             {/* Active set input OR rest timer */}
-            <div style={{ padding: '12px 12px 14px' }}>
+            <div style={{ padding: '12px 12px 14px', ...(pausedAt && { opacity: 0.25, pointerEvents: 'none' }) }}>
               {resting ? (
                 <>
                   <RestCard
