@@ -66,6 +66,49 @@ export async function getActive(req, res) {
 }
 
 /**
+ * GET /api/v1/workouts/recent?limit=4
+ *
+ * Последние завершённые тренировки. Для Home-экрана.
+ */
+export async function getRecent(req, res) {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 4, 20)
+
+  const workouts = await prisma.workout.findMany({
+    where: { userId: req.user.id, finishedAt: { not: null } },
+    orderBy: { finishedAt: 'desc' },
+    take: limit,
+    include: {
+      _count: { select: { sets: true } },
+      sets: {
+        select: { exerciseId: true, exercise: { select: { nameRu: true } } },
+        orderBy: { exerciseOrder: 'asc' },
+      },
+    },
+  })
+
+  // Для каждой тренировки — уникальные упражнения
+  const result = workouts.map(w => {
+    const uniqueExercises = []
+    const seen = new Set()
+    for (const s of w.sets) {
+      if (!seen.has(s.exerciseId)) {
+        seen.add(s.exerciseId)
+        uniqueExercises.push(s.exercise.nameRu)
+      }
+    }
+    return {
+      id: w.id,
+      startedAt: w.startedAt,
+      finishedAt: w.finishedAt,
+      setsCount: w._count.sets,
+      exercises: uniqueExercises,
+    }
+  })
+
+  res.json({ workouts: result })
+}
+
+/**
  * GET /api/v1/workouts/:id
  *
  * Конкретная тренировка со всеми подходами и упражнениями.

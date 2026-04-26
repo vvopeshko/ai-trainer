@@ -29,6 +29,29 @@ export const translations = {
     'workout.sets': 'подх.',
     'workout.completed': 'Выполнено',
 
+    // Home screen (BRD §12.1)
+    'home.yearGoal': '{{done}} / {{target}} тренировок',
+    'home.startWorkout': 'Начать тренировку',
+    'home.continueWorkout': 'Продолжить',
+    'home.workoutActive': 'ИДЁТ ТРЕНИРОВКА',
+    'home.thisMonth': 'Этот месяц',
+    'home.workouts': 'Тренировок',
+    'home.tonnage': 'Тоннаж',
+    'home.streak': 'Серия',
+    'home.records': 'Рекорды',
+    'home.recent': 'Недавно',
+    'home.today': 'Сегодня',
+    'home.yesterday': 'Вчера',
+    'home.daysAgo': '{{n}} дн. назад',
+    'home.exercises': '{{n}} упр.',
+    'home.sets': '{{n}} подх.',
+
+    // Nav
+    'nav.home': 'Главная',
+    'nav.progress': 'Прогресс',
+    'nav.library': 'Каталог',
+    'nav.me': 'Профиль',
+
     // Summary screen (BRD §12.3)
     'summary.title': 'Готово!',
     'summary.subtitle': 'Тренировка записана.',

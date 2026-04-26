@@ -1,15 +1,34 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
+import TabLayout from './components/layout/TabLayout.jsx'
+import HomePage from './pages/Main/HomePage.jsx'
 import WorkoutPage from './pages/Main/WorkoutPage.jsx'
 
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
 
+function StubPage({ title }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '60vh', color: 'var(--fg-tertiary)', fontSize: 'var(--text-sm)',
+    }}>
+      {title} — скоро
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)', color: 'var(--fg-primary)' }}>
       <Routes>
-        <Route path="/" element={<Navigate to="/workout" replace />} />
+        {/* Tab screens */}
+        <Route path="/" element={<TabLayout><HomePage /></TabLayout>} />
+        <Route path="/progress" element={<TabLayout><StubPage title="Прогресс" /></TabLayout>} />
+        <Route path="/library" element={<TabLayout><StubPage title="Каталог" /></TabLayout>} />
+        <Route path="/me" element={<TabLayout><StubPage title="Профиль" /></TabLayout>} />
+
+        {/* Full-screen flows */}
         <Route path="/workout" element={<WorkoutPage />} />
         <Route path="/summary/:id" element={<Suspense fallback={null}><SummaryPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={null}><DesignSystemDemo /></Suspense>} />

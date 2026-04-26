@@ -1,10 +1,10 @@
 import { Icon } from './Icon.jsx'
 
 const NAV_ITEMS = [
-  { k: 'home',     l: 'Today',    i: 'home' },
-  { k: 'progress', l: 'Progress', i: 'activity' },
-  { k: 'lib',      l: 'Library',  i: 'book' },
-  { k: 'me',       l: 'Me',       i: 'user' },
+  { k: 'home',     l: 'Главная',  i: 'home' },
+  { k: 'progress', l: 'Прогресс', i: 'activity' },
+  { k: 'lib',      l: 'Каталог',  i: 'book' },
+  { k: 'me',       l: 'Профиль',  i: 'user' },
 ]
 
 /**
