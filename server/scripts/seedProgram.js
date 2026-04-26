@@ -84,11 +84,16 @@ const DAYS = [
 // ─── Main ───────────────────────────────────────────────────────────────
 
 async function main() {
-  // Найти юзера (dev_bypass = telegramId 0, или первый доступный)
-  let user = await prisma.user.findFirst({ where: { telegramId: 0n } })
-  if (!user) {
-    user = await prisma.user.findFirst()
-  }
+  // Найти юзера — берём владельца тренировок (у кого больше всего)
+  const topUser = await prisma.workout.groupBy({
+    by: ['userId'],
+    _count: true,
+    orderBy: { _count: { userId: 'desc' } },
+    take: 1,
+  })
+  let user = topUser.length > 0
+    ? await prisma.user.findUnique({ where: { id: topUser[0].userId } })
+    : await prisma.user.findFirst()
   if (!user) {
     console.error('❌ No users in DB. Run the app first to create a user.')
     process.exit(1)
