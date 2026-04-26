@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Glass } from './Glass.jsx'
 import { Icon } from './Icon.jsx'
 import { useTranslation } from '../../i18n/useTranslation.js'
@@ -10,21 +10,35 @@ import { useTranslation } from '../../i18n/useTranslation.js'
 export function RestCard({ seconds = 90, onSkip, onComplete }) {
   const { t: tr } = useTranslation()
   const [t, setT] = useState(seconds)
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete })
 
+  // Stable interval — no deps, survives parent re-renders
   useEffect(() => {
-    if (t <= 0) { onComplete?.(); return }
     const id = setInterval(() => setT(x => x - 1), 1000)
     return () => clearInterval(id)
-  }, [t, onComplete])
+  }, [])
 
-  const mm = Math.floor(t / 60)
-  const ss = String(t % 60).padStart(2, '0')
-  const pct = ((seconds - t) / seconds) * 100
+  // Fire onComplete when timer reaches 0
+  useEffect(() => {
+    if (t <= 0) onCompleteRef.current?.()
+  }, [t])
+
+  const display = Math.max(0, t)
+  const mm = Math.floor(display / 60)
+  const ss = String(display % 60).padStart(2, '0')
+  const pct = ((seconds - display) / seconds) * 100
 
   return (
     <>
-      <style>{`@keyframes trainerRestBreath { 0%,100% { opacity:.55; transform: scale(1); } 50% { opacity:.85; transform: scale(1.04); } }`}</style>
-      <Glass variant="tint" padding="18px 16px 16px" radius={16} style={{ textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes trainerRestBreath { 0%,100% { opacity:.55; transform: scale(1); } 50% { opacity:.85; transform: scale(1.04); } }
+        @keyframes restCardAppear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+      <Glass variant="tint" padding="18px 16px 16px" radius={16} style={{
+        textAlign: 'center', position: 'relative', overflow: 'hidden',
+        animation: 'restCardAppear 0.35s var(--ease-out) both',
+      }}>
         <div aria-hidden="true" style={{
           position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
           background: 'radial-gradient(ellipse at 50% 50%, hsla(var(--accent-h,158),55%,40%,0.4) 0%, transparent 65%)',

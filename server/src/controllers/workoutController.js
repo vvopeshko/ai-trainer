@@ -201,6 +201,37 @@ export async function logSet(req, res) {
 }
 
 /**
+ * DELETE /api/v1/workouts/:id/sets/:setId
+ *
+ * Удалить подход. Проверяет что тренировка принадлежит юзеру и не завершена.
+ */
+export async function deleteSet(req, res) {
+  const { id, setId } = z
+    .object({ id: z.string().uuid(), setId: z.string().uuid() })
+    .parse(req.params)
+
+  const workout = await prisma.workout.findFirst({
+    where: { id, userId: req.user.id, finishedAt: null },
+  })
+
+  if (!workout) {
+    return res.status(404).json({ error: 'Active workout not found' })
+  }
+
+  const set = await prisma.workoutSet.findFirst({
+    where: { id: setId, workoutId: id },
+  })
+
+  if (!set) {
+    return res.status(404).json({ error: 'Set not found' })
+  }
+
+  await prisma.workoutSet.delete({ where: { id: setId } })
+
+  res.json({ deleted: true })
+}
+
+/**
  * PATCH /api/v1/workouts/:id
  *
  * Завершить тренировку. Вызывается при нажатии "Завершить".

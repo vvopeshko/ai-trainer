@@ -46,6 +46,17 @@ export async function apiPatch(path, body) {
   return res.json()
 }
 
+export async function apiDelete(path) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: authHeader(),
+    },
+  })
+  if (!res.ok) throw await makeError(res)
+  return res.json()
+}
+
 async function makeError(res) {
   let payload = null
   try {

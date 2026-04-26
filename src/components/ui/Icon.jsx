@@ -13,9 +13,11 @@ export const ICON_PATHS = {
   bell: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>,
   list: <><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></>,
   moreHorizontal: <><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></>,
+  grip: <><circle cx="9" cy="5" r="1.2" fill="currentColor" stroke="none" /><circle cx="15" cy="5" r="1.2" fill="currentColor" stroke="none" /><circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="15" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="9" cy="19" r="1.2" fill="currentColor" stroke="none" /><circle cx="15" cy="19" r="1.2" fill="currentColor" stroke="none" /></>,
   chevronRight: <polyline points="9 18 15 12 9 6" />,
   chevronLeft: <polyline points="15 18 9 12 15 6" />,
   chevronDown: <polyline points="6 9 12 15 18 9" />,
+  chevronUp: <polyline points="6 15 12 9 18 15" />,
   arrowRight: <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
   arrowUpRight: <><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></>,
 

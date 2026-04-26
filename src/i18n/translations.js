@@ -43,6 +43,11 @@ export const translations = {
     'workout.skipRest': 'Пропустить отдых',
     'workout.breathe': 'Вдох носом 4с → выдох 6с. Расслабь плечи.',
     'workout.doneLabel': 'сделано',
+    'workout.startExercise': 'Начать',
+    'workout.lastTime': 'прошлый раз',
+    'workout.restSec': 'отдых {{sec}}с',
+    'workout.noHistory': 'первый раз',
+    'workout.cancelExercise': 'Отменить упражнение',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',
