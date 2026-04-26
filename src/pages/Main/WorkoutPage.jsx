@@ -848,6 +848,13 @@ export default function WorkoutPage() {
     setDoneSets([])
     setResting(false)
     setPicking(false)
+
+    // Fetch last results for this exercise (for weight pre-fill)
+    if (!lastResultsCache[exercise.id]) {
+      apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: [exercise.id] })
+        .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
+        .catch(() => {})
+    }
   }
 
   const handleSetDone = async ({ weight, reps }) => {
@@ -1269,8 +1276,12 @@ export default function WorkoutPage() {
                   exercise={currentExercise}
                   setOrder={doneSets.length}
                   plannedSets={currentPlanExercise?.sets || null}
-                  lastWeight={doneSets.length > 0 ? doneSets[doneSets.length - 1].weightKg : null}
-                  lastReps={doneSets.length > 0 ? doneSets[doneSets.length - 1].reps : null}
+                  lastWeight={doneSets.length > 0
+                    ? doneSets[doneSets.length - 1].weightKg
+                    : lastResultsCache[currentExercise.id]?.lastSets?.[0]?.weightKg ?? null}
+                  lastReps={doneSets.length > 0
+                    ? doneSets[doneSets.length - 1].reps
+                    : lastResultsCache[currentExercise.id]?.lastSets?.[0]?.reps ?? null}
                   plannedReps={currentPlanExercise?.repsMin || null}
                   onDone={handleSetDone}
                 />
