@@ -62,7 +62,23 @@ export async function getActive(req, res) {
     },
   })
 
-  res.json({ workout })
+  // Если тренировка привязана к программе — вернуть план дня
+  let planExercises = null
+  let planDayTitle = null
+
+  if (workout?.programId && workout.programDayIndex != null) {
+    const program = await prisma.program.findUnique({
+      where: { id: workout.programId },
+      select: { planJson: true },
+    })
+    const day = program?.planJson?.days?.[workout.programDayIndex]
+    if (day) {
+      planExercises = day.exercises
+      planDayTitle = day.title
+    }
+  }
+
+  res.json({ workout, planExercises, planDayTitle })
 }
 
 /**

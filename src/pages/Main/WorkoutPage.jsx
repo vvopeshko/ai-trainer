@@ -1,13 +1,15 @@
 /**
- * Workout Page — главный экран в зале (BRD §12.2, Фаза 1c).
+ * Workout Page — главный экран в зале (BRD §12.2).
  *
- * Flow:
- * 1. Создаём тренировку → выбираем упражнение
- * 2. BigStepper (вес + повторы) → "Сделал" → подход сохраняется
- * 3. "К следующему" → выбор следующего упражнения
+ * Flow (с программой):
+ * 1. GET /workouts/active → planExercises (список упражнений дня)
+ * 2. PlanQueue показывает очередь → тап или авто-выбор → BigStepper
+ * 3. "Сделал" → подход сохраняется → "К следующему" → авто-переход к следующему
  * 4. "Завершить тренировку" → Summary
+ *
+ * Flow (без программы): как раньше — ExercisePicker → BigStepper
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet, apiPost, apiPatch } from '../../utils/api.js'
@@ -17,9 +19,100 @@ import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 
+// ─── Plan Queue (список упражнений по программе) ────────────────────────
+
+function PlanQueue({ exercises, doneIds, currentId, onSelect, onAddOther }) {
+  const { t } = useTranslation()
+
+  return (
+    <div style={{ padding: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        {exercises.map((ex, i) => {
+          const isDone = doneIds.has(ex.exerciseId)
+          const isCurrent = currentId === ex.exerciseId
+          const repsLabel = ex.repsMin === ex.repsMax
+            ? `${ex.sets}×${ex.repsMin}`
+            : `${ex.sets}×${ex.repsMin}-${ex.repsMax}`
+
+          return (
+            <button
+              key={ex.exerciseId + '-' + i}
+              onClick={() => !isDone && onSelect(ex)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: isCurrent
+                  ? '1px solid hsla(var(--accent-h,158),70%,50%,0.4)'
+                  : '1px solid var(--border-subtle)',
+                background: isCurrent
+                  ? 'hsla(var(--accent-h,158),70%,22%,0.3)'
+                  : 'var(--surface-0)',
+                color: 'var(--fg-primary)',
+                cursor: isDone ? 'default' : 'pointer',
+                textAlign: 'left',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-sm)',
+                width: '100%',
+                opacity: isDone ? 0.5 : 1,
+              }}
+            >
+              {/* Status indicator */}
+              <div style={{
+                width: 22, height: 22, borderRadius: 'var(--radius-sm)',
+                background: isDone
+                  ? 'var(--success-soft)'
+                  : isCurrent
+                    ? 'hsla(var(--accent-h,158),55%,55%,0.2)'
+                    : 'rgba(255,255,255,0.04)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {isDone
+                  ? <Icon name="check" size={13} style={{ color: 'var(--success)' }} />
+                  : isCurrent
+                    ? <Icon name="play" size={10} style={{ color: 'hsl(var(--accent-h,158),55%,65%)' }} />
+                    : <span style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.15)',
+                      }} />
+                }
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: isCurrent ? 600 : 500 }}>{ex.nameRu}</div>
+              </div>
+
+              <span style={{
+                fontSize: 'var(--text-2xs)',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--fg-tertiary)',
+                whiteSpace: 'nowrap',
+              }}>
+                {repsLabel}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <Button
+        variant="ghost"
+        block
+        onClick={onAddOther}
+        style={{ marginTop: 'var(--space-4)' }}
+      >
+        {t('workout.addOther')}
+      </Button>
+    </div>
+  )
+}
+
 // ─── Выбор упражнения ──────────────────────────────────────────────────
 
-function ExercisePicker({ onSelect }) {
+function ExercisePicker({ onSelect, onBack }) {
   const { t } = useTranslation()
   const [exercises, setExercises] = useState([])
   const [query, setQuery] = useState('')
@@ -231,10 +324,18 @@ export default function WorkoutPage() {
   const [currentExercise, setCurrentExercise] = useState(null)
   const [doneSets, setDoneSets] = useState([])           // подходы текущего упражнения
   const [allExercises, setAllExercises] = useState([])    // выполненные упражнения
-  const [picking, setPicking] = useState(true)            // сразу показываем picker
+  const [picking, setPicking] = useState(false)
+  const [showingQueue, setShowingQueue] = useState(true)  // показываем PlanQueue
   const [finishing, setFinishing] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [startedAt, setStartedAt] = useState(null)
+
+  // Plan state
+  const [planExercises, setPlanExercises] = useState(null)
+  const [planDayTitle, setPlanDayTitle] = useState(null)
+  const [planIndex, setPlanIndex] = useState(0)
+
+  const hasPlan = planExercises && planExercises.length > 0
 
   // ── Timer ──
   useEffect(() => {
@@ -251,7 +352,7 @@ export default function WorkoutPage() {
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  // ── При монтировании: только проверяем активную тренировку (не создаём) ──
+  // ── При монтировании: проверяем активную тренировку ──
   useEffect(() => {
     let cancelled = false
     async function checkActive() {
@@ -262,6 +363,12 @@ export default function WorkoutPage() {
         const workout = data.workout
         setWorkoutId(workout.id)
         setStartedAt(new Date(workout.startedAt).getTime())
+
+        // Plan data from API
+        if (data.planExercises) {
+          setPlanExercises(data.planExercises)
+          setPlanDayTitle(data.planDayTitle)
+        }
 
         if (workout.sets?.length > 0) {
           const grouped = {}
@@ -274,9 +381,27 @@ export default function WorkoutPage() {
             grouped[s.exerciseId].sets.push(s)
           }
           setAllExercises(order.map(id => grouped[id]))
+
+          // Если есть план — найти первое невыполненное
+          if (data.planExercises) {
+            const doneIds = new Set(order)
+            const nextIdx = data.planExercises.findIndex(pe => !doneIds.has(pe.exerciseId))
+            if (nextIdx >= 0) {
+              setPlanIndex(nextIdx)
+            } else {
+              setPlanIndex(data.planExercises.length)
+            }
+          }
+        } else if (data.planExercises) {
+          // Нет выполненных подходов — авто-выбираем первое из плана
+          const first = data.planExercises[0]
+          setPlanIndex(0)
+          setCurrentExercise({ id: first.exerciseId, nameRu: first.nameRu })
+          setShowingQueue(false)
         }
       } catch {
-        // Нет активной тренировки — ок, покажем picker
+        // Нет активной тренировки — покажем picker
+        setPicking(true)
       }
     }
     checkActive()
@@ -292,7 +417,19 @@ export default function WorkoutPage() {
     return workout.id
   }
 
+  // Computed: done exercise IDs
+  const doneExerciseIds = new Set(allExercises.map(e => e.exercise.id))
+
   // ── Handlers ──
+
+  const handleSelectFromPlan = (planEx) => {
+    const idx = planExercises.findIndex(pe => pe.exerciseId === planEx.exerciseId)
+    if (idx >= 0) setPlanIndex(idx)
+    setCurrentExercise({ id: planEx.exerciseId, nameRu: planEx.nameRu })
+    setDoneSets([])
+    setShowingQueue(false)
+    setPicking(false)
+  }
 
   const handleSelectExercise = async (exercise) => {
     try {
@@ -304,6 +441,7 @@ export default function WorkoutPage() {
     setCurrentExercise(exercise)
     setDoneSets([])
     setPicking(false)
+    setShowingQueue(false)
   }
 
   const handleSetDone = async ({ weight, reps }) => {
@@ -333,7 +471,26 @@ export default function WorkoutPage() {
     }
     setCurrentExercise(null)
     setDoneSets([])
-    setPicking(true)
+
+    // Авто-переход к следующему по плану
+    if (hasPlan) {
+      const updatedDoneIds = new Set([...doneExerciseIds])
+      if (currentExercise) updatedDoneIds.add(currentExercise.id)
+
+      const nextIdx = planExercises.findIndex((pe, i) => i > planIndex && !updatedDoneIds.has(pe.exerciseId))
+      if (nextIdx >= 0) {
+        const next = planExercises[nextIdx]
+        setPlanIndex(nextIdx)
+        setCurrentExercise({ id: next.exerciseId, nameRu: next.nameRu })
+        setShowingQueue(false)
+        return
+      }
+      // Все по плану сделаны — показать queue
+      setPlanIndex(planExercises.length)
+      setShowingQueue(true)
+    } else {
+      setPicking(true)
+    }
   }
 
   const handleFinish = async () => {
@@ -357,13 +514,13 @@ export default function WorkoutPage() {
 
   const handleBack = () => navigate('/')
 
-  // ── Render: picker ──
+  // ── Render: ExercisePicker ──
   if (picking) {
     return (
       <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
         <TopBar
           title={t('workout.selectExercise')}
-          onBack={currentExercise ? () => setPicking(false) : handleBack}
+          onBack={hasPlan ? () => { setPicking(false); setShowingQueue(true) } : handleBack}
           rightLabel={workoutId && allExercises.length > 0 ? t('workout.finish') : undefined}
           onRight={workoutId && allExercises.length > 0 ? handleFinish : undefined}
         />
@@ -392,11 +549,67 @@ export default function WorkoutPage() {
     )
   }
 
-  // ── Render: active workout ──
+  // ── Render: PlanQueue (exercise selection from program) ──
+  if (hasPlan && showingQueue && !currentExercise) {
+    return (
+      <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
+        <TopBar
+          title={planDayTitle || t('workout.title')}
+          onBack={handleBack}
+          rightLabel={allExercises.length > 0 ? t('workout.finish') : undefined}
+          onRight={allExercises.length > 0 ? handleFinish : undefined}
+        />
+
+        {startedAt && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--space-2)',
+            padding: 'var(--space-3)',
+            color: 'var(--fg-tertiary)',
+            fontSize: 'var(--text-xs)',
+            fontFamily: 'var(--font-mono)',
+          }}>
+            <Icon name="clock" size={14} />
+            {formatTime(elapsedSec)}
+            {allExercises.length > 0 && (
+              <span> · {allExercises.length} {t('workout.exercises')} · {allExercises.reduce((s, e) => s + e.sets.length, 0)} {t('workout.sets')}</span>
+            )}
+          </div>
+        )}
+
+        <PlanQueue
+          exercises={planExercises}
+          doneIds={doneExerciseIds}
+          currentId={null}
+          onSelect={handleSelectFromPlan}
+          onAddOther={() => setPicking(true)}
+        />
+
+        {allExercises.length > 0 && (
+          <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+            <Button
+              variant="success"
+              block
+              size="lg"
+              loading={finishing}
+              onClick={handleFinish}
+            >
+              <Icon name="check" size={18} style={{ marginRight: 6 }} />
+              {t('workout.finishWorkout')}
+            </Button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Render: active workout (logging sets) ──
   return (
     <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
       <TopBar
-        title={t('workout.title')}
+        title={planDayTitle || t('workout.title')}
         onBack={handleBack}
         rightLabel={t('workout.finish')}
         onRight={handleFinish}
@@ -469,13 +682,29 @@ export default function WorkoutPage() {
                   }}>
                     {currentExercise.nameRu}
                   </div>
-                  <div style={{
-                    fontSize: 'var(--text-2xs)',
-                    color: 'var(--fg-tertiary)',
-                    marginTop: 2,
-                  }}>
-                    {(currentExercise.primaryMuscles || []).join(', ')}
-                  </div>
+                  {hasPlan && planExercises[planIndex] && (
+                    <div style={{
+                      fontSize: 'var(--text-2xs)',
+                      color: 'var(--fg-tertiary)',
+                      marginTop: 2,
+                    }}>
+                      {(() => {
+                        const pe = planExercises[planIndex]
+                        return pe.repsMin === pe.repsMax
+                          ? `${pe.sets}×${pe.repsMin}`
+                          : `${pe.sets}×${pe.repsMin}-${pe.repsMax}`
+                      })()}
+                    </div>
+                  )}
+                  {!hasPlan && currentExercise.primaryMuscles && (
+                    <div style={{
+                      fontSize: 'var(--text-2xs)',
+                      color: 'var(--fg-tertiary)',
+                      marginTop: 2,
+                    }}>
+                      {(currentExercise.primaryMuscles || []).join(', ')}
+                    </div>
+                  )}
                 </div>
               </div>
               <DoneSets sets={doneSets} />

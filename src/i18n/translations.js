@@ -28,6 +28,8 @@ export const translations = {
     'workout.exercises': 'упр.',
     'workout.sets': 'подх.',
     'workout.completed': 'Выполнено',
+    'workout.addOther': '+ Добавить другое',
+    'workout.setsScheme': '{{sets}}×{{reps}}',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',
