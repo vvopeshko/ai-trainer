@@ -370,7 +370,7 @@ function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, onCli
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse }) {
+function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse, onDeletePartialSet }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
@@ -413,31 +413,13 @@ function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults
             {t('workout.setsProgress', { done: partial.length, total: planExercise.sets })}
           </div>
           {partial.map((s, i) => (
-            <div key={i} style={{
-              padding: '9px 12px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10,
-              background: 'hsla(var(--accent-h,158),50%,22%,0.25)',
-              border: '1px solid hsla(var(--accent-h,158),55%,50%,0.15)',
-            }}>
-              <div style={{
-                width: 20, height: 20, borderRadius: '50%',
-                background: 'hsl(var(--accent-h,158),55%,55%)', color: '#0a1815',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon name="check" size={11} strokeWidth={3} />
-              </div>
-              <div style={{
-                fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.4)',
-                textTransform: 'uppercase', letterSpacing: '0.04em',
-              }}>
-                {t('workout.set', { n: i + 1 })}
-              </div>
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: 13.5, flex: 1,
-                fontWeight: 600, color: '#ECEAEF', textAlign: 'right',
-              }}>
-                {s.weightKg ?? 0} × {s.reps}
-              </span>
-            </div>
+            <DoneSetRow
+              key={i}
+              index={i}
+              weight={s.weightKg ?? 0}
+              reps={s.reps}
+              onDelete={onDeletePartialSet ? () => onDeletePartialSet(i) : null}
+            />
           ))}
           {/* Remaining planned sets */}
           {Array.from({ length: planExercise.sets - partial.length }, (_, i) => {
@@ -1000,6 +982,24 @@ export default function WorkoutPage() {
     setDoneSets(prev => prev.filter((_, i) => i !== setIndex))
   }
 
+  const handleDeletePartialSet = (exerciseId, setIndex) => {
+    const sets = partialSets[exerciseId]
+    if (!sets) return
+    const set = sets[setIndex]
+    if (set?.id && workoutId) {
+      apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+    }
+    setPartialSets(prev => {
+      const newSets = prev[exerciseId].filter((_, i) => i !== setIndex)
+      if (newSets.length === 0) {
+        const next = { ...prev }
+        delete next[exerciseId]
+        return next
+      }
+      return { ...prev, [exerciseId]: newSets }
+    })
+  }
+
   const handleNextExercise = (setsOverride) => {
     const sets = setsOverride || doneSets
     if (currentExercise && sets.length > 0) {
@@ -1472,6 +1472,7 @@ export default function WorkoutPage() {
                           setExpandedExerciseId(null)
                           handleSelectFromPlan(pe)
                         }}
+                        onDeletePartialSet={partial ? (setIdx) => handleDeletePartialSet(pe.exerciseId, setIdx) : null}
                       />
                     ) : (
                       <UpcomingExerciseItem
