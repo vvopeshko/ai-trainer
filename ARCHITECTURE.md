@@ -2,7 +2,7 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-04-26 (вечер)
+**Последнее обновление:** 2026-04-26 (ночь)
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
@@ -752,6 +752,25 @@ model AnalyticsEvent {
 - Структура: `routes/` → `controllers/`. Prisma внутри контроллеров, отдельного слоя repositories нет. `services/` появляется только для сложной логики (LLM, vision, генерация программ).
 - Health-check: `GET /api/health`.
 - Централизованный `errorHandler` middleware в конце цепочки Express.
+
+**Текущие эндпоинты:**
+
+| Метод | Путь | Назначение |
+|-------|------|-----------|
+| `GET` | `/exercises` | Список упражнений |
+| `GET` | `/exercises/search?q=` | Поиск |
+| `POST` | `/exercises/batch-last-results` | Прошлые результаты (batch) |
+| `POST` | `/workouts` | Создать/возобновить тренировку |
+| `GET` | `/workouts/active` | Активная тренировка |
+| `GET` | `/workouts/recent?limit=` | Недавние завершённые |
+| `GET` | `/workouts/:id` | Конкретная тренировка |
+| `POST` | `/workouts/:id/sets` | Залогировать подход |
+| `DELETE` | `/workouts/:id/sets/:setId` | Удалить подход |
+| `PATCH` | `/workouts/:id` | Завершить тренировку |
+| `GET` | `/programs/active` | Активная программа |
+| `GET` | `/programs/active/next-workout` | Следующая тренировка |
+| `GET` | `/stats/month` | Месячная статистика |
+| `GET` | `/auth/init` | Инициализация юзера |
 
 ### 5.5 Аналитика
 

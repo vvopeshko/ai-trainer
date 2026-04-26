@@ -4,6 +4,59 @@
 
 ---
 
+## 2026-04-26 (ночь, позже) — Интерактивный Workout UX
+
+Большой набор фич и фиксов для экрана тренировки.
+
+### Раскрытие выполненных упражнений + удаление подходов
+
+- Клик на выполненное упражнение раскрывает список подходов
+- Кнопка × на каждом подходе — удаление (DELETE API + optimistic UI)
+- "Отменить упражнение" — удаление всех подходов, упражнение уходит из done
+- `DELETE /api/v1/workouts/:id/sets/:setId` — новый эндпоинт
+- `apiDelete()` — новая утилита в `src/utils/api.js`
+- `handleSetDone` сохраняет `set.id` из ответа сервера для последующего удаления
+
+### Раскрытие предстоящих упражнений
+
+- Клик на upcoming упражнение → раскрывается карточка (как активная) с заголовком, схемой, прошлыми результатами и кнопкой "Начать"
+- `POST /api/v1/exercises/batch-last-results` — пакетный запрос прошлых результатов
+- Кэш результатов `lastResultsCache` загружается при монтировании тренировки, не при каждом раскрытии
+
+### Drag-and-drop порядка упражнений
+
+- Touch-based drag-and-drop для предстоящих упражнений (grip handle ⠿)
+- Swap при пересечении 50% высоты элемента, haptic feedback при каждом swap
+- Работает на мобильных через touch events
+- Иконка `grip` добавлена в Icon.jsx
+
+### Partial progress (незавершённые упражнения)
+
+- Если переключиться на другое упражнение до завершения всех подходов — предыдущее остаётся в "далее" (не уходит в "сделано")
+- `partialSets` state — хранит подходы незавершённых упражнений
+- Визуальный индикатор: accent-tinted circle + "1/3 подх" вместо "3×8"
+- При раскрытии: выполненные подходы (с галочками) + оставшиеся (пунктирные ghost rows)
+- Кнопка "Продолжить" вместо "Начать"
+- При возврате к упражнению — подходы восстанавливаются
+- Явное нажатие "К следующему" — упражнение уходит в done (даже если не все подходы)
+
+### Фиксы
+
+- **Rest timer не считал**: `useEffect` зависел от `[t, onComplete]`, parent re-renders каждую секунду (elapsed timer) → interval recreated. Исправлено через `useRef` для `onComplete` + пустые deps `[]`
+- **Rest timer появлялся с лагом**: `setResting(true)` был после `await apiPost`. Перенесён до API вызова (optimistic)
+- **Анимация появления RestCard**: `restCardAppear` keyframe (fade-in + slide-up)
+- **Rest timer после последнего подхода**: теперь показывается всегда, auto-advance в `handleRestComplete`
+- **Упражнения исчезали при клике**: фильтр `i > planIndex` заменён на `!doneExerciseIds.has(pe.exerciseId)`
+- **Потеря подходов при переключении**: `handleSelectExercise` (picker) не сохранял `doneSets` — исправлено
+- **"All done" при наличии partial**: проверка заменена с `planIndex >= planExercises.length` на `upcomingExercises.length === 0`
+- **handleNextExercise**: ищет первое несделанное (не привязано к planIndex), корректно работает после reorder
+
+### Новые i18n-ключи
+
+`workout.startExercise`, `workout.lastTime`, `workout.restSec`, `workout.noHistory`, `workout.cancelExercise`
+
+---
+
 ## 2026-04-26 (ночь) — Dev-first workflow
 
 ### seedDevData.js
