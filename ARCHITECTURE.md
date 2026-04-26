@@ -2,7 +2,7 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-04-26
+**Последнее обновление:** 2026-04-26 (вечер)
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
@@ -204,16 +204,24 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
 │   ├── main.jsx
 │   ├── App.jsx
 │   ├── pages/
-│   │   ├── Main/      # WorkoutPage, ExerciseLibrary, ProgressPage, ChatPage
-│   │   └── Editors/   # ExerciseEditor, ProgramEditor
-│   ├── components/    # UI, layout, TelegramProvider
+│   │   ├── Main/      # HomePage, WorkoutPage, SummaryPage
+│   │   ├── Demo/      # DesignSystemDemo
+│   │   └── Editors/   # (placeholder)
+│   ├── components/
+│   │   ├── ui/        # Glass, Button, Icon, BigStepper, TopBar, RestCard, ...
+│   │   └── layout/    # TabLayout, GlassNav
 │   ├── hooks/
 │   ├── i18n/          # TranslationProvider, useTranslation, translations.js
-│   └── utils/
+│   └── utils/         # api.js (fetch + auth header)
 │
 └── server/            # Express + Telegraf + Prisma
     ├── package.json
     ├── .env           # DATABASE_URL, BOT_TOKEN, ANTHROPIC_API_KEY, ...
+    ├── scripts/
+    │   ├── seedExercises.js     # 57 упражнений → Exercise (npm run seed:exercises)
+    │   ├── seedDevData.js       # dev user + 60 workouts + program (npm run seed:dev)
+    │   ├── seedProgram.js       # PPL+Arms программа для прод-юзера
+    │   └── importWorkouts.js    # 60 тренировок из workouts.json
     ├── data/
     │   ├── enriched-exercises.json   # 57 обогащённых упражнений (seed-данные)
     │   └── fetch-missing-gifs.js     # скрипт дозагрузки GIF из ExerciseDB OSS
@@ -221,17 +229,17 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
     │   └── schema.prisma
     └── src/
         ├── index.js                   # entry: Express + bot.launch() + scheduler
-        ├── controllers/               # бизнес-логика per entity
-        ├── routes/                    # все под /api/v1/
+        ├── controllers/               # exercise, workout, program, stats
+        ├── routes/                    # exercises, workouts, programs, stats
         ├── middleware/
-        │   ├── telegramAuth.js        # HMAC-SHA256 валидация initData
+        │   ├── telegramAuth.js        # HMAC-SHA256 + dev_bypass (telegramId=0)
         │   └── errorHandler.js
         ├── bot/
         │   ├── index.js               # createBot() → Telegraf
-        │   ├── handlers/              # команды
         │   └── commands.txt           # для setMyCommands в BotFather
-        ├── services/                  # сложная логика
-        │   └── aiTrainer/             # генерация программ, промпты
+        ├── services/
+        │   ├── exerciseResolver.js    # slug → alias → auto-create
+        │   └── aiTrainer/             # identifyMachine, промпты
         ├── scheduler/                 # node-cron: напоминания
         └── utils/
             ├── prisma.js              # singleton Prisma client
@@ -892,12 +900,16 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
 
 Подробности resolve-слоя и seed-скрипта — в [docs/implementation-plan.md](docs/implementation-plan.md#11-resolve-слой-упражнений-вариант-c-seed--auto-create).
 
-#### Seed-скрипт
+#### Seed-скрипты
 
-`server/scripts/seedExercises.js` (будет создан):
-1. Читает `server/data/enriched-exercises.json`
-2. Upsert в таблицу `Exercise` по slug, `source: 'seed'`
-3. Запускается разово: `cd server && node scripts/seedExercises.js`
+| Скрипт | Команда | Что делает |
+|--------|---------|-----------|
+| `seedExercises.js` | `npm run seed:exercises` | Upsert 57 упражнений из enriched-exercises.json по slug |
+| `seedDevData.js` | `npm run seed:dev` | Создаёт dev user (telegramId=0) + 60 тренировок + PPL+Arms программа |
+| `importWorkouts.js` | `node scripts/importWorkouts.js` | Импорт тренировок из workouts.json (для прод-юзера) |
+| `seedProgram.js` | `node scripts/seedProgram.js` | PPL+Arms программа для прод-юзера |
+
+Все скрипты idempotent (можно перезапускать). `seedDevData.js` чистит старые данные dev user перед пересозданием.
 
 ---
 
@@ -978,16 +990,20 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
 2. `/setcommands` → вставить содержимое `server/src/bot/commands.txt`.
 3. `/setmenubutton` → ввести URL Vercel + текст "Открыть".
 
-### Локальная разработка
+### Локальная разработка (dev-first workflow)
+
+**Проверяем на деве, потом пушим в прод.**
 
 ```bash
+# Первый запуск: настройка dev-данных
+cd server && npm install && npm run seed:exercises && npm run seed:dev
+
 # Терминал 1: frontend
 npm install
 npm run dev                  # http://localhost:5173
 
 # Терминал 2: backend
 cd server
-npm install
 npm run dev                  # http://localhost:3001
 ```
 
@@ -996,27 +1012,34 @@ Frontend `.env`:
 VITE_API_URL=http://localhost:3001
 ```
 
-Backend `server/.env`: как на проде + может использовать отдельную dev-БД.
+Backend `server/.env`: как на проде (DATABASE_URL указывает на ту же Neon БД).
 
-Без Telegram — dev-bypass в API, см. 5.1.
+**Dev user (telegramId=0):** при открытии `localhost:5173` без Telegram — `api.js` автоматически шлёт `Authorization: tma dev_bypass` → middleware создаёт/находит юзера с telegramId=0 → этот юзер имеет полную историю тренировок после `npm run seed:dev`.
+
+**Цикл разработки:**
+1. Код → проверить на `localhost:5173`
+2. `npm run build` — убедиться что нет ошибок
+3. Коммит → пуш → Vercel + Railway подхватят
 
 ### Цикл деплоя
 
 ```bash
-# 1. Проверить билд
+# 1. Проверить на деве (localhost:5173 + localhost:3001)
+
+# 2. Проверить билд
 npm run build
 
-# 2. Если менялась схема БД — безопасно синхронизировать
+# 3. Если менялась схема БД — безопасно синхронизировать
 cd server && npx prisma db push
 
-# 3. Коммит + push
+# 4. Коммит + push
 git add -A
 git commit -m "feat: ..."
 git push origin main
 
-# 4. Vercel + Railway подхватят автоматически
+# 5. Vercel + Railway подхватят автоматически
 
-# 5. Проверить
+# 6. Проверить
 curl https://<railway-url>/api/health
 ```
 

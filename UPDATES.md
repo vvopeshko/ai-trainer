@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-04-26 (ночь) — Dev-first workflow
+
+### seedDevData.js
+
+Единый скрипт `server/scripts/seedDevData.js` (`npm run seed:dev`) для настройки dev-окружения:
+- Создаёт dev user (telegramId=0, "Dev User")
+- Чистит старые данные (idempotent)
+- Импортирует 60 тренировок + 1687 подходов из workouts.json
+- Создаёт программу PPL+Arms (4 дня) и привязывает 46 тренировок
+
+Dev user теперь имеет те же данные, что и продовый аккаунт.
+
+### Dev-first workflow
+
+Переход от "проверяем на проде после пуша" к "проверяем на деве, потом пушим":
+1. `npm run dev` (frontend) + `cd server && npm run dev` (backend)
+2. Открыть `localhost:5173` — `dev_bypass` авторизует как Dev User с полной историей
+3. Проверить фичу → `npm run build` → коммит → пуш
+
+### Обновление документации
+
+CLAUDE.md, ARCHITECTURE.md, NEXT_PLANS.md, UPDATES.md, implementation-plan.md — синхронизированы с актуальным состоянием проекта (фазы 1-3).
+
+---
+
 ## 2026-04-26 (вечер) — Home-экран, программы, полный Workout-редизайн
 
 ### Фаза 1 завершена — сквозной скелет
