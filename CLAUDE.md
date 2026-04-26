@@ -30,6 +30,48 @@
 
 Подробности — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Дизайн-система (Glass)
+
+Тёмная glassmorphism-тема. Все токены — CSS custom properties в `src/styles/tokens.css`. Единственная "ручка" для смены палитры — `--accent-h` (по умолчанию `158`, mint-teal).
+
+### Токены
+
+| Группа | Примеры переменных |
+|--------|--------------------|
+| Accent | `--accent-color`, `--accent-color-soft`, `--accent-fg-on-light` |
+| Surface | `--bg-base` (#050507), `--bg-app`, `--surface-0`, `--surface-1` |
+| Text | `--fg-primary`, `--fg-secondary`, `--fg-tertiary`, `--fg-disabled` |
+| Semantic | `--success` / `--warning` / `--danger` + `-soft` варианты |
+| Spacing | `--space-1`…`--space-10` (4px-based) |
+| Radius | `--radius-xs`…`--radius-2xl`, `--radius-pill` |
+| Typography | `--font-sans`, `--font-display`, `--font-mono`; `--text-xs`…`--text-display` |
+| Motion | `--ease-out`, `--duration-fast`…`--duration-slow` |
+
+### Компоненты (`src/components/ui/`)
+
+Все компоненты — **named exports** (не default). Импорт: `import { Glass } from '…/Glass.jsx'` или через barrel `import { Glass, Button, Icon } from '…/ui/index.js'`. Исключения: `TopBar` и `BigStepper` — default export.
+
+| Компонент | Назначение | Ключевые пропсы |
+|-----------|-----------|----------------|
+| `Glass` | Базовая стеклянная карточка | `variant`: default / strong / tint; `padding`, `radius` |
+| `Button` | Кнопка действия | `variant`: primary / accent / secondary / ghost / danger / success / warning; `size`: sm/md/lg; `block`, `icon`, `loading` |
+| `Icon` | SVG-иконки 24×24 | `name` (из `ICON_PATHS`), `size` |
+| `StatTile` | Числовая плитка (монo-цифры) | `label`, `value`, `sub`, `icon` |
+| `ActivePill` | Пульсирующий индикатор | `label` |
+| `GlassAINote` | AI-инсайт карточка | `emoji`, `tag`, `title`, `body`, `cta`, `onCta` |
+| `RestCard` | Таймер отдыха | `seconds`, `onSkip` |
+| `GlassNav` | Bottom-nav (4 таба) | `items[]`, `activeIndex`, `onTap` |
+| `Mesh` | Фоновый gradient mesh | — |
+| `TopBar` _(default)_ | Sticky шапка flow-экранов | `title`, `onBack`, `rightLabel`/`rightIcon`, `onRight` |
+| `BigStepper` _(default)_ | ± ввод числа | `label`, `value`, `onChange`, `step`, `min`, `max`, `format` |
+
+### Правила использования
+
+1. **Не хардкодить цвета** — использовать токены (`var(--fg-primary)`, `var(--success)` и т.д.).
+2. **Named imports** для большинства компонентов, default только для TopBar и BigStepper.
+3. **Glass — основа** для всех карточек. Не создавать `<div>` с ручным `background + backdrop-filter`.
+4. **Визуальная спецификация экранов** — в [BRD.md §12](BRD.md#12-спецификация-экранов-мини-аппа), дизайн-бриф — в [DESIGN_BRIEF.md](prototype/DESIGN_BRIEF.md).
+
 ## Структура репозитория
 
 Плоская (не монорепо), как в daily balancer:
