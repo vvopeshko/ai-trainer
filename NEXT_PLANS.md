@@ -7,45 +7,32 @@
 
 ---
 
-## 🎯 Следующий заход: Фаза 1 — сквозной скелет
+## 🎯 Следующий заход: Фаза 2 — Home-экран
 
 Полный план реализации — в [docs/implementation-plan.md](docs/implementation-plan.md).
 
-**Цель:** открываю бота в зале → мини-апп → логирую реальный подход → данные в Neon.
+**Цель:** полноценная главная страница — "что делать дальше", статистика, недавние тренировки.
 
-### Фаза 1a — Seed + resolve + import
+### Фаза 2a — API для Home
 
-- [x] Обогатить 57 упражнений из workouts.json (Free Exercise DB + ExerciseDB OSS + русификация)
-- [x] Сохранить `server/data/enriched-exercises.json` (57/57 muscles, equipment, instructions, nameRu, aliases; 21/57 gifUrl)
-- [ ] Добавить `ExerciseSource` enum + поле `source` + `gifUrl` в `Exercise` модель (Prisma)
-- [ ] `prisma db push`
-- [ ] Создать `server/scripts/seedExercises.js` — upsert по slug из enriched-exercises.json
-- [ ] Создать `server/src/services/exerciseResolver.js` — slug match → alias search → auto-create
-- [ ] Запустить seed (57 упражнений → таблица Exercise в Neon)
-- [ ] Создать `server/scripts/importWorkouts.js` — импорт 60 тренировок из workouts.json через resolveExercise
-- [ ] Запустить import, проверить resolve-отчёт (цель: 80%+ match)
-- [ ] Дозагрузить GIF (запустить `server/data/fetch-missing-gifs.js` при сбросе rate limit)
+- [ ] `GET /api/v1/programs/active` — активная программа с днями
+- [ ] `GET /api/v1/programs/active/next-workout` — следующая тренировка
+- [ ] `GET /api/v1/stats/month` — `{ workouts, tonnage, streak }`
+- [ ] `GET /api/v1/workouts/recent?limit=4` — недавние тренировки
 
-### Фаза 1b — API для тренировок
+### Фаза 2b — Home-экран (BRD §12.1)
 
-- [ ] `GET /api/v1/exercises` — список упражнений (фильтр по muscle group)
-- [ ] `GET /api/v1/exercises/search?q=...` — текстовый поиск
-- [ ] `POST /api/v1/workouts` — создать тренировку
-- [ ] `GET /api/v1/workouts/:id` — тренировка с подходами
-- [ ] `GET /api/v1/workouts/active` — незавершённая тренировка
-- [ ] `POST /api/v1/workouts/:id/sets` — залогировать подход
-- [ ] `PATCH /api/v1/workouts/:id` — завершить тренировку
+- [ ] `TabLayout` обёртка с GlassNav (bottom-nav)
+- [ ] `HomePage` — programme strip + hero + stat-tiles + недавние
+- [ ] Роутинг: `/` → Home (вместо redirect на /workout)
+- [ ] Default / Active workout / Empty state
 
-### Фаза 1c — Минимальный Workout-экран
+### Параллельно: улучшения Workout
 
-- [ ] `BigStepper` компонент (± кнопки для веса/повторов)
-- [ ] `TopBar` компонент (← back + title + action)
-- [ ] `FlowLayout` обёртка (TopBar, без GlassNav)
-- [ ] `WorkoutPage` — выбор упражнения, ввод веса × повторов, кнопка "Сделал"
-- [ ] Интеграция с api.js — реальные запросы
-- [ ] Haptic feedback
-
-**Критерий готовности:** открываю мини-апп → выбираю упражнение → ввожу 60×10 → "Сделал" → данные в Neon.
+- [ ] Railway автодеплой — починить (GitHub Repo not found)
+- [ ] Автоподстановка веса/повторов из прошлой тренировки
+- [ ] Rest timer между подходами
+- [ ] Дозагрузить GIF (36 упражнений без анимации)
 
 ---
 
@@ -53,9 +40,8 @@
 
 | Фаза | Что | Зависит от |
 |------|-----|-----------|
-| **2** | Home-экран (программа, статистика, AI-инсайт, недавние) | 1 |
-| **3** | Полный Workout (rest timer, альтернативы, suперсет, AI-замена) | 1 |
-| **4** | Summary + Progress (завершение тренировки, аналитика прогресса) | 1, нужны данные |
+| **3** | Полный Workout (rest timer, альтернативы, суперсет, AI-замена) | 1 |
+| **4** | Progress (аналитика прогресса, плато, дисбалансы) | 1, нужны данные |
 | **5** | Programs (редактор, библиотека, AI-генерация) | 2 |
 | **6** | Cross-cutting + polish (deep-links, toast, empty/loading/error states, offline) | 3-5 |
 
@@ -63,56 +49,70 @@
 
 ## ✅ Выполнено
 
-### Дизайн-система + план + база упражнений (2026-04-26)
+### Фаза 1 — Сквозной скелет (2026-04-26) ✅
 
-- [x] UI-компоненты из дизайн-хэндоффа (Glass, Button, Icon, StatTile, ActivePill, GlassNav, GlassAINote, RestCard, Mesh)
-- [x] Дизайн-токены (CSS custom properties)
+**Критерий:** открываю мини-апп в Telegram → выбираю упражнение → ввожу вес × повторы → "Сделал" → данные в Neon. **Пройден.**
+
+#### 1a — Seed + resolve + import
+- [x] Enriched exercises JSON (57 упр., 21/57 GIF)
+- [x] Prisma schema: `ExerciseSource` enum, `source`, `gifUrl`
+- [x] `seedExercises.js` — 57 упражнений в Neon
+- [x] `exerciseResolver.js` — slug → alias → auto-create
+- [x] `importWorkouts.js` — 60 тренировок, 1687 подходов, 57/57 slug-match
+
+#### 1b — API для тренировок
+- [x] `GET /exercises` + `GET /exercises/search?q=`
+- [x] `POST /workouts` (create/resume) + `GET /workouts/active` + `GET /workouts/:id`
+- [x] `POST /workouts/:id/sets` + `PATCH /workouts/:id` (finish)
+
+#### 1c — Workout-экран
+- [x] BigStepper, TopBar компоненты
+- [x] WorkoutPage — полный flow (picker → stepper → log → finish)
+- [x] SummaryPage — "Готово!" + stat-tiles
+- [x] Роутинг: `/workout`, `/summary/:id`
+- [x] Haptic feedback, optimistic updates
+- [x] **E2E в Telegram — работает** ✅
+
+### Дизайн-система (2026-04-26)
+
+- [x] 11 UI-компонентов (Glass, Button, Icon, StatTile, ActivePill, GlassNav, GlassAINote, RestCard, Mesh, TopBar, BigStepper)
+- [x] CSS-токены (`src/styles/tokens.css`)
 - [x] Демо-страница `/demo`
-- [x] План реализации экранов (`docs/implementation-plan.md`) — 6 фаз, API-карта, Prisma-изменения
-- [x] Исследование баз упражнений (Free Exercise DB, Exercemus, ExerciseDB OSS, wger)
-- [x] 3-шаговое обогащение 57 упражнений → `server/data/enriched-exercises.json`
 
 ### Итерация 4 MVP — сканирование тренажёра (2026-04-24)
 
-- [x] Промпт для `llm.vision()` — `services/aiTrainer/prompts/identifyMachine.md`
-- [x] Сервис `identifyMachine.js` — LLM vision → JSON → Zod → БД → аналитика
-- [x] Telegraf-хэндлер `on('photo')` — скачать фото → base64 → сервис → ответ
-- [x] Запись `MachineIdentification` в БД
-- [x] Ограничение admin-only
-- [x] Деплой в прод, end-to-end пройден
+- [x] Claude Vision → JSON → Zod → БД → ответ в боте
+- [x] Деплой в прод, E2E пройден (admin-only)
 
 ### Инфра (2026-04-21)
 
-- [x] Vercel (фронт) + Railway (бэк+бот) + Neon (БД) — автодеплой на push
-- [x] BotFather: команды, Menu Button
-- [x] End-to-end: `/start` → inline-кнопка → мини-апп в Telegram
+- [x] Vercel + Railway + Neon — автодеплой на push
+- [x] BotFather, Menu Button, `/start` → мини-апп
 
 ### Скелет проекта (2026-04-20)
 
-- [x] Документация: CLAUDE.md, BRD.md, ARCHITECTURE.md, NEXT_PLANS.md, UPDATES.md
-- [x] Frontend: React 19 + Vite 7 + Tailwind 4 + Router + i18n + TelegramProvider
-- [x] Backend: Express 5 + Prisma 6 + Telegraf + auth middleware + LLM абстракция
+- [x] Документация, React + Vite + Tailwind, Express + Prisma + Telegraf
 - [x] Prisma-схема: 9 моделей, `db push` в Neon
 
 ---
 
 ## 🐞 Баги
 
-- ExerciseDB OSS rate limiting: GIF покрытие 21/57, скрипт дозагрузки готов (`server/data/fetch-missing-gifs.js`)
+- Railway автодеплой сломан ("GitHub Repo not found") — нужно переподключить репо
+- ExerciseDB OSS rate limiting: GIF покрытие 21/57, скрипт дозагрузки готов
 
 ---
 
 ## 💸 Техдолг
 
-- Дизайн-система и демо-страница ещё не закоммичены в git
-- `server/data/enriched-exercises.json` ещё не закоммичен
-- Seed-скрипт и exerciseResolver ещё не написаны (Фаза 1a)
-- Prisma-схема не обновлена (нет `source`, `gifUrl` на Exercise)
-- Дополнить aliases в seed по результатам import-валидации
+- Дополнить aliases в seed по результатам реального использования
+- `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию Home ↔ Workout
+- Error handling в WorkoutPage — сейчас ошибки молча глотаются (пустой экран при сбое API)
+- Loading states — нет скелетонов/спиннеров при загрузке данных
 
 ---
 
-## 🔧 Улучшения сканирования (отложено до после Фазы 1)
+## 🔧 Улучшения сканирования (отложено)
 
 - [ ] Потестить на 10-20 реальных фото тренажёров, итерировать промпт
 - [ ] Загрузка фото в Cloudflare R2

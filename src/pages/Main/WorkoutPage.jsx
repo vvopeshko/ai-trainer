@@ -231,7 +231,7 @@ export default function WorkoutPage() {
   const [currentExercise, setCurrentExercise] = useState(null)
   const [doneSets, setDoneSets] = useState([])           // подходы текущего упражнения
   const [allExercises, setAllExercises] = useState([])    // выполненные упражнения
-  const [picking, setPicking] = useState(false)
+  const [picking, setPicking] = useState(true)            // сразу показываем picker
   const [finishing, setFinishing] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [startedAt, setStartedAt] = useState(null)
@@ -251,38 +251,56 @@ export default function WorkoutPage() {
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  // ── Создать или восстановить тренировку ──
-  const startWorkout = useCallback(async () => {
-    try {
-      const { workout, resumed } = await apiPost('/api/v1/workouts', {})
-      setWorkoutId(workout.id)
-      setStartedAt(new Date(workout.startedAt).getTime())
+  // ── При монтировании: только проверяем активную тренировку (не создаём) ──
+  useEffect(() => {
+    let cancelled = false
+    async function checkActive() {
+      try {
+        const data = await apiGet('/api/v1/workouts/active')
+        if (cancelled || !data.workout) return
 
-      if (resumed && workout.sets?.length > 0) {
-        // Восстановить подходы по упражнениям
-        const grouped = {}
-        const order = []
-        for (const s of workout.sets) {
-          if (!grouped[s.exerciseId]) {
-            grouped[s.exerciseId] = { exercise: s.exercise, sets: [] }
-            order.push(s.exerciseId)
+        const workout = data.workout
+        setWorkoutId(workout.id)
+        setStartedAt(new Date(workout.startedAt).getTime())
+
+        if (workout.sets?.length > 0) {
+          const grouped = {}
+          const order = []
+          for (const s of workout.sets) {
+            if (!grouped[s.exerciseId]) {
+              grouped[s.exerciseId] = { exercise: s.exercise, sets: [] }
+              order.push(s.exerciseId)
+            }
+            grouped[s.exerciseId].sets.push(s)
           }
-          grouped[s.exerciseId].sets.push(s)
+          setAllExercises(order.map(id => grouped[id]))
         }
-        setAllExercises(order.map(id => grouped[id]))
+      } catch {
+        // Нет активной тренировки — ок, покажем picker
       }
-
-      setPicking(true)
-    } catch (err) {
-      console.error('Failed to start workout:', err)
     }
+    checkActive()
+    return () => { cancelled = true }
   }, [])
 
-  useEffect(() => { startWorkout() }, [startWorkout])
+  // ── Создать тренировку (вызывается при выборе первого упражнения) ──
+  const ensureWorkout = async () => {
+    if (workoutId) return workoutId
+    const { workout } = await apiPost('/api/v1/workouts', {})
+    setWorkoutId(workout.id)
+    setStartedAt(new Date(workout.startedAt).getTime())
+    return workout.id
+  }
 
   // ── Handlers ──
 
-  const handleSelectExercise = (exercise) => {
+  const handleSelectExercise = async (exercise) => {
+    try {
+      await ensureWorkout()
+    } catch (err) {
+      console.error('Failed to create workout:', err)
+      return
+    }
     setCurrentExercise(exercise)
     setDoneSets([])
     setPicking(false)

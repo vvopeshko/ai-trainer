@@ -25,7 +25,12 @@ export async function create(req, res) {
   })
 
   if (existing) {
-    return res.json({ workout: existing, resumed: true })
+    // Пустая активная тренировка (0 подходов) — удаляем и создаём свежую
+    if (existing.sets.length === 0) {
+      await prisma.workout.delete({ where: { id: existing.id } })
+    } else {
+      return res.json({ workout: existing, resumed: true })
+    }
   }
 
   const workout = await prisma.workout.create({
@@ -157,6 +162,13 @@ export async function finish(req, res) {
 
   if (!workout) {
     return res.status(404).json({ error: 'Active workout not found' })
+  }
+
+  // Если 0 подходов — удаляем вместо завершения (пустая тренировка)
+  const setsCount = await prisma.workoutSet.count({ where: { workoutId: id } })
+  if (setsCount === 0) {
+    await prisma.workout.delete({ where: { id } })
+    return res.json({ workout: null, deleted: true })
   }
 
   const updated = await prisma.workout.update({
