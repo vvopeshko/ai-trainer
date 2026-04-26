@@ -213,16 +213,21 @@ function ExercisePicker({ onSelect, onBack }) {
 
 // ─── Активный подход ────────────────────────────────────────────────────
 
-function ActiveSet({ exercise, setOrder, lastWeight, lastReps, onDone }) {
+function ActiveSet({ exercise, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
   const { t } = useTranslation()
+  const defaultReps = lastReps ?? plannedReps ?? 10
   const [weight, setWeight] = useState(lastWeight ?? 0)
-  const [reps, setReps] = useState(lastReps ?? 10)
+  const [reps, setReps] = useState(defaultReps)
 
   // Обновить defaults при смене упражнения
   useEffect(() => {
     setWeight(lastWeight ?? 0)
-    setReps(lastReps ?? 10)
-  }, [exercise.id, lastWeight, lastReps])
+    setReps(lastReps ?? plannedReps ?? 10)
+  }, [exercise.id, lastWeight, lastReps, plannedReps])
+
+  const setLabel = plannedSets
+    ? t('workout.setOf', { n: setOrder + 1, total: plannedSets })
+    : t('workout.set', { n: setOrder + 1 })
 
   return (
     <Glass padding="16px" style={{ marginTop: 'var(--space-3)' }}>
@@ -236,7 +241,7 @@ function ActiveSet({ exercise, setOrder, lastWeight, lastReps, onDone }) {
         textAlign: 'center',
         marginBottom: 'var(--space-4)',
       }}>
-        {t('workout.set', { n: setOrder + 1 })}
+        {setLabel}
       </div>
 
       {/* BigSteppers */}
@@ -735,8 +740,10 @@ export default function WorkoutPage() {
             <ActiveSet
               exercise={currentExercise}
               setOrder={doneSets.length}
+              plannedSets={hasPlan && planExercises[planIndex] ? planExercises[planIndex].sets : null}
               lastWeight={doneSets.length > 0 ? doneSets[doneSets.length - 1].weightKg : null}
               lastReps={doneSets.length > 0 ? doneSets[doneSets.length - 1].reps : null}
+              plannedReps={hasPlan && planExercises[planIndex] ? planExercises[planIndex].repsMin : null}
               onDone={handleSetDone}
             />
 

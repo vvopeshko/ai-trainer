@@ -21,6 +21,7 @@ export const translations = {
     'workout.search': 'Поиск упражнения...',
     'workout.noExercises': 'Упражнения не найдены',
     'workout.set': 'Подход {{n}}',
+    'workout.setOf': 'Подход {{n}} / {{total}}',
     'workout.addSet': '+ Добавить подход',
     'workout.nextExercise': 'К следующему',
     'workout.finishWorkout': 'Завершить тренировку',
