@@ -9,7 +9,7 @@
  *
  * ExercisePicker shown only for no-plan flow or "добавить другое".
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet, apiPost, apiPatch, apiDelete } from '../../utils/api.js'
@@ -119,10 +119,75 @@ function CollapsedExercise({ name, summary, expanded, onClick }) {
   )
 }
 
-// ─── DoneSetRow (compact done set inside active card) ───────────���───────
+// ─── SwipeRow (swipe-left to reveal delete) ─────────────────────────────
+
+function SwipeRow({ children, onDelete }) {
+  const trackRef = useRef(null)
+  const startX = useRef(0)
+  const currentX = useRef(0)
+  const opened = useRef(false)
+  const DELETE_W = 56
+
+  const handleTouchStart = useCallback((e) => {
+    startX.current = e.touches[0].clientX
+    currentX.current = opened.current ? -DELETE_W : 0
+  }, [])
+
+  const handleTouchMove = useCallback((e) => {
+    const dx = e.touches[0].clientX - startX.current
+    let offset = opened.current ? dx - DELETE_W : dx
+    offset = Math.min(0, Math.max(-DELETE_W - 16, offset))
+    if (trackRef.current) {
+      trackRef.current.style.transition = 'none'
+      trackRef.current.style.transform = `translateX(${offset}px)`
+    }
+    currentX.current = offset
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    if (!trackRef.current) return
+    trackRef.current.style.transition = 'transform 0.25s ease-out'
+    if (currentX.current < -DELETE_W / 2) {
+      trackRef.current.style.transform = `translateX(-${DELETE_W}px)`
+      opened.current = true
+    } else {
+      trackRef.current.style.transform = 'translateX(0)'
+      opened.current = false
+    }
+  }, [])
+
+  return (
+    <div style={{ overflow: 'hidden', borderRadius: 10 }}>
+      <div
+        ref={trackRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ display: 'flex', transition: 'transform 0.25s ease-out' }}
+      >
+        <div style={{ flex: '0 0 100%', minWidth: 0 }}>
+          {children}
+        </div>
+        <div
+          onClick={onDelete}
+          style={{
+            flex: `0 0 ${DELETE_W}px`,
+            background: 'var(--danger, hsl(0,65%,50%))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', borderRadius: '0 10px 10px 0',
+          }}
+        >
+          <Icon name="trash" size={16} style={{ color: '#fff' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── DoneSetRow (compact done set inside active card) ────────────────────
 
 function DoneSetRow({ index, weight, reps, onDelete }) {
-  return (
+  const content = (
     <div style={{
       padding: '9px 12px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10,
       background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
@@ -146,18 +211,15 @@ function DoneSetRow({ index, weight, reps, onDelete }) {
       }}>
         {weight} × {reps}
       </span>
-      {onDelete && (
-        <button onClick={onDelete} style={{
-          width: 24, height: 24, borderRadius: 6,
-          background: 'rgba(255,255,255,0.04)', border: 'none',
-          color: 'rgba(236,234,239,0.35)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <Icon name="x" size={12} />
-        </button>
-      )}
     </div>
+  )
+
+  if (!onDelete) return content
+
+  return (
+    <SwipeRow onDelete={onDelete}>
+      {content}
+    </SwipeRow>
   )
 }
 
