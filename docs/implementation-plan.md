@@ -311,12 +311,14 @@ const planJsonSchema = z.object({
 - [x] Cancel workout (0 подходов → "Отменить")
 - [x] "+ Добавить подход"
 - [x] Optimistic updates + haptic feedback
+- [x] Автоподстановка веса из прошлой тренировки (lastResultsCache → ActiveSetInput) ✅
+- [x] Свайп-удаление подходов (SwipeRow в DoneSetRow: active, done, partial) ✅
+- [x] Удаление partial sets в предстоящих упражнениях (handleDeletePartialSet) ✅
 
 **Осталось:**
-- [ ] Редактирование отдельных подходов
+- [ ] Редактирование отдельных подходов (вес/повторы)
 - [ ] BottomSheet: альтернативы, суперсет, AI-замена
 - [ ] Quick actions: "Спросить тренера", "Фото тренажёра"
-- [ ] Автоподстановка веса/повторов из прошлого подхода
 
 ---
 
