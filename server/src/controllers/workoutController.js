@@ -75,6 +75,23 @@ export async function getActive(req, res) {
     if (day) {
       planExercises = day.exercises
       planDayTitle = day.title
+
+      // Обогатить alternatives: UUID[] → { exerciseId, nameRu, slug }[]
+      const allAltIds = planExercises.flatMap(pe => pe.alternatives || [])
+      if (allAltIds.length > 0) {
+        const altExercises = await prisma.exercise.findMany({
+          where: { id: { in: allAltIds } },
+          select: { id: true, nameRu: true, slug: true },
+        })
+        const altMap = Object.fromEntries(altExercises.map(e => [e.id, e]))
+        for (const pe of planExercises) {
+          if (pe.alternatives?.length) {
+            pe.alternatives = pe.alternatives
+              .map(id => altMap[id] ? { exerciseId: altMap[id].id, nameRu: altMap[id].nameRu, slug: altMap[id].slug } : null)
+              .filter(Boolean)
+          }
+        }
+      }
     }
   }
 
