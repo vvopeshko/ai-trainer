@@ -22,6 +22,8 @@ import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
+import { getExerciseUnit, setExerciseUnit, kgToLbs, lbsToKg } from '../../utils/weightUnit.js'
+import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 
 // ─── WorkoutTopBar (glass_v3: Glass strong, timer, progress, ГОТОВО) ────
 
@@ -226,15 +228,40 @@ function DoneSetRow({ index, weight, reps, onDelete }) {
 
 // ─── ActiveSetInput (accent-tinted stepper card) ────────────────────────
 
-function ActiveSetInput({ exercise, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
+function ActiveSetInput({ exercise, unit, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
   const { t } = useTranslation()
-  const [weight, setWeight] = useState(lastWeight ?? 0)
+  const prevUnit = useRef(unit)
+  const [weight, setWeight] = useState(() => {
+    const raw = lastWeight ?? 0
+    return unit === 'lbs' ? kgToLbs(raw) : raw
+  })
   const [reps, setReps] = useState(lastReps ?? plannedReps ?? 10)
 
+  const step = unit === 'lbs' ? 5 : 2.5
+  const maxWeight = unit === 'lbs' ? 1100 : 500
+
+  // Reset from lastWeight on exercise / data change
   useEffect(() => {
-    setWeight(lastWeight ?? 0)
+    const raw = lastWeight ?? 0
+    setWeight(unit === 'lbs' ? kgToLbs(raw) : raw)
     setReps(lastReps ?? plannedReps ?? 10)
-  }, [exercise.id, lastWeight, lastReps, plannedReps])
+    prevUnit.current = unit
+  }, [exercise.id, lastWeight, lastReps, plannedReps]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Convert displayed weight when unit toggles (without resetting from lastWeight)
+  useEffect(() => {
+    if (prevUnit.current !== unit) {
+      setWeight(w => unit === 'lbs' ? kgToLbs(w) : lbsToKg(w))
+      prevUnit.current = unit
+    }
+  }, [unit])
+
+  const handleDone = () => {
+    const weightKg = unit === 'lbs' ? lbsToKg(weight) : weight
+    onDone({ weight: weightKg, reps })
+  }
+
+  const displayWeight = weight % 1 === 0 ? weight : weight.toFixed(1)
 
   const targetLabel = plannedReps
     ? (plannedReps === (lastReps ?? plannedReps)
@@ -269,19 +296,19 @@ function ActiveSetInput({ exercise, setOrder, plannedSets, lastWeight, lastReps,
           background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button onClick={() => setWeight(w => Math.max(0, w - 2.5))} style={{
+          <button onClick={() => setWeight(w => Math.max(0, w - step))} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>−</button>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 700, color: '#fff' }}>
-              {weight % 1 === 0 ? weight : weight.toFixed(1)}
+              {displayWeight}
             </div>
             <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {t('workout.weightKg')}
+              {unit === 'lbs' ? 'lbs' : 'кг'}
             </div>
           </div>
-          <button onClick={() => setWeight(w => Math.min(500, w + 2.5))} style={{
+          <button onClick={() => setWeight(w => Math.min(maxWeight, w + step))} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>+</button>
@@ -309,12 +336,12 @@ function ActiveSetInput({ exercise, setOrder, plannedSets, lastWeight, lastReps,
         </div>
       </div>
 
-      <button onClick={() => onDone({ weight, reps })} style={{
+      <button onClick={handleDone} style={{
         marginTop: 11, width: '100%', height: 46, borderRadius: 11, border: 'none',
         background: '#fff', color: 'hsl(var(--accent-h,158),50%,22%)',
         fontSize: 13, fontWeight: 700, letterSpacing: 0.4, cursor: 'pointer',
       }}>
-        {t('workout.done').toUpperCase()} · {weight % 1 === 0 ? weight : weight.toFixed(1)} × {reps}
+        {t('workout.done').toUpperCase()} · {displayWeight} × {reps}
       </button>
     </div>
   )
@@ -699,6 +726,7 @@ function ExercisePicker({ onSelect }) {
 export default function WorkoutPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { activeWorkout: cachedWorkout, activePlanExercises: cachedPlan, activePlanDayTitle: cachedPlanTitle } = useHomeData()
 
   const [workoutId, setWorkoutId] = useState(null)
   const [currentExercise, setCurrentExercise] = useState(null)
@@ -719,6 +747,7 @@ export default function WorkoutPage() {
   const [expandedDoneIndex, setExpandedDoneIndex] = useState(null)
   const [lastResultsCache, setLastResultsCache] = useState({})
   const [partialSets, setPartialSets] = useState({}) // { exerciseId: [...sets] }
+  const [weightUnit, setWeightUnit] = useState('kg')
 
   // Plan state
   const [planExercises, setPlanExercises] = useState(null)
@@ -740,6 +769,18 @@ export default function WorkoutPage() {
   useEffect(() => {
     doneExIdsRef.current = new Set(allExercises.map(e => e.exercise.id))
   }, [allExercises])
+
+  // ── Weight unit per exercise (kg/lbs) ──
+  useEffect(() => {
+    if (currentExercise?.slug) {
+      setWeightUnit(getExerciseUnit(currentExercise.slug))
+    }
+  }, [currentExercise?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggleWeightUnit = (newUnit) => {
+    setWeightUnit(newUnit)
+    setExerciseUnit(currentExercise?.slug || '', newUnit)
+  }
 
   const handleDragStart = (e, exerciseId) => {
     const touch = e.touches[0]
@@ -811,68 +852,70 @@ export default function WorkoutPage() {
   // ── Mount: check active workout ──
   useEffect(() => {
     let cancelled = false
-    async function checkActive() {
-      try {
-        const data = await apiGet('/api/v1/workouts/active')
-        if (cancelled) return
-        if (!data.workout) { setPicking(true); setLoading(false); return }
 
-        const workout = data.workout
-        setWorkoutId(workout.id)
-        setStartedAt(new Date(workout.startedAt).getTime())
-        setTotalPausedMs(workout.totalPausedMs || 0)
-        if (workout.pausedAt) setPausedAt(new Date(workout.pausedAt).getTime())
+    function applyData(data) {
+      if (!data.workout) { setPicking(true); return }
+
+      const workout = data.workout
+      setWorkoutId(workout.id)
+      setStartedAt(new Date(workout.startedAt).getTime())
+      setTotalPausedMs(workout.totalPausedMs || 0)
+      if (workout.pausedAt) setPausedAt(new Date(workout.pausedAt).getTime())
+
+      if (data.planExercises) {
+        setPlanExercises(data.planExercises)
+        setPlanDayTitle(data.planDayTitle)
+
+        // Batch-fetch last results for all plan exercises
+        const ids = data.planExercises.map(pe => pe.exerciseId)
+        apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: ids })
+          .then(r => { if (!cancelled) setLastResultsCache(r.results) })
+          .catch(() => {})
+      }
+
+      if (workout.sets?.length > 0) {
+        const grouped = {}
+        const order = []
+        for (const s of workout.sets) {
+          if (!grouped[s.exerciseId]) {
+            grouped[s.exerciseId] = { exercise: s.exercise, sets: [] }
+            order.push(s.exerciseId)
+          }
+          grouped[s.exerciseId].sets.push(s)
+        }
+        setAllExercises(order.map(id => grouped[id]))
 
         if (data.planExercises) {
-          setPlanExercises(data.planExercises)
-          setPlanDayTitle(data.planDayTitle)
-
-          // Batch-fetch last results for all plan exercises
-          const ids = data.planExercises.map(pe => pe.exerciseId)
-          apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: ids })
-            .then(r => { if (!cancelled) setLastResultsCache(r.results) })
-            .catch(() => {})
-        }
-
-        if (workout.sets?.length > 0) {
-          const grouped = {}
-          const order = []
-          for (const s of workout.sets) {
-            if (!grouped[s.exerciseId]) {
-              grouped[s.exerciseId] = { exercise: s.exercise, sets: [] }
-              order.push(s.exerciseId)
-            }
-            grouped[s.exerciseId].sets.push(s)
+          const doneIds = new Set(order)
+          const nextIdx = data.planExercises.findIndex(pe => !doneIds.has(pe.exerciseId))
+          if (nextIdx >= 0) {
+            setPlanIndex(nextIdx)
+            setCurrentExercise({ id: data.planExercises[nextIdx].exerciseId, nameRu: data.planExercises[nextIdx].nameRu, slug: data.planExercises[nextIdx].slug })
+          } else {
+            setPlanIndex(data.planExercises.length)
           }
-          setAllExercises(order.map(id => grouped[id]))
-
-          if (data.planExercises) {
-            const doneIds = new Set(order)
-            const nextIdx = data.planExercises.findIndex(pe => !doneIds.has(pe.exerciseId))
-            if (nextIdx >= 0) {
-              setPlanIndex(nextIdx)
-              setCurrentExercise({ id: data.planExercises[nextIdx].exerciseId, nameRu: data.planExercises[nextIdx].nameRu })
-            } else {
-              setPlanIndex(data.planExercises.length)
-            }
-          }
-        } else if (data.planExercises) {
-          // Fresh start with plan — auto-select first exercise
-          const first = data.planExercises[0]
-          setPlanIndex(0)
-          setCurrentExercise({ id: first.exerciseId, nameRu: first.nameRu })
-        } else {
-          setPicking(true)
         }
-      } catch {
+      } else if (data.planExercises) {
+        // Fresh start with plan — auto-select first exercise
+        const first = data.planExercises[0]
+        setPlanIndex(0)
+        setCurrentExercise({ id: first.exerciseId, nameRu: first.nameRu, slug: first.slug })
+      } else {
         setPicking(true)
-      } finally {
-        if (!cancelled) setLoading(false)
       }
     }
-    checkActive()
+
+    // Use cached data from HomeDataProvider if available (skips network call)
+    const source = cachedWorkout
+      ? Promise.resolve({ workout: cachedWorkout, planExercises: cachedPlan, planDayTitle: cachedPlanTitle })
+      : apiGet('/api/v1/workouts/active')
+
+    source
+      .then(data => { if (!cancelled) { applyData(data); setLoading(false) } })
+      .catch(() => { if (!cancelled) { setPicking(true); setLoading(false) } })
+
     return () => { cancelled = true }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Ensure workout exists ──
   const ensureWorkout = async () => {
@@ -911,7 +954,7 @@ export default function WorkoutPage() {
 
     const idx = planExercises.findIndex(pe => pe.exerciseId === planEx.exerciseId)
     if (idx >= 0) setPlanIndex(idx)
-    setCurrentExercise({ id: planEx.exerciseId, nameRu: planEx.nameRu })
+    setCurrentExercise({ id: planEx.exerciseId, nameRu: planEx.nameRu, slug: planEx.slug })
 
     // Restore partial progress if any
     const partial = partialSets[planEx.exerciseId]
@@ -1016,12 +1059,49 @@ export default function WorkoutPage() {
     setExpandedDoneIndex(null)
   }
 
+  const handleAddSetToDone = (exerciseIndex) => {
+    const item = allExercises[exerciseIndex]
+    saveCurrentExercise()
+    setAllExercises(prev => prev.filter((_, i) => i !== exerciseIndex))
+    setCurrentExercise(item.exercise)
+    setDoneSets([...item.sets])
+    setResting(false)
+    setExpandedDoneIndex(null)
+    if (hasPlan) {
+      const idx = planExercises.findIndex(pe => pe.exerciseId === item.exercise.id)
+      if (idx >= 0) setPlanIndex(idx)
+    }
+  }
+
+  const handleUndoLastSet = () => {
+    const lastSet = doneSets[doneSets.length - 1]
+    if (lastSet?.id && workoutId) {
+      apiDelete(`/api/v1/workouts/${workoutId}/sets/${lastSet.id}`).catch(() => {})
+    }
+    setDoneSets(prev => prev.slice(0, -1))
+    setResting(false)
+  }
+
   const handleDeleteCurrentSet = (setIndex) => {
     const set = doneSets[setIndex]
     if (set?.id && workoutId) {
       apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
     }
     setDoneSets(prev => prev.filter((_, i) => i !== setIndex))
+  }
+
+  const handleAddPlannedSet = () => {
+    if (!currentPlanExercise) return
+    setPlanExercises(prev => prev.map(pe =>
+      pe.exerciseId === currentExercise.id ? { ...pe, sets: pe.sets + 1 } : pe
+    ))
+  }
+
+  const handleRemovePlannedSet = () => {
+    if (!currentPlanExercise || currentPlanExercise.sets <= doneSets.length + 1) return
+    setPlanExercises(prev => prev.map(pe =>
+      pe.exerciseId === currentExercise.id ? { ...pe, sets: pe.sets - 1 } : pe
+    ))
   }
 
   const handleDeletePartialSet = (exerciseId, setIndex) => {
@@ -1066,7 +1146,7 @@ export default function WorkoutPage() {
       if (nextIdx >= 0) {
         const next = planExercises[nextIdx]
         setPlanIndex(nextIdx)
-        setCurrentExercise({ id: next.exerciseId, nameRu: next.nameRu })
+        setCurrentExercise({ id: next.exerciseId, nameRu: next.nameRu, slug: next.slug })
         return
       }
       // Check if there are only partial exercises left
@@ -1080,7 +1160,7 @@ export default function WorkoutPage() {
         )
         const idx = planExercises.indexOf(nextPartial)
         setPlanIndex(idx)
-        setCurrentExercise({ id: nextPartial.exerciseId, nameRu: nextPartial.nameRu })
+        setCurrentExercise({ id: nextPartial.exerciseId, nameRu: nextPartial.nameRu, slug: nextPartial.slug })
         const restored = partialSets[nextPartial.exerciseId]
         setDoneSets(restored)
         setPartialSets(prev => { const n = { ...prev }; delete n[nextPartial.exerciseId]; return n })
@@ -1153,11 +1233,7 @@ export default function WorkoutPage() {
   }
 
   const handleBack = () => {
-    if (hasAnySets) {
-      setConfirmCancel(true)
-    } else {
-      handleCancel()
-    }
+    navigate('/')
   }
 
   // ── Swap alternative ──
@@ -1191,7 +1267,7 @@ export default function WorkoutPage() {
       }))
     }
 
-    setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu })
+    setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug })
     setDoneSets([])
     setResting(false)
     setShowAlternatives(false)
@@ -1379,23 +1455,36 @@ export default function WorkoutPage() {
               }}>
                 {currentExercise.nameRu}
               </div>
-              {currentPlanExercise && (
-                <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{exerciseScheme(currentPlanExercise)}</span>
-                  {currentPlanExercise.alternatives?.length > 0 && (
-                    <button onClick={() => setShowAlternatives(true)} style={{
-                      padding: '2px 8px', borderRadius: 6, border: 'none',
-                      background: 'hsla(var(--accent-h,158),55%,55%,0.15)',
-                      color: 'hsl(var(--accent-h,158),55%,70%)',
-                      fontSize: 10.5, fontWeight: 600, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 4,
-                    }}>
-                      <Icon name="swap" size={11} />
-                      {t('workout.alternatives', { count: currentPlanExercise.alternatives.length })}
-                    </button>
-                  )}
+              <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {currentPlanExercise && <span>{exerciseScheme(currentPlanExercise)}</span>}
+                {currentPlanExercise?.alternatives?.length > 0 && (
+                  <button onClick={() => setShowAlternatives(true)} style={{
+                    padding: '2px 8px', borderRadius: 6, border: 'none',
+                    background: 'hsla(var(--accent-h,158),55%,55%,0.15)',
+                    color: 'hsl(var(--accent-h,158),55%,70%)',
+                    fontSize: 10.5, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <Icon name="swap" size={11} />
+                    {t('workout.alternatives', { count: currentPlanExercise.alternatives.length })}
+                  </button>
+                )}
+                <div style={{ flex: 1 }} />
+                <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', background: 'rgba(255,255,255,0.04)' }}>
+                  <button onClick={() => handleToggleWeightUnit('kg')} style={{
+                    padding: '6px 12px', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                    letterSpacing: '0.02em', borderRadius: 0, minHeight: 32,
+                    background: weightUnit === 'kg' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                    color: weightUnit === 'kg' ? '#fff' : 'rgba(255,255,255,0.35)',
+                  }}>КГ</button>
+                  <button onClick={() => handleToggleWeightUnit('lbs')} style={{
+                    padding: '6px 12px', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
+                    letterSpacing: '0.02em', borderRadius: 0, minHeight: 32,
+                    background: weightUnit === 'lbs' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                    color: weightUnit === 'lbs' ? '#fff' : 'rgba(255,255,255,0.35)',
+                  }}>LBS</button>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Done sets inline */}
@@ -1405,6 +1494,13 @@ export default function WorkoutPage() {
                   <DoneSetRow key={i} index={i} weight={s.weightKg ?? 0} reps={s.reps}
                     onDelete={() => handleDeleteCurrentSet(i)} />
                 ))}
+                <button onClick={handleUndoLastSet} style={{
+                  background: 'none', border: 'none', padding: '2px 0',
+                  color: 'rgba(236,234,239,0.35)', fontSize: 10.5, cursor: 'pointer',
+                  textAlign: 'right', alignSelf: 'flex-end',
+                }}>
+                  {t('workout.undoSet')}
+                </button>
               </div>
             )}
 
@@ -1444,7 +1540,6 @@ export default function WorkoutPage() {
                   <RestCard
                     seconds={currentPlanExercise?.restSec || 90}
                     onSkip={handleRestComplete}
-                    onComplete={handleRestComplete}
                   />
                   {/* Next set preview */}
                   {currentPlanExercise && doneSets.length < currentPlanExercise.sets && (
@@ -1471,6 +1566,7 @@ export default function WorkoutPage() {
               ) : (
                 <ActiveSetInput
                   exercise={currentExercise}
+                  unit={weightUnit}
                   setOrder={doneSets.length}
                   plannedSets={currentPlanExercise?.sets || null}
                   lastWeight={doneSets.length > 0
@@ -1484,49 +1580,57 @@ export default function WorkoutPage() {
                 />
               )}
 
-              {/* Pending sets preview */}
+              {/* Pending sets preview (swipe to remove) */}
               {currentPlanExercise && doneSets.length + 1 < currentPlanExercise.sets && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
                   {Array.from({ length: currentPlanExercise.sets - doneSets.length - 1 }, (_, i) => {
                     const setNum = doneSets.length + 2 + i
+                    const setIdx = doneSets.length + 1 + i
+                    const lastSets = lastResultsCache[currentExercise.id]?.lastSets
+                    const lastSet = lastSets?.[setIdx] || lastSets?.slice(-1)[0] || (doneSets.length > 0 ? doneSets[doneSets.length - 1] : null)
                     const repsLabel = currentPlanExercise.repsMin === currentPlanExercise.repsMax
                       ? `${currentPlanExercise.repsMin}`
                       : `${currentPlanExercise.repsMin}–${currentPlanExercise.repsMax}`
                     return (
-                      <div key={i} style={{
-                        padding: '9px 12px', borderRadius: 10,
-                        border: '1px dashed rgba(255,255,255,0.07)',
-                        display: 'flex', alignItems: 'center', gap: 10,
-                      }}>
+                      <SwipeRow key={i} onDelete={handleRemovePlannedSet}>
                         <div style={{
-                          width: 20, height: 20, borderRadius: '50%',
-                          border: '1.5px dashed rgba(255,255,255,0.10)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 10, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
+                          padding: '9px 12px', borderRadius: 10,
+                          border: '1px dashed rgba(255,255,255,0.07)',
+                          display: 'flex', alignItems: 'center', gap: 10,
                         }}>
-                          {setNum}
+                          <div style={{
+                            width: 20, height: 20, borderRadius: '50%',
+                            border: '1.5px dashed rgba(255,255,255,0.10)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
+                          }}>
+                            {setNum}
+                          </div>
+                          <div style={{
+                            fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
+                            textTransform: 'uppercase', letterSpacing: '0.04em',
+                          }}>
+                            {t('workout.set', { n: setNum })}
+                          </div>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)', fontSize: 11, flex: 1,
+                            color: 'rgba(236,234,239,0.2)', textAlign: 'right',
+                          }}>
+                            {lastSet
+                              ? `${lastSet.weightKg ?? 0} кг × ${lastSet.reps}`
+                              : `${repsLabel} ${t('workout.reps').toLowerCase()}`
+                            }
+                          </span>
                         </div>
-                        <div style={{
-                          fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
-                          textTransform: 'uppercase', letterSpacing: '0.04em',
-                        }}>
-                          {t('workout.set', { n: setNum })}
-                        </div>
-                        <span style={{
-                          fontFamily: 'var(--font-mono)', fontSize: 11, flex: 1,
-                          color: 'rgba(236,234,239,0.2)', textAlign: 'right',
-                        }}>
-                          {repsLabel} {t('workout.reps').toLowerCase()}
-                        </span>
-                      </div>
+                      </SwipeRow>
                     )
                   })}
                 </div>
               )}
 
-              {/* + добавить подход (when all planned done but user wants more) */}
-              {!resting && currentPlanExercise && doneSets.length >= currentPlanExercise.sets && (
-                <button style={{
+              {/* + добавить подход */}
+              {!resting && currentPlanExercise && (
+                <button onClick={handleAddPlannedSet} style={{
                   marginTop: 8, width: '100%', height: 36,
                   background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.10)',
                   borderRadius: 10, color: 'rgba(236,234,239,0.5)', fontSize: 11.5, cursor: 'pointer',

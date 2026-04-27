@@ -1,33 +1,25 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Glass } from './Glass.jsx'
 import { Icon } from './Icon.jsx'
 import { useTranslation } from '../../i18n/useTranslation.js'
 
 /**
- * Rest timer between sets. Breathing radial background, mm:ss countdown,
- * progress bar, breathing instruction, skip button.
+ * Rest timer between sets. Counts UP to show elapsed rest time.
+ * Shows recommended rest as reference. "Идём дальше" button to continue.
  */
-export function RestCard({ seconds = 90, onSkip, onComplete }) {
+export function RestCard({ seconds = 90, onSkip }) {
   const { t: tr } = useTranslation()
-  const [t, setT] = useState(seconds)
-  const onCompleteRef = useRef(onComplete)
-  useEffect(() => { onCompleteRef.current = onComplete })
+  const [elapsed, setElapsed] = useState(0)
 
-  // Stable interval — no deps, survives parent re-renders
   useEffect(() => {
-    const id = setInterval(() => setT(x => x - 1), 1000)
+    const id = setInterval(() => setElapsed(x => x + 1), 1000)
     return () => clearInterval(id)
   }, [])
 
-  // Fire onComplete when timer reaches 0
-  useEffect(() => {
-    if (t <= 0) onCompleteRef.current?.()
-  }, [t])
-
-  const display = Math.max(0, t)
-  const mm = Math.floor(display / 60)
-  const ss = String(display % 60).padStart(2, '0')
-  const pct = ((seconds - display) / seconds) * 100
+  const mm = Math.floor(elapsed / 60)
+  const ss = String(elapsed % 60).padStart(2, '0')
+  const pct = Math.min(100, (elapsed / seconds) * 100)
+  const isReady = elapsed >= seconds
 
   return (
     <>
@@ -47,7 +39,7 @@ export function RestCard({ seconds = 90, onSkip, onComplete }) {
         <div style={{ position: 'relative' }}>
           <div style={{
             fontSize: 'var(--text-xs)', fontWeight: 700,
-            color: 'hsl(var(--accent-h,158),50%,82%)',
+            color: isReady ? 'hsl(var(--accent-h,158),55%,75%)' : 'hsl(var(--accent-h,158),50%,82%)',
             letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
           }}>
@@ -55,22 +47,28 @@ export function RestCard({ seconds = 90, onSkip, onComplete }) {
           </div>
           <div style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--text-display)', fontWeight: 700, color: '#fff',
+            fontSize: 'var(--text-display)', fontWeight: 700,
+            color: isReady ? 'hsl(var(--accent-h,158),55%,75%)' : '#fff',
             marginTop: 4, letterSpacing: 1,
             fontVariantNumeric: 'tabular-nums',
           }}>{mm}:{ss}</div>
           <div style={{ margin: '10px auto 0', width: '70%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: '#fff', borderRadius: 2, transition: 'width 1s linear' }} />
+            <div style={{
+              height: '100%', width: `${pct}%`, borderRadius: 2, transition: 'width 1s linear',
+              background: isReady ? 'hsl(var(--accent-h,158),55%,65%)' : '#fff',
+            }} />
           </div>
-          <div style={{ fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,0.75)', marginTop: 11, lineHeight: 1.45, padding: '0 8px' }}>
-            {tr('workout.breathe')}
+          <div style={{ fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,0.45)', marginTop: 8 }}>
+            {tr('workout.restRecommended', { sec: seconds })}
           </div>
           {onSkip && (
             <button onClick={onSkip} style={{
               marginTop: 12, height: 36, padding: '0 18px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.18)',
-              color: '#fff', fontSize: 'var(--text-base)', fontWeight: 600, cursor: 'pointer',
-            }}>{tr('workout.skipRest')}</button>
+              background: isReady ? 'hsl(var(--accent-h,158),55%,55%)' : 'rgba(255,255,255,0.14)',
+              border: isReady ? 'none' : '1px solid rgba(255,255,255,0.18)',
+              color: isReady ? '#0a1815' : '#fff',
+              fontSize: 'var(--text-base)', fontWeight: 600, cursor: 'pointer',
+            }}>{tr('workout.letsGo')}</button>
           )}
         </div>
       </Glass>
