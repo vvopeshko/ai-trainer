@@ -116,6 +116,28 @@ export const translations = {
     'nav.library': 'Каталог',
     'nav.me': 'Профиль',
 
+    // Progress screen (BRD §12.4)
+    'progress.title': 'Прогресс',
+    'progress.subtitle': 'что AI подсказывает скорректировать',
+    'progress.week.title': 'Эта неделя',
+    'progress.week.ofPlanned': 'из {{n}} запланированных',
+    'progress.week.workoutsWeek': 'Тренировки за неделю',
+    'progress.week.planDone': 'План выполнен и сверху ещё {{n}}. Не забудь про восстановление.',
+    'progress.week.planComplete': 'План на неделю выполнен!',
+    'progress.week.planRemaining': 'Осталось {{n}} до плана',
+    'progress.muscle.sectionTitle': 'Подходы по мышцам · неделя',
+    'progress.muscle.target': 'Цель: {{min}}–{{max}} подх./нед',
+    'progress.status.low': 'Недогруз −{{n}}',
+    'progress.status.optimal': 'В норме',
+    'progress.status.over': 'Чуть выше +{{n}}',
+    'progress.status.overload': 'Перебор +{{n}}',
+    'progress.records.title': 'Рекорды месяца',
+    'progress.records.plus': '+{{kg}} кг',
+    'progress.emptyTitle': 'Пока нет данных',
+    'progress.emptyDescription': 'Начни тренироваться, чтобы увидеть прогресс',
+    'progress.goTrain': 'Начать тренировку',
+    'progress.mostlyEmpty': 'Ещё пара тренировок — и здесь появится полная аналитика',
+
     // Summary screen (BRD §12.3)
     'summary.title': 'Готово!',
     'summary.subtitle': 'Тренировка записана.',

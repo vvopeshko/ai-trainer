@@ -6,6 +6,7 @@ import App from './App.jsx'
 import { TranslationProvider } from './i18n/TranslationProvider.jsx'
 import { TelegramProvider } from './components/TelegramProvider.jsx'
 import { HomeDataProvider } from './contexts/HomeDataContext.jsx'
+import { ProgressDataProvider } from './contexts/ProgressDataContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
       <TranslationProvider>
         <TelegramProvider>
           <HomeDataProvider>
-            <App />
+            <ProgressDataProvider>
+              <App />
+            </ProgressDataProvider>
           </HomeDataProvider>
         </TelegramProvider>
       </TranslationProvider>

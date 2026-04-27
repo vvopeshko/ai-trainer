@@ -4,6 +4,7 @@ import TabLayout from './components/layout/TabLayout.jsx'
 import HomePage from './pages/Main/HomePage.jsx'
 import WorkoutPage from './pages/Main/WorkoutPage.jsx'
 
+const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
 
@@ -24,7 +25,7 @@ export default function App() {
       <Routes>
         {/* Tab screens */}
         <Route path="/" element={<TabLayout><HomePage /></TabLayout>} />
-        <Route path="/progress" element={<TabLayout><StubPage title="Прогресс" /></TabLayout>} />
+        <Route path="/progress" element={<TabLayout><Suspense fallback={null}><ProgressPage /></Suspense></TabLayout>} />
         <Route path="/library" element={<TabLayout><StubPage title="Каталог" /></TabLayout>} />
         <Route path="/me" element={<TabLayout><StubPage title="Профиль" /></TabLayout>} />
 
