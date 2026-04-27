@@ -13,7 +13,7 @@ const NAV_ITEMS = [
  */
 export function GlassNav({ active, onNav, items = NAV_ITEMS }) {
   return (
-    <div style={{ position: 'fixed', bottom: 8, left: 8, right: 8, height: 56, zIndex: 'var(--z-nav)' }}>
+    <div style={{ position: 'fixed', bottom: 'calc(8px + var(--safe-bottom, 0px))', left: 8, right: 8, height: 56, zIndex: 'var(--z-nav)' }}>
       <div style={{
         position: 'relative', height: '100%', borderRadius: 14, display: 'flex', padding: '0 4px',
         background: 'rgba(28,28,34,0.7)',

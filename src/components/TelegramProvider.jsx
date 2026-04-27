@@ -26,6 +26,9 @@ export function TelegramProvider({ children }) {
       } catch {
         /* ignore */
       }
+      applySafeAreaVars(webApp)
+      webApp.onEvent?.('safeAreaChanged', () => applySafeAreaVars(webApp))
+      webApp.onEvent?.('contentSafeAreaChanged', () => applySafeAreaVars(webApp))
     }
   }, [])
 
@@ -35,6 +38,14 @@ export function TelegramProvider({ children }) {
 
 export function useTelegram() {
   return useContext(TelegramContext)
+}
+
+function applySafeAreaVars(webApp) {
+  const sa = webApp.safeAreaInset || {}
+  const csa = webApp.contentSafeAreaInset || {}
+  const root = document.documentElement.style
+  root.setProperty('--safe-top', `${(sa.top || 0) + (csa.top || 0)}px`)
+  root.setProperty('--safe-bottom', `${sa.bottom || 0}px`)
 }
 
 function resolveInitial() {

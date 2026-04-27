@@ -42,7 +42,7 @@ export default function SummaryPage() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 'var(--space-6)',
+      padding: 'calc(var(--space-6) + var(--safe-top, 0px)) var(--space-6) calc(var(--space-6) + var(--safe-bottom, 0px))',
     }}>
       {/* Green check circle */}
       <div style={{

@@ -33,7 +33,7 @@ function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, tot
   const ss = String(elapsed % 60).padStart(2, '0')
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, padding: '12px 12px 8px' }}>
+    <div style={{ position: 'relative', zIndex: 1, padding: 'calc(12px + var(--safe-top, 0px)) 12px 8px' }}>
       <Glass variant="strong" padding="8px 8px 8px 6px" radius={12} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button onClick={onBack} style={{
           width: 32, height: 32, borderRadius: 9,
