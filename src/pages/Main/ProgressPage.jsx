@@ -614,18 +614,20 @@ export default function ProgressPage() {
     )
   }
 
-  if (state === 'empty') {
+  // Filter muscle groups with data or targets
+  const visibleMuscles = (muscleVolume || []).filter(
+    g => g.setsActual > 0 || (g.setsTarget != null && g.setsTarget > 0)
+  )
+
+  // True empty: no workouts ever AND no program targets to show
+  const hasTargets = visibleMuscles.length > 0
+  if (state === 'empty' && !hasTargets) {
     return (
       <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
         <EmptyProgress />
       </div>
     )
   }
-
-  // Filter muscle groups with data
-  const visibleMuscles = (muscleVolume || []).filter(
-    g => g.setsActual > 0 || (g.setsTarget != null && g.setsTarget > 0)
-  )
 
   return (
     <div style={{
