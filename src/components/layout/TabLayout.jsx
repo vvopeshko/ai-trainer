@@ -25,7 +25,6 @@ export default function TabLayout({ children }) {
   return (
     <div style={{
       position: 'relative',
-      overflow: 'hidden',
       minHeight: '100vh',
     }}>
       <Mesh />
