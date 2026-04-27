@@ -20,6 +20,7 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { RestCard } from '../../components/ui/RestCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
+import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 
 // ─── WorkoutTopBar (glass_v3: Glass strong, timer, progress, ГОТОВО) ────
@@ -77,8 +78,8 @@ function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, tot
 
         <button onClick={hasAnySets ? onFinish : onCancel} style={{
           height: 32, padding: '0 13px', borderRadius: 9, border: 'none',
-          background: hasAnySets ? 'hsl(var(--accent-h,158),55%,55%)' : 'rgba(255,255,255,0.08)',
-          color: hasAnySets ? '#0a1815' : 'rgba(236,234,239,0.7)',
+          background: hasAnySets ? 'hsl(var(--accent-h,158),55%,55%)' : 'rgba(255,255,255,0.06)',
+          color: hasAnySets ? '#0a1815' : 'var(--danger, hsl(0,65%,60%))',
           fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
         }}>
           {hasAnySets ? t('workout.ready') : t('workout.cancel')}
@@ -321,7 +322,7 @@ function ActiveSetInput({ exercise, setOrder, plannedSets, lastWeight, lastReps,
 
 // ─── UpcomingExerciseItem ───────────────────────────────────────────────
 
-function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, onClick, onDragStart, isDragging, dragOffset }) {
+function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging, dragOffset }) {
   return (
     <Glass padding="11px 12px" radius={11} style={{
       display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer',
@@ -361,7 +362,12 @@ function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, onCli
           fontSize: 13.5, fontWeight: 600, color: '#ECEAEF',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{name}</div>
-        <div style={{ fontSize: 10.5, color: 'rgba(236,234,239,0.5)', marginTop: 2 }}>{scheme}</div>
+        <div style={{ fontSize: 10.5, color: 'rgba(236,234,239,0.5)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>{scheme}</span>
+          {hasAlternatives && (
+            <Icon name="swap" size={10} style={{ color: 'hsl(var(--accent-h,158),55%,70%)', flexShrink: 0 }} />
+          )}
+        </div>
       </div>
       <Icon name={expanded ? 'chevronDown' : 'chevronRight'} size={14} style={{ color: 'rgba(236,234,239,0.35)' }} />
     </Glass>
@@ -370,12 +376,14 @@ function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, onCli
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse, onDeletePartialSet }) {
+function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse, onDeletePartialSet, onSwapAlternative }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
     ? `${planExercise.sets}×${planExercise.repsMin}`
     : `${planExercise.sets}×${planExercise.repsMin}-${planExercise.repsMax}`
+
+  const alts = planExercise.alternatives || []
 
   return (
     <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
@@ -395,12 +403,44 @@ function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults
         }}>
           {planExercise.nameRu}
         </div>
-        {planExercise.restSec && (
-          <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.45)', marginTop: 4 }}>
-            {t('workout.restSec', { sec: planExercise.restSec })}
-          </div>
-        )}
+        <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.45)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {planExercise.restSec && (
+            <span>{t('workout.restSec', { sec: planExercise.restSec })}</span>
+          )}
+          {alts.length > 0 && (
+            <span style={{
+              padding: '1px 6px', borderRadius: 5,
+              background: 'hsla(var(--accent-h,158),55%,55%,0.12)',
+              color: 'hsl(var(--accent-h,158),55%,70%)',
+              fontSize: 10, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+            }}>
+              <Icon name="swap" size={9} />
+              {t('workout.alternatives', { count: alts.length })}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Alternatives swap buttons */}
+      {alts.length > 0 && onSwapAlternative && (
+        <div style={{ padding: '0 12px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {alts.map(alt => (
+            <button key={alt.exerciseId} onClick={(e) => { e.stopPropagation(); onSwapAlternative(planExercise, alt) }} style={{
+              padding: '8px 12px', borderRadius: 10, border: 'none',
+              background: 'hsla(var(--accent-h,158),55%,55%,0.08)',
+              display: 'flex', alignItems: 'center', gap: 8,
+              cursor: 'pointer', textAlign: 'left', width: '100%',
+              fontFamily: 'var(--font-sans)',
+            }}>
+              <Icon name="swap" size={12} style={{ color: 'hsl(var(--accent-h,158),55%,70%)', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'hsl(var(--accent-h,158),55%,70%)', flex: 1 }}>
+                {alt.nameRu}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Partial progress (done sets from this session) */}
       {partial && partial.length > 0 && (
@@ -667,6 +707,8 @@ export default function WorkoutPage() {
   const [picking, setPicking] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [showAlternatives, setShowAlternatives] = useState(false)
+  const [pendingSwap, setPendingSwap] = useState(null) // alt object awaiting confirm
   const [elapsedSec, setElapsedSec] = useState(0)
   const [startedAt, setStartedAt] = useState(null)
   const [resting, setResting] = useState(false)
@@ -1118,6 +1160,87 @@ export default function WorkoutPage() {
     }
   }
 
+  // ── Swap alternative ──
+
+  const handleSwapAlternative = (alt) => {
+    if (doneSets.length > 0) {
+      setPendingSwap(alt)
+      return
+    }
+    executeSwap(alt)
+  }
+
+  const executeSwap = (alt) => {
+    // Delete any logged sets for current exercise from backend
+    for (const s of doneSets) {
+      if (s?.id && workoutId) apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+    }
+
+    // Swap in planExercises: current ↔ alternative
+    if (hasPlan && currentExercise) {
+      setPlanExercises(prev => prev.map(pe => {
+        if (pe.exerciseId !== currentExercise.id) return pe
+        const oldAlternatives = (pe.alternatives || []).filter(a => a.exerciseId !== alt.exerciseId)
+        return {
+          ...pe,
+          exerciseId: alt.exerciseId,
+          nameRu: alt.nameRu,
+          slug: alt.slug,
+          alternatives: [...oldAlternatives, { exerciseId: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }],
+        }
+      }))
+    }
+
+    setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu })
+    setDoneSets([])
+    setResting(false)
+    setShowAlternatives(false)
+    setPendingSwap(null)
+
+    // Fetch last results for the new exercise
+    if (!lastResultsCache[alt.exerciseId]) {
+      apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: [alt.exerciseId] })
+        .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
+        .catch(() => {})
+    }
+  }
+
+  const confirmSwap = () => {
+    if (pendingSwap) executeSwap(pendingSwap)
+  }
+
+  const handleSwapUpcoming = (planEx, alt) => {
+    // For upcoming exercises: swap directly in plan, handle partial sets if any
+    const partial = partialSets[planEx.exerciseId]
+    if (partial?.length > 0) {
+      // Delete partial sets from backend
+      for (const s of partial) {
+        if (s?.id && workoutId) apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+      }
+      setPartialSets(prev => { const next = { ...prev }; delete next[planEx.exerciseId]; return next })
+    }
+
+    setPlanExercises(prev => prev.map(pe => {
+      if (pe.exerciseId !== planEx.exerciseId) return pe
+      const oldAlts = (pe.alternatives || []).filter(a => a.exerciseId !== alt.exerciseId)
+      return {
+        ...pe,
+        exerciseId: alt.exerciseId,
+        nameRu: alt.nameRu,
+        slug: alt.slug,
+        alternatives: [...oldAlts, { exerciseId: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }],
+      }
+    }))
+    setExpandedExerciseId(null)
+
+    // Fetch last results for the new exercise
+    if (!lastResultsCache[alt.exerciseId]) {
+      apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: [alt.exerciseId] })
+        .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
+        .catch(() => {})
+    }
+  }
+
   // ── Helper ──
   function exerciseScheme(pe) {
     return pe.repsMin === pe.repsMax
@@ -1167,7 +1290,7 @@ export default function WorkoutPage() {
         totalSetCount={totalPlannedSets}
         onBack={handleBack}
         onFinish={handleFinish}
-        onCancel={handleCancel}
+        onCancel={() => setConfirmCancel(true)}
         hasAnySets={hasAnySets}
         paused={!!pausedAt}
         onPause={handlePause}
@@ -1257,8 +1380,20 @@ export default function WorkoutPage() {
                 {currentExercise.nameRu}
               </div>
               {currentPlanExercise && (
-                <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4 }}>
-                  {exerciseScheme(currentPlanExercise)}
+                <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{exerciseScheme(currentPlanExercise)}</span>
+                  {currentPlanExercise.alternatives?.length > 0 && (
+                    <button onClick={() => setShowAlternatives(true)} style={{
+                      padding: '2px 8px', borderRadius: 6, border: 'none',
+                      background: 'hsla(var(--accent-h,158),55%,55%,0.15)',
+                      color: 'hsl(var(--accent-h,158),55%,70%)',
+                      fontSize: 10.5, fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <Icon name="swap" size={11} />
+                      {t('workout.alternatives', { count: currentPlanExercise.alternatives.length })}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1473,6 +1608,7 @@ export default function WorkoutPage() {
                           handleSelectFromPlan(pe)
                         }}
                         onDeletePartialSet={partial ? (setIdx) => handleDeletePartialSet(pe.exerciseId, setIdx) : null}
+                        onSwapAlternative={handleSwapUpcoming}
                       />
                     ) : (
                       <UpcomingExerciseItem
@@ -1481,6 +1617,7 @@ export default function WorkoutPage() {
                         scheme={scheme}
                         expanded={false}
                         hasPartial={!!partial}
+                        hasAlternatives={pe.alternatives?.length > 0}
                         onClick={() => setExpandedExerciseId(pe.exerciseId)}
                         onDragStart={canDrag ? (e) => handleDragStart(e, pe.exerciseId) : null}
                         isDragging={isDragging}
@@ -1509,12 +1646,86 @@ export default function WorkoutPage() {
       <ConfirmDialog
         open={confirmCancel}
         title={t('workout.cancelWorkoutTitle')}
-        message={t('workout.cancelWorkoutMessage')}
+        message={hasAnySets ? t('workout.cancelWorkoutMessage') : t('workout.cancelWorkoutMessageEmpty')}
         confirmLabel={t('workout.cancelWorkoutConfirm')}
         variant="danger"
         onConfirm={handleCancelWorkout}
         onCancel={() => setConfirmCancel(false)}
       />
+
+      <ConfirmDialog
+        open={!!pendingSwap}
+        title={t('workout.swapConfirmTitle')}
+        message={t('workout.swapConfirmMessage', { count: doneSets.length })}
+        confirmLabel={t('workout.swapConfirmBtn')}
+        variant="danger"
+        onConfirm={confirmSwap}
+        onCancel={() => setPendingSwap(null)}
+      />
+
+      {/* Alternatives bottom-sheet */}
+      <BottomSheet open={showAlternatives} onClose={() => setShowAlternatives(false)}>
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--fg-primary)' }}>
+            {t('workout.alternativesTitle')}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {/* Current exercise (locked) */}
+          {currentExercise && (
+            <div style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'hsla(var(--accent-h,158),55%,55%,0.10)',
+              border: '1px solid hsla(var(--accent-h,158),55%,55%,0.25)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%',
+                background: 'hsl(var(--accent-h,158),55%,55%)', color: '#0a1815',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Icon name="check" size={11} strokeWidth={3} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)' }}>
+                  {currentExercise.nameRu}
+                </div>
+                <div style={{ fontSize: 10, color: 'hsl(var(--accent-h,158),55%,70%)', marginTop: 2 }}>
+                  {t('workout.currentExercise')}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Alternative exercises */}
+          {currentPlanExercise?.alternatives?.map(alt => (
+            <button key={alt.exerciseId} onClick={() => handleSwapAlternative(alt)} style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', gap: 10,
+              cursor: 'pointer', textAlign: 'left', width: '100%',
+              fontFamily: 'var(--font-sans)',
+            }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Icon name="swap" size={11} style={{ color: 'rgba(236,234,239,0.5)' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)' }}>
+                  {alt.nameRu}
+                </div>
+              </div>
+              <Icon name="chevronRight" size={14} style={{ color: 'rgba(236,234,239,0.35)' }} />
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   )
 }

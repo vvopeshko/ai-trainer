@@ -54,7 +54,14 @@ export const translations = {
     'workout.tapToResume': 'Нажми, чтобы продолжить',
     'workout.cancelWorkoutTitle': 'Прервать тренировку?',
     'workout.cancelWorkoutMessage': 'Все подходы будут удалены.',
+    'workout.cancelWorkoutMessageEmpty': 'Тренировка не будет сохранена.',
     'workout.cancelWorkoutConfirm': 'Прервать',
+    'workout.alternatives': '{{count}} замена',
+    'workout.alternativesTitle': 'Заменить упражнение',
+    'workout.currentExercise': 'Текущее',
+    'workout.swapConfirmTitle': 'Заменить упражнение?',
+    'workout.swapConfirmMessage': 'Сделанные подходы ({{count}}) будут сброшены.',
+    'workout.swapConfirmBtn': 'Заменить',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',
