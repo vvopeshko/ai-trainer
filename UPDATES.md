@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-04-27 — Progress-экран: ring charts, sub-muscles, UX-фиксы
+
+### Progress API (`GET /api/v1/progress`)
+
+- `planAdherence` — тренировки за неделю vs план (done/planned/extra)
+- `muscleVolume` — подходы по 6 группам мышц с sub-muscle разбивкой
+- `records` — рекорды месяца (макс вес vs предыдущий лучший)
+- Три состояния: `empty` (0 тренировок), `mostly_empty` (1-2), `has_data` (≥3)
+
+### Sub-muscle breakdown
+
+Добавлен `EXERCISE_MUSCLE_OVERRIDE` — маппинг slug упражнения → конкретная sub-muscle:
+- **Грудь:** incline → Верх груди, flat/fly → Середина груди, dip → Низ груди
+- **Плечи:** press → Передние дельты, lateral/upright → Средние дельты, face-pull/reverse → Задние дельты
+- **Трапеции** перенесены из группы "Плечи" в "Спина"
+
+Применяется и к фактическим подходам, и к целям программы.
+
+### ProgressPage — полный редизайн по glass_v4
+
+Все компоненты inline (как в HomePage):
+- **WeeklyCard** — capsule bars (done/extra/remaining), контекстный текст
+- **MuscleGroupCard** — full-width Glass карточка с RingChart (SVG) + StatusBadge
+- **RingChart** — SVG кольцо: фон, зона цели (min–max), заполнение цветом статуса
+- **DotLadder** — точечная лесенка по sub-muscles (gray→green→red) с маркерами min/max
+- **StatusBadge** — цветная пилюля ("Перебор +N", "В норме", "Недогруз −N")
+- **EmptyProgress** — CTA для нового пользователя
+- **MostlyEmptyHint** — подсказка при 1-2 тренировках
+
+### ProgressDataContext
+
+`src/contexts/ProgressDataContext.jsx` — React Context по образцу HomeDataContext:
+- Stale-while-revalidate
+- `refresh()` для фонового обновления
+- Provider добавлен в цепочку (`main.jsx`)
+
+### UX-фиксы
+
+- **Табар не скролится:** GlassNav → `position: fixed` (было `absolute`)
+- **Пустое состояние с целями:** показываем план программы и muscle targets даже при 0 тренировок
+- Убрана заглушка-субтайтл "что AI подсказывает скорректировать"
+
+### Новые i18n-ключи
+
+`progress.title`, `progress.week.*` (title, ofPlanned, workoutsWeek, planDone, planComplete, planRemaining), `progress.muscle.sectionTitle`, `progress.muscle.target`, `progress.status.*` (low, optimal, over, overload), `progress.records.*`, `progress.empty*`, `progress.goTrain`, `progress.mostlyEmpty`
+
+---
+
 ## 2026-04-26 (день, позже) — Автовес, свайп-удаление подходов
 
 ### Автоподстановка веса в подходах

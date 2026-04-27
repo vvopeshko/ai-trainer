@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-26 (день)
+**Последнее обновление:** 2026-04-27
 
 ---
 
@@ -35,9 +35,11 @@
 
 ### Фаза 4 — Summary + Progress
 
-- [ ] Progress API: plan-adherence, muscle-volume, insights, imbalances, records
+- [x] Progress API: plan-adherence, muscle-volume (sub-muscles), records ✅
+- [x] Progress-экран (BRD §12.4): ring charts, dot ladders, capsule bars, muscle cards ✅
+- [x] Sub-muscle breakdown: грудь (верх/середина/низ), плечи (передние/средние/задние), трапеции → спина ✅
 - [ ] Summary-экран: улучшить (сейчас минимальный)
-- [ ] Progress-экран (BRD §12.4): графики, плато, дисбалансы
+- [ ] Progress Phase 2: графики за период, плато, дисбалансы, тренды
 
 ### Параллельно: инфра и улучшения
 
@@ -63,6 +65,16 @@
 ---
 
 ## ✅ Выполнено
+
+### Фаза 4 (частично) — Progress-экран (2026-04-27) ✅
+
+- [x] `GET /api/v1/progress` — plan adherence + muscle volume (sub-muscles) + monthly records
+- [x] `ProgressDataContext` — React Context (stale-while-revalidate, как HomeDataContext)
+- [x] ProgressPage — полный редизайн по glass_v4: ring charts (SVG), dot ladders, capsule bars, muscle group cards
+- [x] Sub-muscle breakdown через `EXERCISE_MUSCLE_OVERRIDE`: грудь → верх/середина/низ, плечи → передние/средние/задние дельты
+- [x] Трапеции перенесены из "Плечи" в "Спина"
+- [x] Empty/mostly_empty состояния + показ целей программы при 0 тренировок
+- [x] GlassNav → `position: fixed` (табар не скролится)
 
 ### Фаза 3 (большая часть) — Workout interactive UX (2026-04-26) ✅
 

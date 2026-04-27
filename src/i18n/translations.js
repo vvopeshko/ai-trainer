@@ -118,7 +118,6 @@ export const translations = {
 
     // Progress screen (BRD §12.4)
     'progress.title': 'Прогресс',
-    'progress.subtitle': 'что AI подсказывает скорректировать',
     'progress.week.title': 'Эта неделя',
     'progress.week.ofPlanned': 'из {{n}} запланированных',
     'progress.week.workoutsWeek': 'Тренировки за неделю',

@@ -642,11 +642,6 @@ export default function ProgressPage() {
         }}>
           {t('progress.title')}
         </div>
-        <div style={{
-          fontSize: 'var(--text-sm)', color: 'var(--fg-tertiary)',
-        }}>
-          {t('progress.subtitle')}
-        </div>
       </div>
 
       {/* Weekly adherence */}

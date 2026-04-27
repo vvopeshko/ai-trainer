@@ -2,12 +2,18 @@ import prisma from '../utils/prisma.js'
 
 /**
  * Маппинг отдельных мышц → 6 групп для UI.
- * Ключи — реальные значения primaryMuscles из базы упражнений.
+ * Ключи — реальные значения primaryMuscles из базы + sub-muscle ключи из EXERCISE_MUSCLE_OVERRIDE.
  */
 const MUSCLE_GROUP_MAP = {
   chest: 'chest',
+  upper_chest: 'chest',
+  mid_chest: 'chest',
+  lower_chest: 'chest',
   shoulders: 'shoulders',
-  traps: 'shoulders',
+  front_delt: 'shoulders',
+  side_delt: 'shoulders',
+  rear_delt: 'shoulders',
+  traps: 'back',
   lats: 'back',
   'middle back': 'back',
   biceps: 'arms',
@@ -22,9 +28,52 @@ const MUSCLE_GROUP_MAP = {
   obliques: 'core',
 }
 
+/**
+ * Для упражнений на грудь и плечи — заменяем generic "chest"/"shoulders"
+ * на конкретные sub-muscle ключи, чтобы показать верх/середину/низ груди
+ * и передние/средние/задние дельты.
+ */
+const EXERCISE_MUSCLE_OVERRIDE = {
+  // Chest → incline = upper, flat/fly = mid, dip = lower
+  'smith-machine-incline-bench-press': { chest: 'upper_chest' },
+  'machine-incline-press': { chest: 'upper_chest' },
+  'incline-bench-db': { chest: 'upper_chest' },
+  'incline-bench-press-barbell': { chest: 'upper_chest' },
+  'machine-chest-press': { chest: 'mid_chest' },
+  'bench-press-db': { chest: 'mid_chest' },
+  'pec-fly': { chest: 'mid_chest' },
+  'push-up': { chest: 'mid_chest' },
+  'machine-chest-fly': { chest: 'mid_chest' },
+  'standing-cable-crossover': { chest: 'mid_chest' },
+  'bench-pullover-db': { chest: 'mid_chest' },
+  'dip': { chest: 'lower_chest' },
+  // Shoulders → press = front, lateral/upright = side, face-pull/reverse = rear
+  'overhead-press-seated-db': { shoulders: 'front_delt' },
+  'shoulder-press-machine': { shoulders: 'front_delt' },
+  'lateral-raise-machine': { shoulders: 'side_delt' },
+  'lateral-raise-db': { shoulders: 'side_delt' },
+  'machine-shoulder-fly': { shoulders: 'side_delt' },
+  'upright-row-barbell': { shoulders: 'side_delt' },
+  'cable-face-pull': { shoulders: 'rear_delt' },
+  'reverse-fly-db': { shoulders: 'rear_delt' },
+  'single-arm-row-l-cable': { shoulders: 'rear_delt' },
+  'single-arm-row-r-cable': { shoulders: 'rear_delt' },
+}
+
+function resolveMuscles(slug, primaryMuscles) {
+  const overrides = EXERCISE_MUSCLE_OVERRIDE[slug] || {}
+  return primaryMuscles.map(m => overrides[m] || m)
+}
+
 const SUB_MUSCLE_NAMES_RU = {
   chest: 'Грудь',
+  upper_chest: 'Верх груди',
+  mid_chest: 'Середина груди',
+  lower_chest: 'Низ груди',
   shoulders: 'Дельты',
+  front_delt: 'Передние дельты',
+  side_delt: 'Средние дельты',
+  rear_delt: 'Задние дельты',
   traps: 'Трапеции',
   lats: 'Широчайшие',
   'middle back': 'Середина спины',
@@ -110,7 +159,7 @@ export async function getProgress(req, res) {
         isWarmup: false,
       },
       select: {
-        exercise: { select: { primaryMuscles: true } },
+        exercise: { select: { slug: true, primaryMuscles: true } },
       },
     }),
 
@@ -192,7 +241,8 @@ export async function getProgress(req, res) {
   // ── Muscle volume (per individual muscle, then aggregate to groups) ──
   const actualByMuscle = {}
   for (const s of weekSets) {
-    for (const muscle of s.exercise.primaryMuscles) {
+    const muscles = resolveMuscles(s.exercise.slug, s.exercise.primaryMuscles)
+    for (const muscle of muscles) {
       if (MUSCLE_GROUP_MAP[muscle]) {
         actualByMuscle[muscle] = (actualByMuscle[muscle] || 0) + 1
       }
@@ -206,14 +256,16 @@ export async function getProgress(req, res) {
     const planExercises = exerciseIds.length > 0
       ? await prisma.exercise.findMany({
           where: { id: { in: exerciseIds } },
-          select: { id: true, primaryMuscles: true },
+          select: { id: true, slug: true, primaryMuscles: true },
         })
       : []
-    const muscleById = Object.fromEntries(planExercises.map(e => [e.id, e.primaryMuscles]))
+    const exerciseDataById = Object.fromEntries(planExercises.map(e => [e.id, e]))
 
     for (const day of days) {
       for (const ex of day.exercises || []) {
-        const muscles = muscleById[ex.exerciseId] || []
+        const data = exerciseDataById[ex.exerciseId]
+        if (!data) continue
+        const muscles = resolveMuscles(data.slug, data.primaryMuscles)
         const sets = ex.sets || 3
         for (const m of muscles) {
           if (MUSCLE_GROUP_MAP[m]) {
