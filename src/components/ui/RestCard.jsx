@@ -12,8 +12,13 @@ export function RestCard({ seconds = 90, onSkip }) {
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
-    const id = setInterval(() => setElapsed(x => x + 1), 1000)
-    return () => clearInterval(id)
+    const start = Date.now()
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000))
+    const id = setInterval(tick, 1000)
+    // Catch up after app was in background
+    const onVisible = () => { if (document.visibilityState === 'visible') tick() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
 
   const mm = Math.floor(elapsed / 60)
