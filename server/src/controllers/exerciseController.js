@@ -13,7 +13,7 @@ export async function list(req, res) {
   const { muscle, limit } = z
     .object({
       muscle: z.string().optional(),
-      limit: z.coerce.number().int().positive().max(500).default(100),
+      limit: z.coerce.number().int().positive().max(1500).default(100),
     })
     .parse(req.query)
 
@@ -26,9 +26,27 @@ export async function list(req, res) {
     where,
     orderBy: { nameRu: 'asc' },
     take: limit,
+    select: {
+      id: true, slug: true, nameRu: true, nameEn: true,
+      primaryMuscles: true, secondaryMuscles: true, equipment: true,
+      difficulty: true, category: true, gifUrl: true, aliases: true,
+    },
   })
 
   res.json({ exercises })
+}
+
+/**
+ * GET /api/v1/exercises/:id
+ *
+ * Полные данные одного упражнения (включая instructions, description, typicalMistakes).
+ */
+export async function getById(req, res) {
+  const exercise = await prisma.exercise.findUnique({
+    where: { id: req.params.id },
+  })
+  if (!exercise) return res.status(404).json({ error: 'Exercise not found' })
+  res.json({ exercise })
 }
 
 /**

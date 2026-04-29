@@ -7,6 +7,7 @@ import WorkoutPage from './pages/Main/WorkoutPage.jsx'
 const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
 const ProgramEditPage = lazy(() => import('./pages/Main/ProgramEditPage.jsx'))
+const LibraryPage = lazy(() => import('./pages/Main/LibraryPage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
 
 function StubPage({ title }) {
@@ -27,7 +28,7 @@ export default function App() {
         {/* Tab screens */}
         <Route path="/" element={<TabLayout><HomePage /></TabLayout>} />
         <Route path="/progress" element={<TabLayout><Suspense fallback={null}><ProgressPage /></Suspense></TabLayout>} />
-        <Route path="/library" element={<TabLayout><StubPage title="Каталог" /></TabLayout>} />
+        <Route path="/library" element={<TabLayout><Suspense fallback={null}><LibraryPage /></Suspense></TabLayout>} />
         <Route path="/me" element={<TabLayout><StubPage title="Профиль" /></TabLayout>} />
 
         {/* Full-screen flows */}

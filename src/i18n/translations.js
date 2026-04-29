@@ -160,6 +160,38 @@ export const translations = {
     'program.addExercise': '+ Добавить упражнение',
     'program.loadError': 'Не удалось загрузить программу',
 
+    // Library screen
+    'library.title': 'Каталог',
+    'library.search': 'Поиск упражнения...',
+    'library.noResults': 'Ничего не найдено',
+    'library.count': '{{n}} упражнений',
+    'library.muscles': 'Мышцы',
+    'library.equipment': 'Оборудование',
+    'library.instructions': 'Техника выполнения',
+    'library.mistakes': 'Типичные ошибки',
+    'library.description': 'Описание',
+    // Muscle groups
+    'library.muscle.chest': 'Грудь',
+    'library.muscle.back': 'Спина',
+    'library.muscle.shoulders': 'Плечи',
+    'library.muscle.arms': 'Руки',
+    'library.muscle.legs': 'Ноги',
+    'library.muscle.core': 'Кор',
+    // Equipment
+    'library.equip.barbell': 'Штанга',
+    'library.equip.dumbbell': 'Гантели',
+    'library.equip.cable': 'Тросы',
+    'library.equip.machine': 'Тренажёр',
+    'library.equip.body only': 'Своё тело',
+    'library.equip.other': 'Другое',
+    // Difficulty
+    'library.diff.beginner': 'Начинающий',
+    'library.diff.intermediate': 'Средний',
+    'library.diff.advanced': 'Продвинутый',
+    // Category
+    'library.cat.compound': 'Базовое',
+    'library.cat.isolation': 'Изолирующее',
+
     // Summary screen (BRD §12.3)
     'summary.title': 'Готово!',
     'summary.subtitle': 'Тренировка записана.',
