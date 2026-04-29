@@ -75,10 +75,11 @@ cd server && npx prisma studio
 ├── src/
 │   ├── main.jsx             # entry: BrowserRouter > TranslationProvider > TelegramProvider > App
 │   ├── App.jsx              # маршруты
-│   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage
+│   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage, ProgressPage
 │   ├── pages/Demo/          # DesignSystemDemo
 │   ├── components/ui/       # Glass, Button, Icon, TopBar, BigStepper и др.
 │   ├── components/layout/   # TabLayout, GlassNav
+│   ├── contexts/            # HomeDataContext, ProgressDataContext
 │   ├── i18n/                # TranslationProvider, useTranslation, translations.js
 │   ├── utils/api.js         # apiGet/apiPost/apiPatch — fetch + auth header
 │   └── styles/tokens.css    # CSS custom properties (дизайн-токены)
@@ -104,15 +105,16 @@ cd server && npx prisma studio
 - Flow: `/workout`, `/summary/:id`
 - Dev: `/demo` (дизайн-система)
 
-Ленивая загрузка через `lazy()` для `SummaryPage` и `DesignSystemDemo`.
+Ленивая загрузка через `lazy()` для `ProgressPage`, `SummaryPage` и `DesignSystemDemo`.
 
 ### Фронтенд: провайдеры
 
-Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `HomeDataProvider` → `App`.
+Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `HomeDataProvider` → `ProgressDataProvider` → `App`.
 
 - **TelegramProvider** — `useTelegram()` → `{ user, webApp, isDev }`. В dev-режиме отдаёт мок-юзера.
 - **TranslationProvider** — `useTranslation()` → `{ t, language, setLanguage }`.
-- **HomeDataProvider** — `useHomeData()` → `{ yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData }`. Кэш Home-данных выше Routes, stale-while-revalidate, optimistic updates через `setData`.
+- **HomeDataProvider** (`src/contexts/HomeDataContext.jsx`) — `useHomeData()` → `{ yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData }`. Кэш Home-данных выше Routes, stale-while-revalidate, optimistic updates через `setData`.
+- **ProgressDataProvider** (`src/contexts/ProgressDataContext.jsx`) — `useProgressData()`. Кэш прогресс-данных, stale-while-revalidate, аналогично HomeDataProvider.
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)
 

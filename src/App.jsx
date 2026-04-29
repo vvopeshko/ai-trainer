@@ -6,6 +6,7 @@ import WorkoutPage from './pages/Main/WorkoutPage.jsx'
 
 const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
+const ProgramEditPage = lazy(() => import('./pages/Main/ProgramEditPage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
 
 function StubPage({ title }) {
@@ -31,6 +32,7 @@ export default function App() {
 
         {/* Full-screen flows */}
         <Route path="/workout" element={<WorkoutPage />} />
+        <Route path="/program/:id" element={<Suspense fallback={null}><ProgramEditPage /></Suspense>} />
         <Route path="/summary/:id" element={<Suspense fallback={null}><SummaryPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={null}><DesignSystemDemo /></Suspense>} />
         <Route path="*" element={<NotFound />} />

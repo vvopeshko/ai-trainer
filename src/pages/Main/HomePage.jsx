@@ -128,7 +128,7 @@ function ProgrammeHeroSkeleton() {
   )
 }
 
-function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onStart, onContinue, onResume, onCancel, onPickDay, loading }) {
+function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onStart, onContinue, onResume, onCancel, onPickDay, onProgramTap, loading }) {
   const { t } = useTranslation()
 
   const isPaused = activeWorkout?.pausedAt != null
@@ -174,7 +174,13 @@ function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onSta
       {/* Programme header */}
       {hasProgram && (
         <>
-          <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <div
+            onClick={onProgramTap}
+            style={{
+              padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+              cursor: 'pointer',
+            }}
+          >
             <div style={{
               width: 32, height: 32, borderRadius: 8,
               background: 'rgba(255,255,255,0.06)',
@@ -722,6 +728,7 @@ export default function HomePage() {
           onResume={handleResume}
           onCancel={() => setConfirmCancel(true)}
           onPickDay={() => setShowDayPicker(true)}
+          onProgramTap={() => program && navigate('/program/' + program.id)}
           loading={starting}
         />
       )}
