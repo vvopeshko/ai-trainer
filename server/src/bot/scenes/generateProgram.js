@@ -74,6 +74,49 @@ async function findOrCreateUser(ctx) {
   return user
 }
 
+// ─── Генерация (общая логика для обоих путей) ─────────────────────────
+
+async function runGeneration(ctx) {
+  await ctx.reply('⏳ Генерирую программу...')
+  await ctx.sendChatAction('typing')
+
+  try {
+    const result = await generateProgram(
+      ctx.wizard.state.userId,
+      ctx.wizard.state.profile,
+    )
+
+    if (!result.success) {
+      await ctx.reply(`❌ ${result.error}`)
+      return ctx.scene.leave()
+    }
+
+    const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:5173'
+    const programUrl = `${webAppUrl}/program/${result.program.id}`
+    const canUseWebAppButton = webAppUrl.startsWith('https://')
+
+    let text = `✅ Программа создана!\n\n${result.summary}`
+
+    if (canUseWebAppButton) {
+      await ctx.reply(text, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🏋️ Открыть в приложении', web_app: { url: programUrl } }],
+          ],
+        },
+      })
+    } else {
+      text += `\n\n(dev) открой: ${programUrl}`
+      await ctx.reply(text)
+    }
+  } catch (err) {
+    console.error('[generateProgram scene] error:', err)
+    await ctx.reply('😕 Произошла ошибка при генерации программы. Попробуй ещё раз через /program')
+  }
+
+  return ctx.scene.leave()
+}
+
 // ─── Сцена ───────────────────────────────────────────────────────────
 
 export const generateProgramScene = new Scenes.WizardScene(
@@ -124,7 +167,6 @@ export const generateProgramScene = new Scenes.WizardScene(
     const action = ctx.callbackQuery.data
 
     if (action === 'profile:use') {
-      // Используем существующий профиль — сразу генерируем
       const profile = ctx.wizard.state.existingProfile
       ctx.wizard.state.profile = {
         goal: profile.goal,
@@ -133,7 +175,8 @@ export const generateProgramScene = new Scenes.WizardScene(
         equipmentPreset: profile.equipment?.length > 0 ? 'gym' : 'gym',
         constraints: profile.constraints || [],
       }
-      return ctx.wizard.selectStep(6) // jump to generation step
+      // Сразу генерируем — selectStep не вызывает обработчик
+      return runGeneration(ctx)
     }
 
     if (action === 'profile:new') {
@@ -214,66 +257,25 @@ export const generateProgramScene = new Scenes.WizardScene(
     return ctx.wizard.next()
   },
 
-  // Step 6: Ограничения + генерация
+  // Step 6: Ограничения → генерация
   async (ctx) => {
-    // Если пришли из "использовать профиль" — profile уже в state
-    if (!ctx.wizard.state.profile) {
-      if (!ctx.callbackQuery) return
-      await ctx.answerCbQuery()
+    if (!ctx.callbackQuery) return
+    await ctx.answerCbQuery()
 
-      const match = ctx.callbackQuery.data.match(/^constraint:(.+)$/)
-      if (!match) return
+    const match = ctx.callbackQuery.data.match(/^constraint:(.+)$/)
+    if (!match) return
 
-      const constraint = match[1]
-      ctx.wizard.state.constraints = constraint === 'none' ? [] : [constraint]
+    const constraint = match[1]
+    ctx.wizard.state.constraints = constraint === 'none' ? [] : [constraint]
 
-      ctx.wizard.state.profile = {
-        goal: ctx.wizard.state.goal,
-        experienceLevel: ctx.wizard.state.experienceLevel,
-        sessionsPerWeek: ctx.wizard.state.sessionsPerWeek,
-        equipmentPreset: ctx.wizard.state.equipmentPreset,
-        constraints: ctx.wizard.state.constraints,
-      }
+    ctx.wizard.state.profile = {
+      goal: ctx.wizard.state.goal,
+      experienceLevel: ctx.wizard.state.experienceLevel,
+      sessionsPerWeek: ctx.wizard.state.sessionsPerWeek,
+      equipmentPreset: ctx.wizard.state.equipmentPreset,
+      constraints: ctx.wizard.state.constraints,
     }
 
-    // Генерация
-    await ctx.reply('⏳ Генерирую программу...')
-    await ctx.sendChatAction('typing')
-
-    try {
-      const result = await generateProgram(
-        ctx.wizard.state.userId,
-        ctx.wizard.state.profile,
-      )
-
-      if (!result.success) {
-        await ctx.reply(`❌ ${result.error}`)
-        return ctx.scene.leave()
-      }
-
-      const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:5173'
-      const programUrl = `${webAppUrl}/program/${result.program.id}`
-      const canUseWebAppButton = webAppUrl.startsWith('https://')
-
-      let text = `✅ Программа создана!\n\n${result.summary}`
-
-      if (canUseWebAppButton) {
-        await ctx.reply(text, {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🏋️ Открыть в приложении', web_app: { url: programUrl } }],
-            ],
-          },
-        })
-      } else {
-        text += `\n\n(dev) открой: ${programUrl}`
-        await ctx.reply(text)
-      }
-    } catch (err) {
-      console.error('[generateProgram scene] error:', err)
-      await ctx.reply('😕 Произошла ошибка при генерации программы. Попробуй ещё раз через /program')
-    }
-
-    return ctx.scene.leave()
+    return runGeneration(ctx)
   },
 )
