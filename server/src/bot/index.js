@@ -1,5 +1,6 @@
-import { Telegraf } from 'telegraf'
+import { Telegraf, Scenes, session } from 'telegraf'
 import { identifyMachine } from '../services/aiTrainer/identifyMachine.js'
+import { generateProgramScene } from './scenes/generateProgram.js'
 import prisma from '../utils/prisma.js'
 
 // Создание Telegraf-бота. Запускается из server/src/index.js параллельно Express.
@@ -12,6 +13,11 @@ export function createBot(token) {
   // Telegram разрешает web_app кнопки только с https://. В dev с localhost
   // отдаём просто ссылку текстом — кнопка заработает после деплоя на Vercel.
   const canUseWebAppButton = webAppUrl.startsWith('https://')
+
+  // ─── Session + Scenes ────────────────────────────────────────────
+  const stage = new Scenes.Stage([generateProgramScene])
+  bot.use(session())
+  bot.use(stage.middleware())
 
   bot.start(async (ctx) => {
     const base =
@@ -51,9 +57,14 @@ export function createBot(token) {
         '• логировать тренировки в зале\n' +
         '• подбирать упражнение по фото тренажёра\n' +
         '• отвечать на вопросы по технике\n\n' +
-        'Жми /start, чтобы открыть мини-апп.',
+        'Команды:\n' +
+        '/program — составить программу тренировок\n' +
+        '/workout — открыть тренировку\n' +
+        '/start — открыть мини-апп',
     )
   })
+
+  bot.command('program', (ctx) => ctx.scene.enter('generate-program'))
 
   // ─── Распознавание тренажёра по фото ──────────────────────────
   // Telegram присылает массив PhotoSize[] — от маленького превью до полного размера.

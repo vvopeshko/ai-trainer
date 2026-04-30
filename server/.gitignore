@@ -5,3 +5,5 @@ node_modules/
 prisma/*.db
 prisma/*.db-journal
 *.log
+data/free-exercise-db.json
+data/enrichment-checkpoint.json

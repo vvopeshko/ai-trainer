@@ -2,6 +2,28 @@ import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 
 /**
+ * GET /api/v1/programs
+ *
+ * Список всех программ юзера.
+ */
+export async function listPrograms(req, res) {
+  const programs = await prisma.program.findMany({
+    where: { userId: req.user.id },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      durationWeeks: true,
+      isActive: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  res.json({ programs })
+}
+
+/**
  * GET /api/v1/programs/active
  *
  * Активная программа текущего юзера.
@@ -182,4 +204,33 @@ export async function updateProgram(req, res) {
       updatedAt: updated.updatedAt,
     },
   })
+}
+
+/**
+ * POST /api/v1/programs/:id/activate
+ *
+ * Сделать программу активной (деактивировать остальные).
+ */
+export async function activateProgram(req, res) {
+  const program = await prisma.program.findFirst({
+    where: { id: req.params.id, userId: req.user.id },
+    select: { id: true },
+  })
+
+  if (!program) {
+    return res.status(404).json({ error: 'Program not found' })
+  }
+
+  await prisma.$transaction([
+    prisma.program.updateMany({
+      where: { userId: req.user.id, isActive: true },
+      data: { isActive: false },
+    }),
+    prisma.program.update({
+      where: { id: program.id },
+      data: { isActive: true },
+    }),
+  ])
+
+  res.json({ ok: true })
 }

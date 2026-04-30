@@ -14,6 +14,7 @@ import { z } from 'zod'
 import llm from '../../utils/llm.js'
 import prisma from '../../utils/prisma.js'
 import { track } from '../../utils/analytics.js'
+import { parseJsonFromLLM } from '../../utils/parseJsonFromLLM.js'
 
 // ─── 1. Загрузка промпта ────────────────────────────────────────────
 // Промпт лежит в отдельном .md файле — удобно итерировать и версионировать.
@@ -51,43 +52,7 @@ const identificationSchema = z.object({
   suggestedExercises: z.array(exerciseSchema),
 })
 
-// ─── 3. Парсинг JSON из ответа LLM ─────────────────────────────────
-// Даже с инструкцией "отвечай только JSON", LLM иногда добавляет
-// markdown-обёртку ```json ... ``` или текст до/после.
-// Эта функция пытается извлечь JSON в любом случае.
-
-function parseJsonFromLLM(text) {
-  // Попытка 1: весь текст — валидный JSON
-  try {
-    return JSON.parse(text)
-  } catch {
-    // продолжаем
-  }
-
-  // Попытка 2: JSON обёрнут в ```json ... ``` или ``` ... ```
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fenceMatch) {
-    try {
-      return JSON.parse(fenceMatch[1].trim())
-    } catch {
-      // продолжаем
-    }
-  }
-
-  // Попытка 3: ищем первый { ... } в тексте
-  const braceMatch = text.match(/\{[\s\S]*\}/)
-  if (braceMatch) {
-    try {
-      return JSON.parse(braceMatch[0])
-    } catch {
-      // ничего не помогло
-    }
-  }
-
-  return null
-}
-
-// ─── 4. Основная функция ────────────────────────────────────────────
+// ─── 3. Основная функция ────────────────────────────────────────────
 
 /**
  * Распознать тренажёр по фото.
