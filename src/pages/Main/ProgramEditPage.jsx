@@ -335,7 +335,7 @@ export default function ProgramEditPage() {
   if (loading) {
     return (
       <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
-        <TopBar title={t('program.title')} onBack={() => navigate('/')} />
+        <TopBar title={t('program.title')} onBack={() => navigate('/')} style={{ paddingTop: 'var(--safe-top, 0px)' }} />
         <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
           <Glass style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
             <Skeleton width="60%" height={18} style={{ marginBottom: 8 }} />
@@ -355,7 +355,7 @@ export default function ProgramEditPage() {
   if (error || !program) {
     return (
       <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
-        <TopBar title={t('program.title')} onBack={() => navigate('/')} />
+        <TopBar title={t('program.title')} onBack={() => navigate('/')} style={{ paddingTop: 'var(--safe-top, 0px)' }} />
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           minHeight: '60vh', color: 'var(--fg-tertiary)', fontSize: 'var(--text-sm)',
