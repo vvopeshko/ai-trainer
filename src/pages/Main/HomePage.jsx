@@ -617,7 +617,6 @@ function WeeklyCard({ data }) {
   return (
     <Glass style={{
       padding: 'var(--space-4)',
-      borderLeft: '3px solid hsl(var(--accent-h,158),55%,45%)',
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
