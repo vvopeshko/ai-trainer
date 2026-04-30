@@ -9,7 +9,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiGet, apiPatch } from '../../utils/api.js'
+import { apiGet, apiPatch, apiPost } from '../../utils/api.js'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
@@ -153,6 +153,12 @@ export default function ProgramEditPage() {
   const [editedName, setEditedName] = useState(null)
   const [saving, setSaving] = useState(false)
 
+  // Activate
+  const [activating, setActivating] = useState(false)
+
+  // Other programs
+  const [otherPrograms, setOtherPrograms] = useState(null)
+
   // UI
   const [expandedDays, setExpandedDays] = useState(new Set([0]))
   const [editingExercise, setEditingExercise] = useState(null) // { dayIdx, exIdx }
@@ -169,9 +175,13 @@ export default function ProgramEditPage() {
   // ─── Load ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    apiGet('/api/v1/programs/' + id)
-      .then(data => {
-        setProgram(data.program)
+    Promise.all([
+      apiGet('/api/v1/programs/' + id),
+      apiGet('/api/v1/programs'),
+    ])
+      .then(([progData, listData]) => {
+        setProgram(progData.program)
+        setOtherPrograms((listData.programs || []).filter(p => p.id !== id))
         setLoading(false)
       })
       .catch(() => {
@@ -268,17 +278,39 @@ export default function ProgramEditPage() {
 
   // ─── Back navigation ──────────────────────────────────────────────
 
+  const goBack = useCallback(() => {
+    // When opened from Telegram web_app button there's no history to go back to.
+    // Always navigate to home to be safe.
+    navigate('/')
+  }, [navigate])
+
   const handleBack = () => {
     if (isDirty) {
       setConfirmLeave(true)
     } else {
-      navigate(-1)
+      goBack()
     }
   }
 
   const handleConfirmLeave = () => {
     setConfirmLeave(false)
-    navigate(-1)
+    goBack()
+  }
+
+  // ─── Activate ───────────────────────────────────────────────────
+
+  const handleActivate = async () => {
+    setActivating(true)
+    try {
+      await apiPost('/api/v1/programs/' + id + '/activate')
+      setProgram(prev => ({ ...prev, isActive: true }))
+      setOtherPrograms(prev => prev?.map(p => ({ ...p, isActive: false })))
+      refresh()
+    } catch (err) {
+      console.error('Failed to activate program:', err)
+    } finally {
+      setActivating(false)
+    }
   }
 
   // ─── Toggle day ───────────────────────────────────────────────────
@@ -303,7 +335,7 @@ export default function ProgramEditPage() {
   if (loading) {
     return (
       <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
-        <TopBar title={t('program.title')} onBack={() => navigate(-1)} />
+        <TopBar title={t('program.title')} onBack={() => navigate('/')} />
         <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
           <Glass style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
             <Skeleton width="60%" height={18} style={{ marginBottom: 8 }} />
@@ -323,7 +355,7 @@ export default function ProgramEditPage() {
   if (error || !program) {
     return (
       <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
-        <TopBar title={t('program.title')} onBack={() => navigate(-1)} />
+        <TopBar title={t('program.title')} onBack={() => navigate('/')} />
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           minHeight: '60vh', color: 'var(--fg-tertiary)', fontSize: 'var(--text-sm)',
@@ -443,6 +475,47 @@ export default function ProgramEditPage() {
               ))}
             </div>
           </Glass>
+        )}
+
+        {/* ── Activate Button ── */}
+        {!program.isActive && (
+          <button
+            onClick={handleActivate}
+            disabled={activating}
+            style={{
+              width: '100%',
+              padding: '14px',
+              marginBottom: 'var(--space-4)',
+              background: 'hsla(var(--accent-h,158),45%,25%,0.3)',
+              border: '1px solid hsla(var(--accent-h,158),45%,40%,0.3)',
+              borderRadius: 'var(--radius-lg, 14px)',
+              color: 'hsl(var(--accent-h,158),55%,72%)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 600,
+              cursor: activating ? 'default' : 'pointer',
+              opacity: activating ? 0.6 : 1,
+            }}
+          >
+            {activating ? t('program.activating') : t('program.activate')}
+          </button>
+        )}
+
+        {/* ── Active badge ── */}
+        {program.isActive && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            marginBottom: 'var(--space-4)',
+            padding: '8px 12px',
+            background: 'hsla(var(--accent-h,158),40%,20%,0.2)',
+            borderRadius: 'var(--radius-md, 10px)',
+            width: 'fit-content',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 600,
+            color: 'hsl(var(--accent-h,158),55%,72%)',
+          }}>
+            <Icon name="check" size={14} />
+            {t('program.active')}
+          </div>
         )}
 
         {/* ── Day Cards ── */}
@@ -632,6 +705,80 @@ export default function ProgramEditPage() {
             </Glass>
           )
         })}
+
+        {/* ── Other Programs ── */}
+        {otherPrograms && otherPrograms.length > 0 && (
+          <div style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+            <div style={{
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700,
+              letterSpacing: 'var(--tracking-caps)',
+              textTransform: 'uppercase',
+              color: 'var(--fg-tertiary)',
+              marginBottom: 'var(--space-3)',
+            }}>
+              {t('program.otherPrograms')}
+            </div>
+            <Glass padding={0} style={{ overflow: 'hidden' }}>
+              {otherPrograms.map((p, i) => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate('/program/' + p.id)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    background: 'none',
+                    border: 'none',
+                    padding: '12px var(--space-4)',
+                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-3)',
+                  }}
+                >
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    background: p.isActive
+                      ? 'hsla(var(--accent-h,158),40%,30%,0.4)'
+                      : 'rgba(255,255,255,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: p.isActive
+                      ? 'hsl(var(--accent-h,158),55%,72%)'
+                      : 'var(--fg-disabled)',
+                  }}>
+                    <Icon name="zap" size={14} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 500,
+                      color: 'var(--fg-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {p.name}
+                    </div>
+                    <div style={{
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--fg-tertiary)',
+                      marginTop: 1,
+                    }}>
+                      {p.durationWeeks ? t('program.daysShort', { n: p.durationWeeks * 7 }) : ''}
+                      {p.isActive && (
+                        <span style={{ color: 'hsl(var(--accent-h,158),55%,72%)' }}>
+                          {p.durationWeeks ? ' · ' : ''}{t('program.active').toLowerCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Icon name="chevronRight" size={14} style={{ color: 'var(--fg-disabled)', flexShrink: 0 }} />
+                </button>
+              ))}
+            </Glass>
+          </div>
+        )}
       </div>
 
       {/* ── Exercise Edit BottomSheet ── */}

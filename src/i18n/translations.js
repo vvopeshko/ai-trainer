@@ -159,6 +159,11 @@ export const translations = {
     'program.unsavedConfirm': 'Выйти',
     'program.addExercise': '+ Добавить упражнение',
     'program.loadError': 'Не удалось загрузить программу',
+    'program.activate': 'Сделать активной',
+    'program.activating': 'Активация...',
+    'program.active': 'Активная',
+    'program.otherPrograms': 'Все программы',
+    'program.daysShort': '{{n}} дн.',
 
     // Library screen
     'library.title': 'Каталог',
