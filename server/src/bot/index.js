@@ -39,14 +39,78 @@ export function createBot(token) {
   })
 
   bot.command('workout', async (ctx) => {
-    if (canUseWebAppButton) {
-      await ctx.reply('Открываю тренировку…', {
-        reply_markup: {
-          inline_keyboard: [[{ text: '🏋️‍♂️ Открыть тренировку', web_app: { url: webAppUrl } }]],
-        },
-      })
-    } else {
-      await ctx.reply(`(dev) открой в браузере: ${webAppUrl}/workout`)
+    try {
+      const telegramId = BigInt(ctx.from.id)
+      const user = await prisma.user.findUnique({ where: { telegramId } })
+
+      if (user) {
+        const program = await prisma.program.findFirst({
+          where: { userId: user.id, isActive: true },
+          select: { id: true, name: true, planJson: true },
+        })
+
+        if (program) {
+          const days = program.planJson?.days || []
+
+          if (days.length > 0) {
+            const lastWorkout = await prisma.workout.findFirst({
+              where: {
+                userId: user.id,
+                programId: program.id,
+                finishedAt: { not: null },
+                programDayIndex: { not: null },
+              },
+              orderBy: { finishedAt: 'desc' },
+              select: { programDayIndex: true },
+            })
+
+            const nextDayIndex = lastWorkout
+              ? (lastWorkout.programDayIndex + 1) % days.length
+              : 0
+
+            const day = days[nextDayIndex]
+            const exerciseList = day.exercises
+              .map((ex, i) => `${i + 1}. ${ex.nameRu}`)
+              .join('\n')
+
+            const text =
+              `📋 *${program.name}*\n` +
+              `Следующая: *${day.title}*\n\n` +
+              `${exerciseList}`
+
+            const workoutUrl = `${webAppUrl}/workout`
+            if (canUseWebAppButton) {
+              await ctx.reply(text, {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: '🏋️‍♂️ Начать тренировку', web_app: { url: workoutUrl } }],
+                  ],
+                },
+              })
+            } else {
+              await ctx.reply(`${text}\n\n(dev) открой: ${workoutUrl}`, { parse_mode: 'Markdown' })
+            }
+            return
+          }
+        }
+      }
+
+      // Нет активной программы или юзера
+      await ctx.reply(
+        'У тебя пока нет активной программы.\nСоздай её командой /program',
+      )
+    } catch (err) {
+      console.error('[bot] /workout error:', err)
+      if (canUseWebAppButton) {
+        await ctx.reply('Открываю тренировку…', {
+          reply_markup: {
+            inline_keyboard: [[{ text: '🏋️‍♂️ Открыть тренировку', web_app: { url: webAppUrl } }]],
+          },
+        })
+      } else {
+        await ctx.reply(`(dev) открой в браузере: ${webAppUrl}/workout`)
+      }
     }
   })
 

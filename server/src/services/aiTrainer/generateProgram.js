@@ -72,6 +72,11 @@ function buildUserPrompt(profile, exercises) {
     advanced: 'Продвинутый',
   }
 
+  const genderLabels = {
+    male: 'Мужчина',
+    female: 'Женщина',
+  }
+
   // Компактный список упражнений: slug | nameRu | muscles | equipment
   const exerciseList = exercises
     .map(ex => `${ex.slug} | ${ex.nameRu} | ${ex.primaryMuscles.join(',')} | ${ex.equipment.join(',')}`)
@@ -79,6 +84,8 @@ function buildUserPrompt(profile, exercises) {
 
   return `## Профиль пользователя
 
+- Пол: ${genderLabels[profile.gender] || 'не указан'}
+- Возраст: ${profile.ageRange || 'не указан'}
 - Цель: ${goalLabels[profile.goal] || profile.goal}
 - Уровень: ${levelLabels[profile.experienceLevel] || profile.experienceLevel}
 - Дней в неделю: ${profile.sessionsPerWeek || profile.availableDays?.length || 3}

@@ -3,7 +3,7 @@
  *
  * Поток:
  * 1. Проверка UserProfile — если есть, предложить использовать или заполнить заново
- * 2. Сбор данных: цель → уровень → дни → оборудование → ограничения
+ * 2. Сбор данных: пол → возраст → цель → уровень → дни → оборудование → ограничения
  * 3. Вызов generateProgram сервиса
  * 4. Отправка результата с кнопкой открытия в мини-аппе
  */
@@ -12,6 +12,18 @@ import prisma from '../../utils/prisma.js'
 import { generateProgram } from '../../services/aiTrainer/generateProgram.js'
 
 // ─── Опции для шагов ─────────────────────────────────────────────────
+
+const GENDERS = [
+  { value: 'male', label: '👨 Мужчина' },
+  { value: 'female', label: '👩 Женщина' },
+]
+
+const AGES = [
+  { value: '16-24', label: '16–24' },
+  { value: '25-34', label: '25–34' },
+  { value: '35-44', label: '35–44' },
+  { value: '45+', label: '45+' },
+]
 
 const GOALS = [
   { value: 'muscle_gain', label: '💪 Набор массы' },
@@ -150,13 +162,12 @@ export const generateProgramScene = new Scenes.WizardScene(
       return ctx.wizard.next()
     }
 
-    // Нет профиля — сразу к выбору цели
+    // Нет профиля — сразу к выбору пола
     await ctx.reply(
-      'Давай составим программу! Какая у тебя цель?',
-      Markup.inlineKeyboard(inlineButtons(GOALS, 'goal')),
+      'Давай составим программу! Укажи свой пол:',
+      Markup.inlineKeyboard(inlineButtons(GENDERS, 'gender')),
     )
-    ctx.wizard.state.step = 'goal'
-    return ctx.wizard.selectStep(2) // skip profile step, go to data collection
+    return ctx.wizard.selectStep(2) // skip profile step, go to gender
   },
 
   // Step 1: Обработка ответа "использовать профиль / заново"
@@ -174,6 +185,8 @@ export const generateProgramScene = new Scenes.WizardScene(
         sessionsPerWeek: profile.sessionsPerWeek || profile.availableDays?.length || 3,
         equipmentPreset: profile.equipment?.length > 0 ? 'gym' : 'gym',
         constraints: profile.constraints || [],
+        gender: profile.gender || null,
+        ageRange: profile.age ? ageToRange(profile.age) : null,
       }
       // Сразу генерируем — selectStep не вызывает обработчик
       return runGeneration(ctx)
@@ -181,15 +194,48 @@ export const generateProgramScene = new Scenes.WizardScene(
 
     if (action === 'profile:new') {
       await ctx.reply(
-        'Хорошо, заполним заново. Какая у тебя цель?',
-        Markup.inlineKeyboard(inlineButtons(GOALS, 'goal')),
+        'Хорошо, заполним заново. Укажи свой пол:',
+        Markup.inlineKeyboard(inlineButtons(GENDERS, 'gender')),
       )
-      ctx.wizard.state.step = 'goal'
       return ctx.wizard.next()
     }
   },
 
-  // Step 2: Цель
+  // Step 2: Пол
+  async (ctx) => {
+    if (!ctx.callbackQuery) return
+    await ctx.answerCbQuery()
+
+    const match = ctx.callbackQuery.data.match(/^gender:(.+)$/)
+    if (!match) return
+
+    ctx.wizard.state.gender = match[1]
+
+    await ctx.reply(
+      'Укажи свой возраст:',
+      Markup.inlineKeyboard(inlineButtons(AGES, 'age')),
+    )
+    return ctx.wizard.next()
+  },
+
+  // Step 3: Возраст
+  async (ctx) => {
+    if (!ctx.callbackQuery) return
+    await ctx.answerCbQuery()
+
+    const match = ctx.callbackQuery.data.match(/^age:(.+)$/)
+    if (!match) return
+
+    ctx.wizard.state.ageRange = match[1]
+
+    await ctx.reply(
+      'Какая у тебя цель?',
+      Markup.inlineKeyboard(inlineButtons(GOALS, 'goal')),
+    )
+    return ctx.wizard.next()
+  },
+
+  // Step 4: Цель
   async (ctx) => {
     if (!ctx.callbackQuery) return
     await ctx.answerCbQuery()
@@ -206,7 +252,7 @@ export const generateProgramScene = new Scenes.WizardScene(
     return ctx.wizard.next()
   },
 
-  // Step 3: Уровень
+  // Step 5: Уровень
   async (ctx) => {
     if (!ctx.callbackQuery) return
     await ctx.answerCbQuery()
@@ -223,7 +269,7 @@ export const generateProgramScene = new Scenes.WizardScene(
     return ctx.wizard.next()
   },
 
-  // Step 4: Дни
+  // Step 6: Дни
   async (ctx) => {
     if (!ctx.callbackQuery) return
     await ctx.answerCbQuery()
@@ -240,7 +286,7 @@ export const generateProgramScene = new Scenes.WizardScene(
     return ctx.wizard.next()
   },
 
-  // Step 5: Оборудование
+  // Step 7: Оборудование
   async (ctx) => {
     if (!ctx.callbackQuery) return
     await ctx.answerCbQuery()
@@ -257,7 +303,7 @@ export const generateProgramScene = new Scenes.WizardScene(
     return ctx.wizard.next()
   },
 
-  // Step 6: Ограничения → генерация
+  // Step 8: Ограничения → генерация
   async (ctx) => {
     if (!ctx.callbackQuery) return
     await ctx.answerCbQuery()
@@ -274,8 +320,19 @@ export const generateProgramScene = new Scenes.WizardScene(
       sessionsPerWeek: ctx.wizard.state.sessionsPerWeek,
       equipmentPreset: ctx.wizard.state.equipmentPreset,
       constraints: ctx.wizard.state.constraints,
+      gender: ctx.wizard.state.gender,
+      ageRange: ctx.wizard.state.ageRange,
     }
 
     return runGeneration(ctx)
   },
 )
+
+// ─── Утилита: возраст (число) → диапазон ────────────────────────────
+
+function ageToRange(age) {
+  if (age < 25) return '16-24'
+  if (age < 35) return '25-34'
+  if (age < 45) return '35-44'
+  return '45+'
+}
