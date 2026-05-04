@@ -2,7 +2,7 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-04-26 (ночь)
+**Последнее обновление:** 2026-04-30
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
@@ -204,9 +204,8 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
 │   ├── main.jsx
 │   ├── App.jsx
 │   ├── pages/
-│   │   ├── Main/      # HomePage, WorkoutPage, SummaryPage
-│   │   ├── Demo/      # DesignSystemDemo
-│   │   └── Editors/   # (placeholder)
+│   │   ├── Main/      # HomePage, WorkoutPage, SummaryPage, ProgressPage, LibraryPage, ProgramEditPage
+│   │   └── Demo/      # DesignSystemDemo
 │   ├── components/
 │   │   ├── ui/        # Glass, Button, Icon, BigStepper, TopBar, RestCard, ...
 │   │   └── layout/    # TabLayout, GlassNav
@@ -236,6 +235,7 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
         │   └── errorHandler.js
         ├── bot/
         │   ├── index.js               # createBot() → Telegraf
+        │   ├── scenes/                # WizardScene для /program (generateProgram.js)
         │   └── commands.txt           # для setMyCommands в BotFather
         ├── services/
         │   ├── exerciseResolver.js    # slug → alias → auto-create
@@ -767,9 +767,14 @@ model AnalyticsEvent {
 | `POST` | `/workouts/:id/sets` | Залогировать подход |
 | `DELETE` | `/workouts/:id/sets/:setId` | Удалить подход |
 | `PATCH` | `/workouts/:id` | Завершить тренировку |
+| `GET` | `/programs` | Список программ юзера |
 | `GET` | `/programs/active` | Активная программа |
 | `GET` | `/programs/active/next-workout` | Следующая тренировка |
+| `GET` | `/programs/:id` | Полная программа (обогащённые упражнения) |
+| `PATCH` | `/programs/:id` | Обновление программы (название, planJson) |
+| `POST` | `/programs/:id/activate` | Активировать программу |
 | `GET` | `/stats/month` | Месячная статистика |
+| `GET` | `/progress` | Прогресс (plan adherence, muscle volume, records) |
 | `GET` | `/auth/init` | Инициализация юзера |
 
 ### 5.5 Аналитика
@@ -859,13 +864,12 @@ export async function vision(imageBase64, prompt, { maxTokens } = {}) { ... }
 
 ```
 server/src/services/aiTrainer/
-├── generateProgram.js     # профиль → персональная программа
+├── generateProgram.js     # профиль (цель, пол, возраст, уровень, ...) → персональная программа
 ├── identifyMachine.js     # фото → название тренажёра + упражнения
-├── chatWithContext.js     # user message + history → ответ тренера
-├── analyzeProgress.js     # метрики за неделю → рекомендации
+├── chatWithContext.js     # user message + history → ответ тренера (planned)
+├── analyzeProgress.js     # метрики за неделю → рекомендации (planned)
 └── prompts/               # промпты отдельными файлами, версионируются в git
-    ├── systemTrainer.md
-    ├── generateProgram.md
+    ├── generateProgram.md # учитывает пол, возраст, цель, уровень, оборудование, ограничения
     └── identifyMachine.md
 ```
 

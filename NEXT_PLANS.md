@@ -3,55 +3,42 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-27
+**Последнее обновление:** 2026-04-30
 
 ---
 
-## 🎯 Следующий заход: Фаза 3 (остаток) + Фаза 4
+## 🎯 Следующий заход: Фаза 6 — Polish + AI-фичи
 
 Полный план реализации — в [docs/implementation-plan.md](docs/implementation-plan.md).
 
-**Цель:** доделать Workout-экран (edit/delete sets, альтернативы, суперсеты) + Summary + Progress-аналитика.
+**Цель:** довести до ума UX, добавить AI-фичи (чат, замены), профиль, улучшить Summary.
 
-### Фаза 3 (остаток) — Workout полный
+### Фаза 3 (остаток) — Workout
 
-- [x] `DELETE /api/v1/workouts/:id/sets/:setId` — удалить подход
-- [x] Удаление подходов в UI (кнопка × на каждом подходе)
-- [x] Раскрытие выполненных упражнений (просмотр подходов + отмена)
-- [x] Раскрытие предстоящих упражнений (прошлые результаты + "Начать")
-- [x] `POST /api/v1/exercises/batch-last-results` — пакетный запрос прошлых результатов
-- [x] Drag-and-drop reorder предстоящих упражнений (touch)
-- [x] Partial progress — незавершённые упражнения остаются в "далее"
-- [x] Фикс rest timer (не считал, лаг, анимация, после последнего подхода)
-- [x] Фикс исчезающих упражнений при клике
 - [ ] `PATCH /api/v1/workouts/:id/sets/:setId` — редактировать подход (вес/повторы)
 - [ ] `POST /api/v1/workouts/:id/exercises` — внеплановое упражнение (через exerciseResolver)
 - [ ] `POST /api/v1/exercises/:id/replace-suggest` — AI-предложения замены
-- [x] BottomSheet компонент (переиспользуемый) ✅
 - [ ] BottomSheet: альтернативы, суперсет, AI-замена
 - [ ] Quick actions: "Спросить тренера", "Фото тренажёра"
-- [x] Автоподстановка веса/повторов из прошлой тренировки ✅
-- [x] Свайп-удаление подходов (DoneSetRow: active, done, partial) ✅
 
-### Фаза 4 — Summary + Progress
+### Фаза 4 (остаток) — Summary + Progress
 
-- [x] Progress API: plan-adherence, muscle-volume (sub-muscles), records ✅
-- [x] Progress-экран (BRD §12.4): ring charts, dot ladders, capsule bars, muscle cards ✅
-- [x] Sub-muscle breakdown: грудь (верх/середина/низ), плечи (передние/средние/задние), трапеции → спина ✅
 - [ ] Summary-экран: улучшить (сейчас минимальный)
 - [ ] Progress Phase 2: графики за период, плато, дисбалансы, тренды
+
+### Фаза 6 — Cross-cutting + polish
+
+- [ ] Профиль-экран (`/me`) — сейчас placeholder
+- [ ] Deep-links из бота в мини-апп
+- [ ] Toast-уведомления
+- [ ] Error states (сетевые ошибки, пустые состояния)
+- [ ] Offline-очередь pending-подходов
 
 ### Параллельно: инфра и улучшения
 
 - [ ] Railway автодеплой — починить (GitHub Repo not found)
 - [ ] Дозагрузить GIF (36 упражнений без анимации)
 - [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
-- [x] Loading states — скелетоны при загрузке данных ✅
-- [x] HomeDataContext — кэш Home-данных (stale-while-revalidate) ✅
-- [x] Cancel active workout + Delete past workout ✅
-- [x] Pause/Resume на Home-экране ✅
-- [x] Day picker — шторка выбора тренировки из программы ✅
-- [x] Recent list redesign (название дня, длительность, свайп-удаление) ✅
 
 ---
 
@@ -65,6 +52,23 @@
 ---
 
 ## ✅ Выполнено
+
+### Бот + Layout (2026-04-30) ✅
+
+- [x] Визард `/program`: пол + возраст (9 шагов вместо 7)
+- [x] Промпт `generateProgram.md` учитывает пол и возраст
+- [x] `/workout` показывает следующий день из активной программы
+- [x] Layout: месячная статистика → Progress, еженедельные + мышцы → Home
+- [x] ProgramEditPage: back, activate, program list, safe-area padding
+
+### Фаза 5 — Библиотека + Программы (2026-04-29) ✅
+
+- [x] LibraryPage — каталог упражнений с поиском, фильтрами и detail sheet
+- [x] ProgramEditPage — просмотр/редактирование программы с параметрами упражнений
+- [x] `GET /programs`, `GET /programs/:id`, `PATCH /programs/:id`, `POST /programs/:id/activate`
+- [x] Бот: визард генерации программы через `/program` (Scenes.WizardScene)
+- [x] Rest timer fix: дрифт при сворачивании приложения
+- [x] Telegram safe area insets в fullscreen mode
 
 ### Фаза 4 (частично) — Progress-экран (2026-04-27) ✅
 

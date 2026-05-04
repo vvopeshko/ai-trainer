@@ -75,7 +75,7 @@ cd server && npx prisma studio
 ├── src/
 │   ├── main.jsx             # entry: BrowserRouter > TranslationProvider > TelegramProvider > App
 │   ├── App.jsx              # маршруты
-│   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage, ProgressPage
+│   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage, ProgressPage, LibraryPage, ProgramEditPage
 │   ├── pages/Demo/          # DesignSystemDemo
 │   ├── components/ui/       # Glass, Button, Icon, TopBar, BigStepper и др.
 │   ├── components/layout/   # TabLayout, GlassNav
@@ -89,7 +89,7 @@ cd server && npx prisma studio
     │   ├── routes/          # /api/v1/{auth,exercises,workouts,stats,programs}
     │   ├── controllers/     # exercise, workout, program, stats
     │   ├── middleware/       # telegramAuth.js, errorHandler.js
-    │   ├── bot/             # Telegraf bot (long polling)
+    │   ├── bot/             # Telegraf bot (long polling) + scenes (WizardScene для /program)
     │   ├── services/aiTrainer/  # LLM-логика: identifyMachine, generateProgram, chatWithContext
     │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js
     ├── prisma/schema.prisma
@@ -102,10 +102,10 @@ cd server && npx prisma studio
 Два типа экранов: **таб-экраны** (внутри `TabLayout` с `GlassNav`) и **полноэкранные flow** (без навигации):
 
 - Табы: `/` (Home), `/progress`, `/library`, `/me`
-- Flow: `/workout`, `/summary/:id`
+- Flow: `/workout`, `/program/:id`, `/summary/:id`
 - Dev: `/demo` (дизайн-система)
 
-Ленивая загрузка через `lazy()` для `ProgressPage`, `SummaryPage` и `DesignSystemDemo`.
+Ленивая загрузка через `lazy()` для `ProgressPage`, `LibraryPage`, `ProgramEditPage`, `SummaryPage` и `DesignSystemDemo`.
 
 ### Фронтенд: провайдеры
 
