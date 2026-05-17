@@ -2,7 +2,7 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-04-30
+**Последнее обновление:** 2026-05-17
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
@@ -217,12 +217,13 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
     ├── package.json
     ├── .env           # DATABASE_URL, BOT_TOKEN, ANTHROPIC_API_KEY, ...
     ├── scripts/
-    │   ├── seedExercises.js     # 57 упражнений → Exercise (npm run seed:exercises)
+    │   ├── seedExercises.js     # 924 упражнения → Exercise (npm run seed:exercises)
     │   ├── seedDevData.js       # dev user + 60 workouts + program (npm run seed:dev)
     │   ├── seedProgram.js       # PPL+Arms программа для прод-юзера
-    │   └── importWorkouts.js    # 60 тренировок из workouts.json
+    │   ├── importWorkouts.js    # 60 тренировок из workouts.json
+    │   └── importProgramFromMd.js  # прямой импорт программы (без LLM)
     ├── data/
-    │   ├── enriched-exercises.json   # 57 обогащённых упражнений (seed-данные)
+    │   ├── enriched-exercises.json   # 924 упражнения (seed-данные)
     │   └── fetch-missing-gifs.js     # скрипт дозагрузки GIF из ExerciseDB OSS
     ├── prisma/
     │   └── schema.prisma
@@ -239,7 +240,7 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
         │   └── commands.txt           # для setMyCommands в BotFather
         ├── services/
         │   ├── exerciseResolver.js    # slug → alias → auto-create
-        │   └── aiTrainer/             # identifyMachine, промпты
+        │   └── aiTrainer/             # generateProgram, importProgram, identifyMachine, промпты
         ├── scheduler/                 # node-cron: напоминания
         └── utils/
             ├── prisma.js              # singleton Prisma client
@@ -319,6 +320,7 @@ erDiagram
         int durationWeeks
         boolean isActive
         json planJson
+        json guidelines
         string generatedByModel
         datetime createdAt
     }
@@ -521,7 +523,7 @@ enum ExerciseCategory {
 // ═══════════════════════════════════════════════
 // Program — сгенерированная программа тренировок
 // План хранится как JSON (проще, чем отдельные таблицы ProgramDay/ProgramExercise)
-// Структура planJson: { weeks: [{ days: [{ title, exercises: [{ exerciseId, sets, reps, restSec, notes }] }] }] }
+// Структура planJson: { days: [{ title, durationMin?, notes?, exercises: [{ exerciseId, sets, repsMin, repsMax, restSec, rir?, notes?, alternatives? }] }] }
 // ═══════════════════════════════════════════════
 model Program {
   id               String    @id @default(uuid())
@@ -533,6 +535,7 @@ model Program {
   durationWeeks    Int       @default(4)
   isActive         Boolean   @default(false)            // одна активная на юзера
   planJson         Json
+  guidelines       Json?                                // методические указания: volumeTargets, progression, deload, constraints, nutrition, schedule
 
   generatedByModel String?                              // 'claude-*' — для аналитики качества
 
@@ -669,6 +672,7 @@ model AnalyticsEvent {
 - **WorkoutSet ссылается напрямую на Exercise**, а не на `ProgramExercise`. Так проще делать замены упражнений на лету и логировать "внеплановые" подходы.
 - **MachineIdentification — отдельная таблица**, не подтип `ChatMessage`. Она критична для метрик ключевой фичи (точность распознавания) и возможного будущего датасета для дообучения.
 - **Глобальный `Exercise`, не per-user.** База упражнений одинаковая для всех. Если появится потребность в кастомных упражнениях юзера — добавим `userId: String?` (nullable = глобальное).
+- **`guidelines` как nullable Json на Program.** Структура: `{ volumeTargets, progression, deload, constraints, nutrition, schedule }`. Nullable = старые программы не затронуты. Хранится рядом с planJson, не в отдельной таблице.
 - **`isActive` на Program** вместо отдельного `currentProgramId` у юзера. Проще поддерживать историю программ.
 - **`telegramId` как BigInt**, а не Int — Telegram ID уже выходит за пределы int32 и продолжает расти.
 - **`aliases[]` на Exercise** — массив синонимов ("жим лёжа", "bench press", "жим штанги лёжа") для подбора упражнения после распознавания тренажёра и текстового поиска.
@@ -772,6 +776,7 @@ model AnalyticsEvent {
 | `GET` | `/programs/active/next-workout` | Следующая тренировка |
 | `GET` | `/programs/:id` | Полная программа (обогащённые упражнения) |
 | `PATCH` | `/programs/:id` | Обновление программы (название, planJson) |
+| `POST` | `/programs/import` | Импорт программы из markdown (LLM) |
 | `POST` | `/programs/:id/activate` | Активировать программу |
 | `GET` | `/stats/month` | Месячная статистика |
 | `GET` | `/progress` | Прогресс (plan adherence, muscle volume, records) |
@@ -846,9 +851,11 @@ export async function logSet(req, res) {
 
 ```js
 // псевдокод
-export async function chat(messages, { tools, maxTokens } = {}) { ... }
+export async function chat(messages, { system, maxTokens, retries } = {}) { ... }
 export async function vision(imageBase64, prompt, { maxTokens } = {}) { ... }
 ```
+
+`chat()` включает retry с backoff (до 2 повторов при Connection error / ECONNRESET, задержка 1с, 2с).
 
 Почему:
 - Retry + timeout + логирование в одном месте.
@@ -865,11 +872,14 @@ export async function vision(imageBase64, prompt, { maxTokens } = {}) { ... }
 ```
 server/src/services/aiTrainer/
 ├── generateProgram.js     # профиль (цель, пол, возраст, уровень, ...) → персональная программа
+├── importProgram.js       # markdown → два LLM-вызова (структура + guidelines) → программа в БД
 ├── identifyMachine.js     # фото → название тренажёра + упражнения
 ├── chatWithContext.js     # user message + history → ответ тренера (planned)
 ├── analyzeProgress.js     # метрики за неделю → рекомендации (planned)
 └── prompts/               # промпты отдельными файлами, версионируются в git
     ├── generateProgram.md # учитывает пол, возраст, цель, уровень, оборудование, ограничения
+    ├── importProgram.md   # парсинг структуры программы из markdown
+    ├── importGuidelines.md # парсинг методических указаний
     └── identifyMachine.md
 ```
 
@@ -927,10 +937,11 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
 
 | Скрипт | Команда | Что делает |
 |--------|---------|-----------|
-| `seedExercises.js` | `npm run seed:exercises` | Upsert 57 упражнений из enriched-exercises.json по slug |
+| `seedExercises.js` | `npm run seed:exercises` | Upsert 924 упражнений из enriched-exercises.json по slug |
 | `seedDevData.js` | `npm run seed:dev` | Создаёт dev user (telegramId=0) + 60 тренировок + PPL+Arms программа |
 | `importWorkouts.js` | `node scripts/importWorkouts.js` | Импорт тренировок из workouts.json (для прод-юзера) |
 | `seedProgram.js` | `node scripts/seedProgram.js` | PPL+Arms программа для прод-юзера |
+| `importProgramFromMd.js` | `node scripts/importProgramFromMd.js` | Прямой импорт программы из hardcoded структуры (без LLM) |
 
 Все скрипты idempotent (можно перезапускать). `seedDevData.js` чистит старые данные dev user перед пересозданием.
 

@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-04-30
+**Последнее обновление:** 2026-05-17
 
 ---
 
@@ -52,6 +52,18 @@
 ---
 
 ## ✅ Выполнено
+
+### Импорт программы + Guidelines + RIR (2026-05-17) ✅
+
+- [x] Prisma: `guidelines Json?` на Program
+- [x] Zod-схемы: rir, notes на упражнении; durationMin, notes на дне; guidelines на программе
+- [x] `POST /programs/import` — импорт из markdown через 2 LLM-вызова (структура + guidelines)
+- [x] Сервис `importProgram.js` + промпты `importProgram.md`, `importGuidelines.md`
+- [x] Скрипт `importProgramFromMd.js` — прямой импорт без LLM
+- [x] `generateProgram.js` расширен: rir, durationMin, notes
+- [x] `llm.js` — retry с backoff при ECONNRESET
+- [x] ProgramEditPage: RIR в строке упражнения, day notes, Guidelines-карточка, RIR selector в BottomSheet
+- [x] 8 i18n-ключей
 
 ### Бот + Layout (2026-04-30) ✅
 

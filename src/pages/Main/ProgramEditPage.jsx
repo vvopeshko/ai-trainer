@@ -6,7 +6,7 @@
  * Редактирование: удаление/reorder упражнений, изменение sets/reps/rest, rename дня.
  * Сохранение: PATCH /programs/:id с полной заменой planJson.
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet, apiPatch, apiPost } from '../../utils/api.js'
@@ -16,6 +16,7 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
+import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import TopBar from '../../components/ui/TopBar.jsx'
 
 // ─── Muscle label + grouping ───────────────────────────────────────────
@@ -67,6 +68,18 @@ function computeMuscleVolume(days) {
   return Object.entries(volume)
     .sort((a, b) => b[1] - a[1])
     .map(([label, sets]) => ({ label, sets }))
+}
+
+function computeSubMuscleVolume(days) {
+  const volume = {}
+  for (const day of days) {
+    for (const ex of day.exercises || []) {
+      for (const muscle of ex.primaryMuscles || []) {
+        volume[muscle] = (volume[muscle] || 0) + (ex.sets || 0)
+      }
+    }
+  }
+  return Object.entries(volume).map(([muscle, setsActual]) => ({ muscle, setsActual }))
 }
 
 // ─── Estimate day duration ─────────────────────────────────────────────
@@ -374,6 +387,7 @@ export default function ProgramEditPage() {
   const days = plan?.days || []
   const totalExercises = days.reduce((sum, d) => sum + (d.exercises?.length || 0), 0)
   const muscleVolume = computeMuscleVolume(days)
+  const subMuscleVolume = useMemo(() => computeSubMuscleVolume(days), [days])
   const displayName = editedName ?? program.name
 
   return (
@@ -443,7 +457,7 @@ export default function ProgramEditPage() {
           </div>
         </Glass>
 
-        {/* ── Muscle Targets (badges) ── */}
+        {/* ── Muscle Targets (body map + badges) ── */}
         {muscleVolume.length > 0 && (
           <Glass style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
             <div style={{
@@ -456,7 +470,13 @@ export default function ProgramEditPage() {
             }}>
               {t('program.muscleTargets')}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+            {subMuscleVolume.length > 0 && (
+              <BodyMap muscles={subMuscleVolume} height={220} />
+            )}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)',
+              marginTop: 'var(--space-3)',
+            }}>
               {muscleVolume.map(m => (
                 <span key={m.label} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,

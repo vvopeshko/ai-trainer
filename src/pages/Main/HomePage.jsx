@@ -4,7 +4,7 @@
  * Секции: YearHeader → ProgrammeHero → WeeklyCard → MuscleGroups → Records.
  * Данные: HomeDataContext + ProgressDataContext.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -15,6 +15,7 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
+import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
 
@@ -160,6 +161,18 @@ function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onSta
     ? activeWorkout.programDayIndex + 1
     : null
 
+  // Extract muscles from active day for mini BodyMap
+  const activeDayMuscles = useMemo(() => {
+    if (!activeDay?.exercises) return []
+    const vol = {}
+    for (const ex of activeDay.exercises) {
+      for (const m of ex.primaryMuscles || []) {
+        vol[m] = (vol[m] || 0) + (ex.sets || 3)
+      }
+    }
+    return Object.entries(vol).map(([muscle, setsActual]) => ({ muscle, setsActual }))
+  }, [activeDay])
+
   return (
     <Glass padding={0} style={{
       marginBottom: 'var(--space-5)',
@@ -288,6 +301,12 @@ function ProgrammeHero({ program, activeWorkout, nextDay, nextWorkoutData, onSta
                   {mm}:{ss}
                 </div>
               </div>
+
+              {activeDayMuscles.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                  <BodyMap muscles={activeDayMuscles} height={160} />
+                </div>
+              )}
 
               <Button
                 variant="accent"
@@ -1091,6 +1110,12 @@ export default function HomePage() {
             }}>
               {t('progress.muscle.setsThisWeek', { n: selectedMuscle.setsActual })}
             </div>
+
+            {selectedMuscle.subMuscles?.length > 0 && (
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <BodyMap muscles={selectedMuscle.subMuscles} height={180} />
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {selectedMuscle.exercises.map((ex, i) => (

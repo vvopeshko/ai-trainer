@@ -9,7 +9,7 @@
  *
  * ExercisePicker shown only for no-plan flow or "добавить другое".
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet, apiPost, apiPatch, apiDelete } from '../../utils/api.js'
@@ -21,6 +21,7 @@ import { RestCard } from '../../components/ui/RestCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
+import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 import { getExerciseUnit, setExerciseUnit, kgToLbs, lbsToKg } from '../../utils/weightUnit.js'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
@@ -935,6 +936,38 @@ export default function WorkoutPage() {
   const currentExerciseNum = allExercises.length + (currentExercise ? 1 : 0)
   const currentPlanExercise = hasPlan && planIndex < planExercises.length ? planExercises[planIndex] : null
 
+  // Build muscles data for BodyMap (done=low, current=high, upcoming=medium)
+  const workoutMuscles = useMemo(() => {
+    if (!hasPlan) return []
+    const muscleState = {} // muscle → max level: 'done' | 'current' | 'upcoming'
+    const SETS = { done: 3, current: 10, upcoming: 5 }
+    const PRIORITY = { upcoming: 0, done: 1, current: 2 }
+
+    const addMuscles = (muscles, state) => {
+      for (const m of muscles || []) {
+        const prev = muscleState[m]
+        if (!prev || PRIORITY[state] > PRIORITY[prev]) muscleState[m] = state
+      }
+    }
+
+    const doneIds = new Set(allExercises.map(e => e.exercise.id))
+    for (const ex of allExercises) addMuscles(ex.exercise.primaryMuscles, 'done')
+    if (currentExercise) {
+      const curPlan = planExercises?.find(pe => pe.exerciseId === currentExercise.id)
+      addMuscles(curPlan?.primaryMuscles || currentExercise.primaryMuscles, 'current')
+    }
+    const curId = currentExercise?.id
+    for (const pe of planExercises) {
+      if (pe.exerciseId !== curId && !doneIds.has(pe.exerciseId)) {
+        addMuscles(pe.primaryMuscles, 'upcoming')
+      }
+    }
+
+    return Object.entries(muscleState).map(([muscle, state]) => ({
+      muscle, setsActual: SETS[state],
+    }))
+  }, [hasPlan, allExercises, currentExercise, planExercises])
+
   // ── Handlers ──
 
   const saveCurrentExercise = () => {
@@ -1674,6 +1707,13 @@ export default function WorkoutPage() {
               {t('workout.addOther')}
             </button>
           </Glass>
+        )}
+
+        {/* ── Workout muscle map ── */}
+        {workoutMuscles.length > 0 && upcomingExercises.length > 0 && (
+          <div style={{ marginTop: 14, marginBottom: 4 }}>
+            <BodyMap muscles={workoutMuscles} height={160} />
+          </div>
         )}
 
         {/* ── Upcoming exercises ── */}

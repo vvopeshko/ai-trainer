@@ -21,7 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Стек
 
-- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (Vite-плагин, не PostCSS) + React Router 7 + Lucide + Recharts
+- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + Lucide + Recharts
 - **Backend:** Express 5 + Prisma 6 + PostgreSQL (Neon) + Zod + Telegraf + node-cron
 - **AI:** Claude API (`@anthropic-ai/sdk`) — и для чата, и для vision
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR) + Cloudflare R2 (фото)
@@ -40,7 +40,7 @@ cd server && npm install && npm run dev
 # Первый запуск: seed dev-данных (60 тренировок + PPL+Arms программа)
 cd server && npm run seed:exercises && npm run seed:dev
 
-# Seed упражнений (57 штук, idempotent)
+# Seed упражнений (924 штуки, idempotent upsert по slug)
 cd server && npm run seed:exercises
 
 # Lint (только фронтенд, ESLint 9 flat config; server/ excluded)
@@ -90,11 +90,11 @@ cd server && npx prisma studio
     │   ├── controllers/     # exercise, workout, program, stats
     │   ├── middleware/       # telegramAuth.js, errorHandler.js
     │   ├── bot/             # Telegraf bot (long polling) + scenes (WizardScene для /program)
-    │   ├── services/aiTrainer/  # LLM-логика: identifyMachine, generateProgram, chatWithContext
+    │   ├── services/aiTrainer/  # LLM-логика: identifyMachine, generateProgram, importProgram, chatWithContext
     │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js
     ├── prisma/schema.prisma
     ├── scripts/             # seedExercises.js, seedDevData.js
-    └── data/                # enriched-exercises.json (57 упражнений)
+    └── data/                # enriched-exercises.json (924 упражнения)
 ```
 
 ### Фронтенд: маршрутизация
@@ -118,7 +118,7 @@ cd server && npx prisma studio
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)
 
-`apiGet(path)`, `apiPost(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrapper над `fetch`. Автоматически аттачит `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`.
+`apiGet(path)`, `apiPost(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrappers над `fetch`. Автоматически аттачат `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`.
 
 ### Бэкенд: архитектура
 
@@ -127,6 +127,8 @@ cd server && npx prisma studio
 - Все роуты под `/api/v1/*`, защищены `telegramAuth` middleware.
 - Health-check: `GET /api/health` (без авторизации).
 - **Контроллеры тонкие, сервисы толстые.** LLM-логика — в `services/aiTrainer/`, промпты — в git как `.md`-файлы.
+- `services/exerciseResolver.js` — резолвит названия упражнений от LLM в ID (slug → alias → auto-create).
+- `utils/parseJsonFromLLM.js` — извлечение JSON из LLM-ответов (markdown code fences, etc.).
 - Zod для валидации тел запросов.
 - Централизованный `errorHandler` middleware (ловит ZodError → 400).
 
@@ -177,7 +179,7 @@ Dev-bypass: в dev-окружении заголовок `Authorization: tma dev
 
 ### LLM вызовы
 
-Только через абстракцию `server/src/utils/llm.js` (`llm.chat()`, `llm.vision()`). Не импортируем Anthropic SDK напрямую в контроллерах — чтобы легко подменить провайдера или добавить retry/timeout/логирование.
+Только через абстракцию `server/src/utils/llm.js` (`llm.chat()`, `llm.vision()`). Не импортируем Anthropic SDK напрямую в контроллерах — чтобы легко подменить провайдера или добавить retry/timeout/логирование. `chat()` включает retry с backoff (до 2 повторов при Connection error / ECONNRESET).
 
 ### Аналитика
 
@@ -192,3 +194,13 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 ### Деплой
 
 **Dev-first:** сначала проверяем на `localhost`, потом пушим. `git push origin main` → Vercel и Railway подхватывают автоматически. Ручной деплой не нужен. Детали — в [ARCHITECTURE.md](ARCHITECTURE.md#деплой).
+
+### Env-переменные
+
+Примеры — в `.env.example` (фронт) и `server/.env.example` (бэк).
+
+**Фронт:** `VITE_API_URL` (локально `http://localhost:3001`).
+
+**Бэк:** `DATABASE_URL`, `BOT_TOKEN`, `FRONTEND_URL`, `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_ACCESS_KEY`/`R2_SECRET_KEY`/`R2_BUCKET`/`R2_ENDPOINT` (Cloudflare R2 для фото тренажёров), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`.
+
+`postinstall` в server/package.json автоматически запускает `prisma generate`.

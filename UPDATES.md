@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-05-17 — Импорт программы из markdown, guidelines, RIR
+
+### Program entity: guidelines + RIR + day notes
+
+- Prisma: добавлена nullable колонка `guidelines Json?` на Program (безопасно через `db push`)
+- Zod-схемы в programController расширены: `rir` (string) и `notes` на упражнении, `durationMin` и `notes` на дне, `guidelines` на программе
+- `GET /programs/:id` возвращает `guidelines`
+- `PATCH /programs/:id` сохраняет `guidelines`
+- Извлечена `enrichPlanExercises(planJson)` — переиспользуемый хелпер для обогащения упражнений в программе
+
+### Импорт программы из markdown
+
+- Новый эндпоинт `POST /api/v1/programs/import` — импорт программы из markdown-текста через два параллельных LLM-вызова
+- Сервис `importProgram.js` — два вызова LLM: структура программы (maxTokens: 8192) + guidelines (maxTokens: 2048)
+- Промпты: `importProgram.md` (парсинг структуры) + `importGuidelines.md` (парсинг методических указаний)
+- Guidelines: volumeTargets, progression, deload, constraints, nutrition, schedule
+- Best-effort парсинг guidelines — если не получилось, сохраняется null
+- Скрипт `importProgramFromMd.js` — прямой импорт без LLM (для обхода сетевых проблем с длинными LLM-ответами)
+
+### Генерация программы: расширение
+
+- `generateProgram.js`: схемы расширены — rir, durationMin, notes проходят через resolved exercises/days
+
+### LLM: retry logic
+
+- `llm.js` (`chat()`) — добавлен retry с backoff: до 2 повторов при Connection error / ECONNRESET (задержка 1с, 2с)
+
+### Фронтенд: ProgramEditPage
+
+- **RIR** в строке упражнения: `4×12 RIR 1-2`
+- **Day notes** — блок с иконкой info под заголовком дня (при раскрытии)
+- **Guidelines** — collapsible Glass-карточка с 6 подсекциями: целевые объёмы (badges), прогрессия, деблок, ограничения (bullet list), питание, расписание
+- **RIR selector** в BottomSheet — chip-кнопки `['0', '0-1', '1-2', '2-3', '3+']` с toggle-поведением
+
+### i18n
+
+8 новых ключей: `program.rir`, `program.guidelines`, `program.volumeTargets`, `program.progression`, `program.deload`, `program.constraints`, `program.nutrition`, `program.schedule`
+
+---
+
 ## 2026-04-30 — Бот: wizard с полом/возрастом, /workout, layout reorganization
 
 ### Бот: генерация программы — пол и возраст

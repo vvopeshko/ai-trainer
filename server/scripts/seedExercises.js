@@ -1,7 +1,7 @@
 /**
  * Seed-скрипт: загружает обогащённые упражнения в таблицу Exercise.
  *
- * Источник: server/data/enriched-exercises.json (57 упр.)
+ * Источник: server/data/enriched-exercises.json (924 упр.)
  * Данные получены из Free Exercise DB + ExerciseDB OSS + ручная русификация.
  *
  * Upsert по slug — можно перезапускать безопасно.

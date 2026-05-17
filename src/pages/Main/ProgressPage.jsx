@@ -4,7 +4,7 @@
  * Секции: Заголовок → Month stats (4 плитки) → Recent workouts (с swipe-to-delete).
  * Данные: monthStats + recent из HomeDataContext.
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from '../../components/ui/Glass.jsx'
@@ -14,7 +14,9 @@ import { StatTile } from '../../components/ui/StatTile.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
+import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
+import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
 import { apiGet, apiDelete } from '../../utils/api.js'
 
 // ─── Month Stats Skeleton ─────────────────────────────────────────────
@@ -426,12 +428,30 @@ function ProgressSkeleton() {
 export default function ProgressPage() {
   const { t } = useTranslation()
   const { monthStats, recent, loaded, refresh, setData } = useHomeData()
+  const progressData = useProgressData()
 
   const [deletingWorkoutId, setDeletingWorkoutId] = useState(null)
   const [selectedWorkout, setSelectedWorkout] = useState(null)
   const [workoutDetail, setWorkoutDetail] = useState(null)
+  const [selectedMuscle, setSelectedMuscle] = useState(null)
 
   useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { progressData.refresh() }, [progressData.refresh])
+
+  // Flatten all subMuscles from muscleVolume for BodyMap
+  const flatMuscles = useMemo(() => {
+    if (!progressData.muscleVolume) return []
+    return progressData.muscleVolume.flatMap(g => g.subMuscles || [])
+  }, [progressData.muscleVolume])
+
+  // Find group + exercises for a clicked muscle
+  const handleMuscleClick = useCallback((muscleId) => {
+    if (!progressData.muscleVolume) return
+    const group = progressData.muscleVolume.find(g =>
+      g.subMuscles?.some(s => s.muscle === muscleId)
+    )
+    if (group) setSelectedMuscle(group)
+  }, [progressData.muscleVolume])
 
   const handleDeleteRecent = async () => {
     const id = deletingWorkoutId
@@ -507,6 +527,89 @@ export default function ProgressPage() {
         <StatTile label={t('home.streak')} value={monthStats?.streak ?? 0} icon="flame" />
         <StatTile label={t('home.records')} value="—" icon="trophy" />
       </div>
+
+      {/* Muscle volume body map */}
+      {flatMuscles.length > 0 && (
+        <Glass style={{ padding: 'var(--space-4)', marginTop: 'var(--space-2)' }}>
+          <div style={{
+            fontSize: 'var(--text-xs)',
+            fontWeight: 700,
+            letterSpacing: 'var(--tracking-caps)',
+            textTransform: 'uppercase',
+            color: 'var(--fg-tertiary)',
+            marginBottom: 'var(--space-3)',
+          }}>
+            {t('progress.muscle.sectionTitle')}
+          </div>
+          <BodyMap muscles={flatMuscles} height={260} onMuscleClick={handleMuscleClick} />
+        </Glass>
+      )}
+
+      {/* Muscle detail sheet */}
+      <BottomSheet open={!!selectedMuscle} onClose={() => setSelectedMuscle(null)}>
+        {selectedMuscle && (
+          <>
+            <div style={{
+              fontSize: 'var(--text-base)', fontWeight: 600,
+              color: 'var(--fg-primary)', marginBottom: 4,
+            }}>
+              {selectedMuscle.nameRu}
+            </div>
+            <div style={{
+              fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)',
+              marginBottom: 'var(--space-4)',
+            }}>
+              {t('progress.muscle.nSets', { n: selectedMuscle.setsActual })}
+              {selectedMuscle.setsTarget && ` / ${selectedMuscle.setsTarget}`}
+            </div>
+
+            {/* Sub-muscles */}
+            {selectedMuscle.subMuscles?.length > 0 && (
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)',
+                marginBottom: 'var(--space-4)',
+              }}>
+                {selectedMuscle.subMuscles.map(s => (
+                  <span key={s.muscle} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 10px', borderRadius: 8,
+                    background: 'rgba(255,255,255,0.06)',
+                    fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)',
+                  }}>
+                    <span style={{ fontWeight: 500, color: 'var(--fg-primary)' }}>{s.nameRu}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--fg-tertiary)' }}>
+                      {s.setsActual}{s.setsTarget ? `/${s.setsTarget}` : ''}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Exercises */}
+            {selectedMuscle.exercises?.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {selectedMuscle.exercises.map((ex, i) => (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '8px 0',
+                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--fg-primary)' }}>
+                      {ex.nameRu}
+                    </span>
+                    <span style={{
+                      fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {t('progress.muscle.nSets', { n: ex.sets })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </BottomSheet>
 
       {/* Recent workouts */}
       <RecentList workouts={recent} onDelete={id => setDeletingWorkoutId(id)} onTap={handleTapWorkout} />
