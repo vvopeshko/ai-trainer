@@ -13,8 +13,9 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { StatTile } from '../../components/ui/StatTile.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
+import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
-import { apiDelete } from '../../utils/api.js'
+import { apiGet, apiDelete } from '../../utils/api.js'
 
 // ─── Month Stats Skeleton ─────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ function SwipeRow({ children, onDelete }) {
   )
 }
 
-function RecentList({ workouts, onDelete }) {
+function RecentList({ workouts, onDelete, onTap }) {
   const { t } = useTranslation()
 
   if (!workouts || workouts.length === 0) return null
@@ -183,13 +184,17 @@ function RecentList({ workouts, onDelete }) {
 
           return (
             <SwipeRow key={w.id} onDelete={() => onDelete(w.id)}>
-              <div style={{
-                padding: '12px 14px',
-                borderBottom: i < workouts.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-3)',
-              }}>
+              <div
+                onClick={() => onTap(w)}
+                style={{
+                  padding: '12px 14px',
+                  borderBottom: i < workouts.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  cursor: 'pointer',
+                }}
+              >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: 'var(--text-sm)',
@@ -219,12 +224,147 @@ function RecentList({ workouts, onDelete }) {
                     <span>{t('home.sets', { n: w.setsCount })}</span>
                   </div>
                 </div>
+                <Icon name="chevronRight" size={16} style={{ color: 'var(--fg-disabled)', flexShrink: 0 }} />
               </div>
             </SwipeRow>
           )
         })}
       </Glass>
     </div>
+  )
+}
+
+// ─── Workout Detail Sheet ────────────────────────────────────────────
+
+function WorkoutDetailSheet({ recentItem, workoutDetail, onClose }) {
+  const { t } = useTranslation()
+
+  if (!recentItem) return null
+
+  const title = recentItem.dayTitle
+    ? `${t('home.dayN', { n: (recentItem.programDayIndex ?? 0) + 1 })} · ${recentItem.dayTitle}`
+    : (recentItem.exercises?.length > 0 ? recentItem.exercises.join(', ') : t('home.freeformWorkout'))
+  const duration = formatDuration(recentItem.durationSec, t)
+  const dateLine = formatDateLine(recentItem.startedAt, t)
+
+  // Group sets by exerciseOrder (maintaining order)
+  const exerciseGroups = []
+  if (workoutDetail?.sets) {
+    let currentExId = null
+    let currentGroup = null
+    for (const s of workoutDetail.sets) {
+      if (s.exerciseId !== currentExId) {
+        currentExId = s.exerciseId
+        currentGroup = { name: s.exercise.nameRu, sets: [] }
+        exerciseGroups.push(currentGroup)
+      }
+      currentGroup.sets.push(s)
+    }
+  }
+
+  return (
+    <BottomSheet open={!!recentItem} onClose={onClose}>
+      {/* Header */}
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <div style={{
+          fontSize: 'var(--text-base)',
+          fontWeight: 600,
+          color: 'var(--fg-primary)',
+          marginBottom: 4,
+        }}>
+          {title}
+        </div>
+        <div style={{
+          display: 'flex',
+          gap: 'var(--space-2)',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--fg-tertiary)',
+        }}>
+          <span>{dateLine}</span>
+          {duration && (
+            <>
+              <span style={{ opacity: 0.4 }}>·</span>
+              <span>{duration}</span>
+            </>
+          )}
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>{t('home.sets', { n: recentItem.setsCount })}</span>
+        </div>
+      </div>
+
+      {/* Exercise list */}
+      {!workoutDetail ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {[0, 1, 2].map(i => (
+            <div key={i}>
+              <Skeleton width="60%" height={14} style={{ marginBottom: 8 }} />
+              <Skeleton width="40%" height={12} />
+              <Skeleton width="35%" height={12} style={{ marginTop: 4 }} />
+            </div>
+          ))}
+        </div>
+      ) : exerciseGroups.length === 0 ? (
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--fg-tertiary)' }}>
+          {t('home.freeformWorkout')}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {exerciseGroups.map((group, gi) => (
+            <div key={gi}>
+              <div style={{
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: 'var(--fg-primary)',
+                marginBottom: 6,
+              }}>
+                {group.name}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {group.sets.map((s, si) => (
+                  <div key={s.id} style={{
+                    fontSize: 'var(--text-xs)',
+                    color: s.isWarmup ? 'var(--fg-disabled)' : 'var(--fg-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                  }}>
+                    <span style={{
+                      width: 18,
+                      color: 'var(--fg-disabled)',
+                      fontSize: 'var(--text-xs)',
+                    }}>
+                      {si + 1}.
+                    </span>
+                    <span>
+                      {s.weightKg != null ? `${s.weightKg} кг × ${s.reps}` : `× ${s.reps}`}
+                    </span>
+                    {s.isWarmup && (
+                      <span style={{
+                        fontSize: '10px',
+                        color: 'var(--fg-disabled)',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: 4,
+                        padding: '1px 4px',
+                      }}>
+                        разм.
+                      </span>
+                    )}
+                    {s.rpe != null && (
+                      <span style={{
+                        fontSize: '10px',
+                        color: 'var(--fg-tertiary)',
+                      }}>
+                        RPE {s.rpe}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </BottomSheet>
   )
 }
 
@@ -288,6 +428,8 @@ export default function ProgressPage() {
   const { monthStats, recent, loaded, refresh, setData } = useHomeData()
 
   const [deletingWorkoutId, setDeletingWorkoutId] = useState(null)
+  const [selectedWorkout, setSelectedWorkout] = useState(null)
+  const [workoutDetail, setWorkoutDetail] = useState(null)
 
   useEffect(() => { refresh() }, [refresh])
 
@@ -296,6 +438,20 @@ export default function ProgressPage() {
     setDeletingWorkoutId(null)
     setData(prev => ({ ...prev, recent: prev.recent.filter(w => w.id !== id) }))
     try { await apiDelete(`/api/v1/workouts/${id}`) } catch { /* ignore */ }
+  }
+
+  const handleTapWorkout = async (w) => {
+    setSelectedWorkout(w)
+    setWorkoutDetail(null)
+    try {
+      const data = await apiGet(`/api/v1/workouts/${w.id}`)
+      setWorkoutDetail(data.workout)
+    } catch { /* ignore */ }
+  }
+
+  const handleCloseDetail = () => {
+    setSelectedWorkout(null)
+    setWorkoutDetail(null)
   }
 
   if (!loaded) {
@@ -353,7 +509,7 @@ export default function ProgressPage() {
       </div>
 
       {/* Recent workouts */}
-      <RecentList workouts={recent} onDelete={id => setDeletingWorkoutId(id)} />
+      <RecentList workouts={recent} onDelete={id => setDeletingWorkoutId(id)} onTap={handleTapWorkout} />
 
       <ConfirmDialog
         open={!!deletingWorkoutId}
@@ -363,6 +519,12 @@ export default function ProgressPage() {
         variant="danger"
         onConfirm={handleDeleteRecent}
         onCancel={() => setDeletingWorkoutId(null)}
+      />
+
+      <WorkoutDetailSheet
+        recentItem={selectedWorkout}
+        workoutDetail={workoutDetail}
+        onClose={handleCloseDetail}
       />
     </div>
   )
