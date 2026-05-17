@@ -27,17 +27,33 @@ function client() {
  */
 export async function chat(messages, options = {}) {
   const model = options.model ?? DEFAULT_MODEL
-  const res = await client().messages.create({
-    model,
-    max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-    system: options.system,
-    messages,
-  })
-  return {
-    text: res.content?.[0]?.text ?? '',
-    model: res.model,
-    usage: res.usage,
+  const maxRetries = options.retries ?? 2
+  let lastError
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await client().messages.create({
+        model,
+        max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+        system: options.system,
+        messages,
+      })
+      return {
+        text: res.content?.[0]?.text ?? '',
+        model: res.model,
+        usage: res.usage,
+      }
+    } catch (err) {
+      lastError = err
+      const isRetryable = err.message?.includes('Connection error') || err.message?.includes('ECONNRESET')
+      if (!isRetryable || attempt === maxRetries) throw err
+      const delay = 1000 * (attempt + 1)
+      console.warn(`[llm] retry ${attempt + 1}/${maxRetries} after ${delay}ms: ${err.message}`)
+      await new Promise(r => setTimeout(r, delay))
+    }
   }
+
+  throw lastError
 }
 
 /**

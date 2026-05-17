@@ -1,7 +1,12 @@
 /**
  * Сервис импорта тренировочной программы из markdown через LLM.
  *
- * Поток: markdown-текст → промпт → llm.chat() → JSON → Zod → resolveExercise → БД.
+ * Два вызова LLM:
+ * 1. Парсинг структуры (дни, упражнения) — maxTokens: 4096
+ * 2. Парсинг guidelines (методические указания) — maxTokens: 2048
+ *
+ * Разделение нужно для стабильности: один большой вызов на 8192 токенов
+ * может обрываться по таймауту.
  *
  * Используется из API: POST /api/v1/programs/import
  */
@@ -16,15 +21,21 @@ import { track } from '../../utils/analytics.js'
 import { parseJsonFromLLM } from '../../utils/parseJsonFromLLM.js'
 import { resolveExercise } from '../exerciseResolver.js'
 
-// ─── Загрузка промпта ────────────────────────────────────────────────
+// ─── Загрузка промптов ───────────────────────────────────────────────
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SYSTEM_PROMPT = readFileSync(
+
+const PROGRAM_PROMPT = readFileSync(
   join(__dirname, 'prompts', 'importProgram.md'),
   'utf-8',
 )
 
-// ─── Zod-схема ответа LLM ───────────────────────────────────────────
+const GUIDELINES_PROMPT = readFileSync(
+  join(__dirname, 'prompts', 'importGuidelines.md'),
+  'utf-8',
+)
+
+// ─── Zod-схемы ──────────────────────────────────────────────────────
 
 const importExerciseSchema = z.object({
   slug: z.string(),
@@ -36,6 +47,17 @@ const importExerciseSchema = z.object({
   rir: z.string().optional(),
   notes: z.string().optional().default(''),
   alternatives: z.array(z.string()).optional().default([]),
+})
+
+const programSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  days: z.array(z.object({
+    title: z.string(),
+    durationMin: z.number().int().positive().optional(),
+    notes: z.string().optional(),
+    exercises: z.array(importExerciseSchema).min(1),
+  })).min(1),
 })
 
 const volumeTargetSchema = z.object({
@@ -51,18 +73,6 @@ const guidelinesSchema = z.object({
   constraints: z.array(z.string()).optional(),
   nutrition: z.string().optional(),
   schedule: z.string().optional(),
-}).optional()
-
-const importSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  days: z.array(z.object({
-    title: z.string(),
-    durationMin: z.number().int().positive().optional(),
-    notes: z.string().optional(),
-    exercises: z.array(importExerciseSchema).min(1),
-  })).min(1),
-  guidelines: guidelinesSchema,
 })
 
 // ─── Основная функция ────────────────────────────────────────────────
@@ -75,34 +85,44 @@ const importSchema = z.object({
  * @returns {Promise<{ success: boolean, program?: object, error?: string }>}
  */
 export async function importProgram(userId, markdownText) {
-  // 1. Вызов LLM
-  const result = await llm.chat(
-    [{ role: 'user', content: markdownText }],
-    {
-      system: SYSTEM_PROMPT,
-      maxTokens: 8192,
-    },
-  )
+  const userMessage = [{ role: 'user', content: markdownText }]
 
-  // 2. Парсинг JSON
-  const parsed = parseJsonFromLLM(result.text)
+  // 1. Два параллельных вызова LLM: структура + guidelines
+  const [programResult, guidelinesResult] = await Promise.all([
+    llm.chat(userMessage, { system: PROGRAM_PROMPT, maxTokens: 8192 }),
+    llm.chat(userMessage, { system: GUIDELINES_PROMPT, maxTokens: 2048 }),
+  ])
 
-  if (!parsed) {
-    console.error('[importProgram] failed to parse LLM response:', result.text.slice(0, 500))
+  // 2. Парсинг структуры программы
+  const parsedProgram = parseJsonFromLLM(programResult.text)
+
+  if (!parsedProgram) {
+    console.error('[importProgram] failed to parse program response:', programResult.text.slice(0, 500))
     track(userId, 'program_import_failed', { reason: 'json_parse_error' })
     return { success: false, error: 'Не удалось распарсить программу. Попробуй ещё раз.' }
   }
 
-  // 3. Zod-валидация
-  const validation = importSchema.safeParse(parsed)
+  const programValidation = programSchema.safeParse(parsedProgram)
 
-  if (!validation.success) {
-    console.error('[importProgram] Zod validation failed:', validation.error.issues)
+  if (!programValidation.success) {
+    console.error('[importProgram] program validation failed:', programValidation.error.issues)
     track(userId, 'program_import_failed', { reason: 'validation_error' })
     return { success: false, error: 'Не удалось валидировать программу. Попробуй ещё раз.' }
   }
 
-  const data = validation.data
+  // 3. Парсинг guidelines (best-effort — если не получилось, сохраним null)
+  let guidelines = null
+  const parsedGuidelines = parseJsonFromLLM(guidelinesResult.text)
+  if (parsedGuidelines) {
+    const guidelinesValidation = guidelinesSchema.safeParse(parsedGuidelines)
+    if (guidelinesValidation.success) {
+      guidelines = guidelinesValidation.data
+    } else {
+      console.warn('[importProgram] guidelines validation failed, skipping:', guidelinesValidation.error.issues)
+    }
+  }
+
+  const data = programValidation.data
 
   // 4. Привязка упражнений к БД через exerciseResolver
   const resolvedDays = []
@@ -143,8 +163,8 @@ export async function importProgram(userId, markdownText) {
       durationWeeks: 4,
       isActive: false,
       planJson: { days: resolvedDays },
-      guidelines: data.guidelines || null,
-      generatedByModel: result.model,
+      guidelines,
+      generatedByModel: programResult.model,
     },
   })
 
@@ -154,10 +174,10 @@ export async function importProgram(userId, markdownText) {
     name: data.name,
     daysCount: resolvedDays.length,
     totalExercises: resolvedDays.reduce((sum, d) => sum + d.exercises.length, 0),
-    hasGuidelines: !!data.guidelines,
-    model: result.model,
-    tokensInput: result.usage?.input_tokens,
-    tokensOutput: result.usage?.output_tokens,
+    hasGuidelines: !!guidelines,
+    model: programResult.model,
+    tokensInput: (programResult.usage?.input_tokens || 0) + (guidelinesResult.usage?.input_tokens || 0),
+    tokensOutput: (programResult.usage?.output_tokens || 0) + (guidelinesResult.usage?.output_tokens || 0),
   })
 
   return { success: true, program }
