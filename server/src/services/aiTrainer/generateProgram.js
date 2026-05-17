@@ -33,6 +33,7 @@ const programExerciseSchema = z.object({
   repsMin: z.number().int().min(1).max(100),
   repsMax: z.number().int().min(1).max(100),
   restSec: z.number().int().min(0).max(600).default(90),
+  rir: z.string().optional(),
   notes: z.string().optional().default(''),
   alternatives: z.array(z.string()).optional().default([]),
 })
@@ -42,6 +43,8 @@ const programSchema = z.object({
   description: z.string(),
   days: z.array(z.object({
     title: z.string(),
+    durationMin: z.number().int().positive().optional(),
+    notes: z.string().optional(),
     exercises: z.array(programExerciseSchema).min(1),
   })).min(1),
 })
@@ -176,12 +179,15 @@ export async function generateProgram(userId, profile) {
         repsMin: ex.repsMin,
         repsMax: ex.repsMax,
         restSec: ex.restSec,
+        ...(ex.rir && { rir: ex.rir }),
         notes: ex.notes,
         alternatives: ex.alternatives,
       })
     }
     resolvedDays.push({
       title: day.title,
+      ...(day.durationMin && { durationMin: day.durationMin }),
+      ...(day.notes && { notes: day.notes }),
       exercises: resolvedExercises,
     })
   }

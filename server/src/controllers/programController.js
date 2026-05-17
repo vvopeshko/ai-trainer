@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
+import { importProgram } from '../services/aiTrainer/importProgram.js'
 
 /**
  * GET /api/v1/programs
@@ -88,6 +89,44 @@ export async function getNextWorkout(req, res) {
 }
 
 /**
+ * Обогащает planJson данными из Exercise (primaryMuscles, secondaryMuscles, equipment).
+ * Используется в getProgram и importProgramHandler.
+ */
+export async function enrichPlanExercises(planJson) {
+  const exerciseIds = []
+  for (const day of planJson?.days || []) {
+    for (const ex of day.exercises || []) {
+      if (ex.exerciseId) exerciseIds.push(ex.exerciseId)
+    }
+  }
+
+  const exercises = exerciseIds.length > 0
+    ? await prisma.exercise.findMany({
+        where: { id: { in: [...new Set(exerciseIds)] } },
+        select: { id: true, primaryMuscles: true, secondaryMuscles: true, equipment: true },
+      })
+    : []
+
+  const exerciseMap = Object.fromEntries(exercises.map(e => [e.id, e]))
+
+  return {
+    ...planJson,
+    days: (planJson?.days || []).map(day => ({
+      ...day,
+      exercises: (day.exercises || []).map(ex => {
+        const info = exerciseMap[ex.exerciseId]
+        return {
+          ...ex,
+          primaryMuscles: info?.primaryMuscles || [],
+          secondaryMuscles: info?.secondaryMuscles || [],
+          equipment: info?.equipment || [],
+        }
+      }),
+    })),
+  }
+}
+
+/**
  * GET /api/v1/programs/:id
  *
  * Полная программа с обогащёнными данными упражнений (primaryMuscles, equipment).
@@ -101,40 +140,7 @@ export async function getProgram(req, res) {
     return res.status(404).json({ error: 'Program not found' })
   }
 
-  // Собрать все exerciseId из planJson
-  const exerciseIds = []
-  for (const day of program.planJson?.days || []) {
-    for (const ex of day.exercises || []) {
-      if (ex.exerciseId) exerciseIds.push(ex.exerciseId)
-    }
-  }
-
-  // Одним запросом получить muscles/equipment
-  const exercises = exerciseIds.length > 0
-    ? await prisma.exercise.findMany({
-        where: { id: { in: [...new Set(exerciseIds)] } },
-        select: { id: true, primaryMuscles: true, secondaryMuscles: true, equipment: true },
-      })
-    : []
-
-  const exerciseMap = Object.fromEntries(exercises.map(e => [e.id, e]))
-
-  // Обогатить planJson
-  const enrichedPlanJson = {
-    ...program.planJson,
-    days: (program.planJson?.days || []).map(day => ({
-      ...day,
-      exercises: (day.exercises || []).map(ex => {
-        const info = exerciseMap[ex.exerciseId]
-        return {
-          ...ex,
-          primaryMuscles: info?.primaryMuscles || [],
-          secondaryMuscles: info?.secondaryMuscles || [],
-          equipment: info?.equipment || [],
-        }
-      }),
-    })),
-  }
+  const enrichedPlanJson = await enrichPlanExercises(program.planJson)
 
   res.json({
     program: {
@@ -144,6 +150,7 @@ export async function getProgram(req, res) {
       durationWeeks: program.durationWeeks,
       isActive: program.isActive,
       planJson: enrichedPlanJson,
+      guidelines: program.guidelines,
       createdAt: program.createdAt,
       updatedAt: program.updatedAt,
     },
@@ -163,6 +170,8 @@ const planExerciseSchema = z.object({
   repsMin: z.number().int().positive(),
   repsMax: z.number().int().positive(),
   restSec: z.number().int().nonnegative().default(90),
+  rir: z.string().optional(),
+  notes: z.string().optional(),
   alternatives: z.array(z.string()).default([]),
 })
 
@@ -171,10 +180,13 @@ const updateProgramSchema = z.object({
   planJson: z.object({
     days: z.array(z.object({
       title: z.string(),
+      durationMin: z.number().int().positive().optional(),
+      notes: z.string().optional(),
       exercises: z.array(planExerciseSchema),
     })),
   }).optional(),
-}).refine(d => d.name || d.planJson, { message: 'Nothing to update' })
+  guidelines: z.record(z.unknown()).nullable().optional(),
+}).refine(d => d.name || d.planJson || d.guidelines !== undefined, { message: 'Nothing to update' })
 
 export async function updateProgram(req, res) {
   const data = updateProgramSchema.parse(req.body)
@@ -193,6 +205,7 @@ export async function updateProgram(req, res) {
     data: {
       ...(data.name && { name: data.name }),
       ...(data.planJson && { planJson: data.planJson }),
+      ...(data.guidelines !== undefined && { guidelines: data.guidelines }),
     },
   })
 
@@ -201,6 +214,7 @@ export async function updateProgram(req, res) {
       id: updated.id,
       name: updated.name,
       planJson: updated.planJson,
+      guidelines: updated.guidelines,
       updatedAt: updated.updatedAt,
     },
   })
@@ -233,4 +247,39 @@ export async function activateProgram(req, res) {
   ])
 
   res.json({ ok: true })
+}
+
+/**
+ * POST /api/v1/programs/import
+ *
+ * Импорт программы из markdown-текста через LLM.
+ */
+const importBodySchema = z.object({
+  text: z.string().min(100),
+})
+
+export async function importProgramHandler(req, res) {
+  const { text } = importBodySchema.parse(req.body)
+
+  const result = await importProgram(req.user.id, text)
+
+  if (!result.success) {
+    return res.status(422).json({ error: result.error })
+  }
+
+  const enrichedPlanJson = await enrichPlanExercises(result.program.planJson)
+
+  res.json({
+    program: {
+      id: result.program.id,
+      name: result.program.name,
+      description: result.program.description,
+      durationWeeks: result.program.durationWeeks,
+      isActive: result.program.isActive,
+      planJson: enrichedPlanJson,
+      guidelines: result.program.guidelines,
+      createdAt: result.program.createdAt,
+      updatedAt: result.program.updatedAt,
+    },
+  })
 }

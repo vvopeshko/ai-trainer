@@ -169,6 +169,9 @@ export default function ProgramEditPage() {
   // Drag state
   const [dragState, setDragState] = useState(null)
 
+  // Guidelines expanded sections
+  const [guidelinesExpanded, setGuidelinesExpanded] = useState(false)
+
   const isDirty = editedPlan !== null || editedName !== null
   const plan = editedPlan ?? program?.planJson
 
@@ -477,6 +480,152 @@ export default function ProgramEditPage() {
           </Glass>
         )}
 
+        {/* ── Guidelines ── */}
+        {program.guidelines && (
+          <Glass style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+            <button
+              onClick={() => setGuidelinesExpanded(prev => !prev)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <span style={{
+                fontSize: 'var(--text-xs)',
+                fontWeight: 700,
+                letterSpacing: 'var(--tracking-caps)',
+                textTransform: 'uppercase',
+                color: 'var(--fg-tertiary)',
+              }}>
+                {t('program.guidelines')}
+              </span>
+              <Icon
+                name="chevronRight"
+                size={14}
+                style={{
+                  color: 'var(--fg-disabled)',
+                  transform: guidelinesExpanded ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 0.2s ease',
+                }}
+              />
+            </button>
+
+            {guidelinesExpanded && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                {/* Volume Targets */}
+                {program.guidelines.volumeTargets?.length > 0 && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--fg-secondary)', marginBottom: 'var(--space-2)',
+                    }}>
+                      {t('program.volumeTargets')}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                      {program.guidelines.volumeTargets.map((vt, i) => (
+                        <span key={i} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '5px 10px', borderRadius: 8,
+                          background: 'rgba(255,255,255,0.06)',
+                          fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          <span style={{ color: 'var(--fg-primary)', fontWeight: 500 }}>{vt.muscle}</span>
+                          <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--fg-tertiary)' }}>
+                            {vt.sets}
+                          </span>
+                          {vt.note && <span style={{ color: 'var(--fg-disabled)' }}>{vt.note}</span>}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Progression */}
+                {program.guidelines.progression && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--fg-secondary)', marginBottom: 'var(--space-1)',
+                    }}>
+                      {t('program.progression')}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                      {program.guidelines.progression}
+                    </div>
+                  </div>
+                )}
+
+                {/* Deload */}
+                {program.guidelines.deload && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--fg-secondary)', marginBottom: 'var(--space-1)',
+                    }}>
+                      {t('program.deload')}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                      {program.guidelines.deload}
+                    </div>
+                  </div>
+                )}
+
+                {/* Constraints */}
+                {program.guidelines.constraints?.length > 0 && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--fg-secondary)', marginBottom: 'var(--space-1)',
+                    }}>
+                      {t('program.constraints')}
+                    </div>
+                    <ul style={{
+                      margin: 0, paddingLeft: 16,
+                      fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.5,
+                    }}>
+                      {program.guidelines.constraints.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Nutrition */}
+                {program.guidelines.nutrition && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--fg-secondary)', marginBottom: 'var(--space-1)',
+                    }}>
+                      {t('program.nutrition')}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                      {program.guidelines.nutrition}
+                    </div>
+                  </div>
+                )}
+
+                {/* Schedule */}
+                {program.guidelines.schedule && (
+                  <div>
+                    <div style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--fg-secondary)', marginBottom: 'var(--space-1)',
+                    }}>
+                      {t('program.schedule')}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                      {program.guidelines.schedule}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Glass>
+        )}
+
         {/* ── Activate Button ── */}
         {!program.isActive && (
           <button
@@ -595,6 +744,21 @@ export default function ProgramEditPage() {
                 />
               </button>
 
+              {/* Day notes */}
+              {expanded && day.notes && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)',
+                  padding: '10px var(--space-4)',
+                  borderTop: '1px solid rgba(255,255,255,0.04)',
+                  background: 'rgba(255,255,255,0.02)',
+                }}>
+                  <Icon name="info" size={14} style={{ color: 'var(--fg-tertiary)', flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
+                    {day.notes}
+                  </span>
+                </div>
+              )}
+
               {/* Expanded: exercise list */}
               {expanded && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
@@ -652,7 +816,7 @@ export default function ProgramEditPage() {
                           <div style={{
                             fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', marginTop: 1,
                           }}>
-                            {ex.sets}×{ex.repsMax || ex.repsMin}
+                            {ex.sets}×{ex.repsMax || ex.repsMin}{ex.rir && ` RIR ${ex.rir}`}
                             {(ex.primaryMuscles?.length > 0 || ex.secondaryMuscles?.length > 0) && (
                               <span style={{ opacity: 0.5 }}> · {
                                 [...(ex.primaryMuscles || []), ...(ex.secondaryMuscles || [])]
@@ -822,6 +986,45 @@ export default function ProgramEditPage() {
               max={300}
               onChange={v => handleUpdateExercise(editingExercise.dayIdx, editingExercise.exIdx, { restSec: v })}
             />
+
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+            {/* RIR selector */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 0',
+            }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)' }}>
+                {t('program.rir')}
+              </span>
+              <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
+                {['0', '0-1', '1-2', '2-3', '3+'].map(v => (
+                  <button
+                    key={v}
+                    onClick={() => handleUpdateExercise(
+                      editingExercise.dayIdx, editingExercise.exIdx,
+                      { rir: editEx.rir === v ? undefined : v },
+                    )}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: editEx.rir === v
+                        ? 'hsla(var(--accent-h,158),40%,30%,0.4)'
+                        : 'rgba(255,255,255,0.06)',
+                      color: editEx.rir === v
+                        ? 'hsl(var(--accent-h,158),55%,72%)'
+                        : 'var(--fg-secondary)',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginBottom: 'var(--space-4)' }} />
 

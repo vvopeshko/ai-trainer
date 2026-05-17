@@ -167,6 +167,7 @@ model Program {
   durationWeeks    Int       @default(4)
   isActive         Boolean   @default(false) // одна активная на юзера
   planJson         Json
+  guidelines       Json? // методические указания: volumeTargets, progression, deload, constraints, nutrition, schedule
 
   generatedByModel String? // 'claude-*' — для аналитики качества
 

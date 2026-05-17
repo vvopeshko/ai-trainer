@@ -164,6 +164,14 @@ export const translations = {
     'program.active': 'Активная',
     'program.otherPrograms': 'Все программы',
     'program.daysShort': '{{n}} дн.',
+    'program.rir': 'RIR',
+    'program.guidelines': 'Методические указания',
+    'program.volumeTargets': 'Целевые объёмы',
+    'program.progression': 'Прогрессия',
+    'program.deload': 'Деблок',
+    'program.constraints': 'Ограничения',
+    'program.nutrition': 'Питание',
+    'program.schedule': 'Расписание',
 
     // Library screen
     'library.title': 'Каталог',
