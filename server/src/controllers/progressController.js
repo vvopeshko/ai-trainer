@@ -159,7 +159,7 @@ export async function getProgress(req, res) {
         isWarmup: false,
       },
       select: {
-        exercise: { select: { slug: true, primaryMuscles: true } },
+        exercise: { select: { slug: true, nameRu: true, primaryMuscles: true } },
       },
     }),
 
@@ -240,11 +240,20 @@ export async function getProgress(req, res) {
 
   // ── Muscle volume (per individual muscle, then aggregate to groups) ──
   const actualByMuscle = {}
+  // exercisesByGroup: { group → { slug → { nameRu, sets } } }
+  const exercisesByGroup = {}
   for (const s of weekSets) {
     const muscles = resolveMuscles(s.exercise.slug, s.exercise.primaryMuscles)
     for (const muscle of muscles) {
-      if (MUSCLE_GROUP_MAP[muscle]) {
+      const group = MUSCLE_GROUP_MAP[muscle]
+      if (group) {
         actualByMuscle[muscle] = (actualByMuscle[muscle] || 0) + 1
+        if (!exercisesByGroup[group]) exercisesByGroup[group] = {}
+        const slug = s.exercise.slug
+        if (!exercisesByGroup[group][slug]) {
+          exercisesByGroup[group][slug] = { nameRu: s.exercise.nameRu || slug, sets: 0 }
+        }
+        exercisesByGroup[group][slug].sets += 1
       }
     }
   }
@@ -293,12 +302,17 @@ export async function getProgress(req, res) {
     const totalActual = subMuscles.reduce((sum, s) => sum + s.setsActual, 0)
     const totalTarget = subMuscles.reduce((sum, s) => sum + (s.setsTarget || 0), 0) || null
 
+    // Exercises that contributed to this group, sorted by sets desc
+    const groupExercises = Object.values(exercisesByGroup[group] || {})
+      .sort((a, b) => b.sets - a.sets)
+
     return {
       group,
       nameRu: GROUP_NAMES_RU[group],
       setsActual: totalActual,
       setsTarget: totalTarget,
       subMuscles,
+      exercises: groupExercises,
     }
   })
 

@@ -683,7 +683,7 @@ function WeeklyCard({ data }) {
   )
 }
 
-function MuscleGroupCard({ group }) {
+function MuscleGroupCard({ group, onTap }) {
   const { t } = useTranslation()
   const iconName = MUSCLE_ICONS[group.group] || 'activity'
   const hasTarget = group.setsTarget != null && group.setsTarget > 0
@@ -691,7 +691,10 @@ function MuscleGroupCard({ group }) {
   const max = group.setsTarget
 
   return (
-    <Glass style={{ padding: 'var(--space-4)' }}>
+    <Glass
+      style={{ padding: 'var(--space-4)', cursor: onTap ? 'pointer' : undefined }}
+      onClick={onTap ? () => onTap(group) : undefined}
+    >
       <div style={{
         display: 'flex', justifyContent: 'space-between',
         alignItems: 'flex-start', gap: 'var(--space-3)',
@@ -911,6 +914,7 @@ export default function HomePage() {
   const [starting, setStarting] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showDayPicker, setShowDayPicker] = useState(false)
+  const [selectedMuscle, setSelectedMuscle] = useState(null)
 
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => { refreshProgress() }, [refreshProgress])
@@ -1031,7 +1035,11 @@ export default function HomePage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 {visibleMuscles.map(g => (
-                  <MuscleGroupCard key={g.group} group={g} />
+                  <MuscleGroupCard
+                    key={g.group}
+                    group={g}
+                    onTap={g.exercises?.length > 0 ? setSelectedMuscle : undefined}
+                  />
                 ))}
               </div>
             </div>
@@ -1054,6 +1062,68 @@ export default function HomePage() {
         onConfirm={handleCancel}
         onCancel={() => setConfirmCancel(false)}
       />
+
+      {/* Muscle group detail bottom sheet */}
+      <BottomSheet open={!!selectedMuscle} onClose={() => setSelectedMuscle(null)}>
+        {selectedMuscle && (
+          <>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+              marginBottom: 4,
+            }}>
+              <Icon
+                name={MUSCLE_ICONS[selectedMuscle.group] || 'activity'}
+                size={20}
+                style={{ color: 'hsl(var(--accent-h,158),55%,72%)' }}
+              />
+              <span style={{
+                fontSize: 'var(--text-lg)',
+                fontWeight: 600,
+                color: 'var(--fg-primary)',
+              }}>
+                {selectedMuscle.nameRu}
+              </span>
+            </div>
+            <div style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--fg-tertiary)',
+              marginBottom: 'var(--space-4)',
+            }}>
+              {t('progress.muscle.setsThisWeek', { n: selectedMuscle.setsActual })}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {selectedMuscle.exercises.map((ex, i) => (
+                <div key={i} style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: i < selectedMuscle.exercises.length - 1
+                    ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                }}>
+                  <span style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--fg-primary)',
+                    flex: 1, minWidth: 0,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    marginRight: 'var(--space-3)',
+                  }}>
+                    {ex.nameRu}
+                  </span>
+                  <span style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--fg-tertiary)',
+                    fontVariantNumeric: 'tabular-nums',
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                    {t('progress.muscle.nSets', { n: ex.sets })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </BottomSheet>
 
       {/* Day picker bottom sheet */}
       <BottomSheet open={showDayPicker} onClose={() => setShowDayPicker(false)}>

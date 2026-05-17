@@ -126,6 +126,8 @@ export const translations = {
     'progress.week.planRemaining': 'Осталось {{n}} до плана',
     'progress.muscle.sectionTitle': 'Подходы по мышцам · неделя',
     'progress.muscle.target': 'Цель: {{min}}–{{max}} подх./нед',
+    'progress.muscle.setsThisWeek': '{{n}} подх. за неделю',
+    'progress.muscle.nSets': '{{n}} подх.',
     'progress.status.low': 'Недогруз −{{n}}',
     'progress.status.optimal': 'В норме',
     'progress.status.over': 'Чуть выше +{{n}}',
