@@ -30,7 +30,6 @@ export default function TabLayout({ children }) {
       <Mesh />
       <div style={{
         position: 'relative',
-        zIndex: 1,
         paddingTop: 'var(--safe-top, 0px)',
         paddingBottom: 'calc(80px + var(--safe-bottom, 0px))',
         minHeight: '100vh',
