@@ -86,6 +86,22 @@ function buildBodyState(muscles) {
   return state
 }
 
+// ─── Fix library styles to fit within container height ──────────────────
+
+function fixSvgSizing(containerEl) {
+  const wrapper = containerEl.querySelector('.body-chart-container')
+  if (wrapper) {
+    wrapper.style.padding = '0'
+  }
+  const svg = containerEl.querySelector('.body-chart-svg')
+  if (svg) {
+    svg.style.width = 'auto'
+    svg.style.height = '100%'
+    svg.style.maxHeight = '100%'
+    svg.style.maxWidth = '100%'
+  }
+}
+
 // ─── Component ──────────────────────────────────────────────────────────
 
 export function BodyMap({ muscles, height = 240, onMuscleClick }) {
@@ -121,6 +137,9 @@ export function BodyMap({ muscles, height = 240, onMuscleClick }) {
       enableTransitions: true,
     })
 
+    fixSvgSizing(frontRef.current)
+    fixSvgSizing(backRef.current)
+
     return () => {
       frontChart.current?.destroy()
       backChart.current?.destroy()
@@ -140,18 +159,17 @@ export function BodyMap({ muscles, height = 240, onMuscleClick }) {
     <div style={{
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       gap: 4,
       height,
-      overflow: 'hidden',
     }}>
       <div
         ref={frontRef}
-        style={{ flex: '0 0 50%', height: '100%', display: 'flex', justifyContent: 'center' }}
+        style={{ height: '100%', display: 'flex', justifyContent: 'center' }}
       />
       <div
         ref={backRef}
-        style={{ flex: '0 0 50%', height: '100%', display: 'flex', justifyContent: 'center' }}
+        style={{ height: '100%', display: 'flex', justifyContent: 'center' }}
       />
     </div>
   )

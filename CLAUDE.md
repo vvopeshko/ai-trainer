@@ -21,7 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Стек
 
-- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + Lucide + Recharts
+- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + Lucide + Recharts + body-muscles (анатомическая SVG-карта)
 - **Backend:** Express 5 + Prisma 6 + PostgreSQL (Neon) + Zod + Telegraf + node-cron
 - **AI:** Claude API (`@anthropic-ai/sdk`) — и для чата, и для vision
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR) + Cloudflare R2 (фото)
@@ -143,10 +143,12 @@ cd server && npx prisma studio
 Все компоненты — **named exports** через barrel `src/components/ui/index.js`. **Исключения:** `TopBar` и `BigStepper` — default export, импортировать напрямую.
 
 ```js
-import { Glass, Button, Icon, Skeleton, ConfirmDialog, BottomSheet } from '../../components/ui/index.js'
+import { Glass, Button, Icon, Skeleton, ConfirmDialog, BottomSheet, BodyMap } from '../../components/ui/index.js'
 import TopBar from '../../components/ui/TopBar.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 ```
+
+**BodyMap** — React-обёртка над `body-muscles` (70+ SVG-зон, front+back вид). Принимает `muscles={[{ muscle, setsActual, setsTarget }]}`, автоматически рассчитывает интенсивность. Маппинг 20 внутренних muscle ID → зоны библиотеки в `MUSCLE_ZONE_MAP`. Используется на 5 экранах (Progress, Home, ProgramEdit, Workout, ProgrammeHero).
 
 ### Правила
 

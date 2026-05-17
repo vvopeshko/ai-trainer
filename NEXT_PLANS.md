@@ -53,6 +53,13 @@
 
 ## ✅ Выполнено
 
+### BodyMap — анатомическая карта мышц (2026-05-17) ✅
+
+- [x] `BodyMap.jsx` — React-обёртка над `body-muscles` (70+ SVG-зон, front+back, интенсивность 0-10)
+- [x] Маппинг 20 внутренних muscle ID → зоны библиотеки
+- [x] Интеграция в 5 экранов: ProgressPage, HomePage BottomSheet, ProgramEditPage, WorkoutPage, HomePage ProgrammeHero
+- [x] Fix: hooks crash в ProgramEditPage (useMemo после условных return)
+
 ### Импорт программы + Guidelines + RIR (2026-05-17) ✅
 
 - [x] Prisma: `guidelines Json?` на Program

@@ -20,6 +20,7 @@
 - **React Router 7** — SPA
 - **Lucide React** — outline-иконки
 - **Recharts** — графики прогресса (тоннаж, 1RM, частота)
+- **body-muscles** — анатомическая SVG-карта (70+ зон, front+back вид, интенсивность 0-10)
 - **Telegram WebApp SDK** — нативная интеграция
 
 ### Сервер (API + бот в одном процессе)
@@ -207,7 +208,7 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
 │   │   ├── Main/      # HomePage, WorkoutPage, SummaryPage, ProgressPage, LibraryPage, ProgramEditPage
 │   │   └── Demo/      # DesignSystemDemo
 │   ├── components/
-│   │   ├── ui/        # Glass, Button, Icon, BigStepper, TopBar, RestCard, ...
+│   │   ├── ui/        # Glass, Button, Icon, BigStepper, TopBar, RestCard, BodyMap, ...
 │   │   └── layout/    # TabLayout, GlassNav
 │   ├── hooks/
 │   ├── i18n/          # TranslationProvider, useTranslation, translations.js

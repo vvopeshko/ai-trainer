@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-05-17 — Body Map, импорт программы, guidelines, RIR
+
+### BodyMap — анатомическая карта мышц (body-muscles)
+
+- Новый компонент `src/components/ui/BodyMap.jsx` — React-обёртка над библиотекой `body-muscles` (70+ SVG-зон, front+back вид, интенсивность 0-10)
+- Зависимость `body-muscles` добавлена в корневой `package.json`
+- Маппинг 20 внутренних muscle ID на зоны библиотеки (`MUSCLE_ZONE_MAP`)
+- Автоматический расчёт интенсивности из setsActual/setsTarget
+- Named export через barrel (`src/components/ui/index.js`)
+
+**Интеграция в 5 экранов:**
+
+| Экран | Что показывает |
+|-------|---------------|
+| ProgressPage | Тепловая карта недельного объёма мышц + detail BottomSheet при клике |
+| HomePage (BottomSheet) | Компактная карта в детали группы мышц |
+| ProgramEditPage | Карта над badges целевых мышц программы |
+| WorkoutPage | Done/current/upcoming мышцы с 3 уровнями интенсивности |
+| HomePage (ProgrammeHero) | Мини-карта под таймером во время активной тренировки |
+
+### Fix: hooks crash в ProgramEditPage (a36b15d)
+
+- `useMemo` был после условных return (loading/error) — нарушение Rules of Hooks, чёрный экран
+- Заменён на обычный вызов функции (вычисление дешёвое)
+
+---
+
 ## 2026-05-17 — Импорт программы из markdown, guidelines, RIR
 
 ### Program entity: guidelines + RIR + day notes
