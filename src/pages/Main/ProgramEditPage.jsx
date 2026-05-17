@@ -6,7 +6,7 @@
  * Редактирование: удаление/reorder упражнений, изменение sets/reps/rest, rename дня.
  * Сохранение: PATCH /programs/:id с полной заменой planJson.
  */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet, apiPatch, apiPost } from '../../utils/api.js'
@@ -387,7 +387,7 @@ export default function ProgramEditPage() {
   const days = plan?.days || []
   const totalExercises = days.reduce((sum, d) => sum + (d.exercises?.length || 0), 0)
   const muscleVolume = computeMuscleVolume(days)
-  const subMuscleVolume = useMemo(() => computeSubMuscleVolume(days), [days])
+  const subMuscleVolume = computeSubMuscleVolume(days)
   const displayName = editedName ?? program.name
 
   return (
