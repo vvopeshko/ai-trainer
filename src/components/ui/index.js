@@ -28,3 +28,6 @@ export { BottomSheet } from './BottomSheet.jsx'
 
 // Visualization
 export { BodyMap } from './BodyMap.jsx'
+
+// Exercise Detail
+export { ExerciseDetailSheet } from './ExerciseDetailSheet.jsx'

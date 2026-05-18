@@ -17,6 +17,7 @@ import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
+import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
 import TopBar from '../../components/ui/TopBar.jsx'
 
 // ─── Muscle label + grouping ───────────────────────────────────────────
@@ -178,6 +179,7 @@ export default function ProgramEditPage() {
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [editingDayTitle, setEditingDayTitle] = useState(null) // dayIdx or null
   const dayTitleRef = useRef(null)
+  const [detailExerciseId, setDetailExerciseId] = useState(null)
 
   // Drag state
   const [dragState, setDragState] = useState(null)
@@ -848,6 +850,20 @@ export default function ProgramEditPage() {
                           </div>
                         </div>
 
+                        {/* Info button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDetailExerciseId(ex.exerciseId) }}
+                          style={{
+                            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                            background: 'rgba(255,255,255,0.04)',
+                            border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--fg-disabled)',
+                          }}
+                        >
+                          <Icon name="info" size={14} />
+                        </button>
+
                         {/* Remove button */}
                         <button
                           onClick={() => handleRemoveExercise(dayIdx, exIdx)}
@@ -1065,6 +1081,13 @@ export default function ProgramEditPage() {
           </>
         )}
       </BottomSheet>
+
+      {/* ── Exercise Detail Sheet ── */}
+      <ExerciseDetailSheet
+        exerciseId={detailExerciseId}
+        open={!!detailExerciseId}
+        onClose={() => setDetailExerciseId(null)}
+      />
 
       {/* ── Confirm leave dialog ── */}
       <ConfirmDialog

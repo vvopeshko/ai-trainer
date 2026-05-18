@@ -11,7 +11,7 @@ import { apiGet } from '../../utils/api.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
-import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
+import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -175,141 +175,6 @@ function ExerciseRow({ exercise, isLast, onClick }) {
   )
 }
 
-// ─── Detail Sheet Content ─────────────────────────────────────────────
-
-function ExerciseDetail({ exercise, t }) {
-  if (!exercise) return null
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      {/* Title */}
-      <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--fg-primary)' }}>
-        {exercise.nameRu}
-      </div>
-
-      {/* GIF */}
-      {exercise.gifUrl && (
-        <img
-          src={exercise.gifUrl}
-          alt={exercise.nameRu}
-          style={{
-            width: '100%', maxHeight: 200, objectFit: 'contain',
-            borderRadius: 12, background: 'rgba(255,255,255,0.04)',
-          }}
-        />
-      )}
-
-      {/* Badges: difficulty + category */}
-      <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-        {exercise.difficulty && (
-          <span style={{
-            padding: '3px 10px', borderRadius: 12,
-            fontSize: 'var(--text-xs)', fontWeight: 500,
-            background: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)',
-          }}>
-            {t(`library.diff.${exercise.difficulty}`)}
-          </span>
-        )}
-        {exercise.category && (
-          <span style={{
-            padding: '3px 10px', borderRadius: 12,
-            fontSize: 'var(--text-xs)', fontWeight: 500,
-            background: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)',
-          }}>
-            {t(`library.cat.${exercise.category}`)}
-          </span>
-        )}
-      </div>
-
-      {/* Primary muscles */}
-      {exercise.primaryMuscles?.length > 0 && (
-        <DetailSection label={t('library.muscles')}>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            {exercise.primaryMuscles.map(m => (
-              <span key={m} style={{
-                padding: '3px 10px', borderRadius: 12,
-                fontSize: 'var(--text-xs)',
-                background: 'hsla(var(--accent-h,158),60%,40%,0.2)',
-                color: 'hsl(var(--accent-h,158),60%,70%)',
-              }}>
-                {m}
-              </span>
-            ))}
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Equipment */}
-      {exercise.equipment?.length > 0 && (
-        <DetailSection label={t('library.equipment')}>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            {exercise.equipment.map(eq => (
-              <span key={eq} style={{
-                padding: '3px 10px', borderRadius: 12,
-                fontSize: 'var(--text-xs)',
-                background: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)',
-              }}>
-                {t(`library.equip.${eq}`)}
-              </span>
-            ))}
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Instructions */}
-      {exercise.instructions && (
-        <DetailSection label={t('library.instructions')}>
-          <p style={{
-            fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)',
-            lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line',
-          }}>
-            {exercise.instructions}
-          </p>
-        </DetailSection>
-      )}
-
-      {/* Typical mistakes */}
-      {exercise.typicalMistakes && (
-        <DetailSection label={t('library.mistakes')}>
-          <p style={{
-            fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)',
-            lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line',
-          }}>
-            {exercise.typicalMistakes}
-          </p>
-        </DetailSection>
-      )}
-
-      {/* Description */}
-      {exercise.description && (
-        <DetailSection label={t('library.description')}>
-          <p style={{
-            fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)',
-            lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line',
-          }}>
-            {exercise.description}
-          </p>
-        </DetailSection>
-      )}
-    </div>
-  )
-}
-
-function DetailSection({ label, children }) {
-  return (
-    <div>
-      <div style={{
-        fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--fg-tertiary)',
-        textTransform: 'uppercase', letterSpacing: '0.04em',
-        marginBottom: 'var(--space-2)',
-      }}>
-        {label}
-      </div>
-      {children}
-    </div>
-  )
-}
-
 // ─── Loading Skeleton ─────────────────────────────────────────────────
 
 function ListSkeleton() {
@@ -350,9 +215,8 @@ export default function LibraryPage() {
   const [selectedEquipment, setSelectedEquipment] = useState(null)
 
   // Detail sheet
-  const [selectedExercise, setSelectedExercise] = useState(null)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [detailExerciseId, setDetailExerciseId] = useState(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   // Load all exercises once
   useEffect(() => {
@@ -395,18 +259,12 @@ export default function LibraryPage() {
 
   // Open detail sheet
   const openDetail = useCallback((exerciseId) => {
-    setDetailLoading(true)
-    setSheetOpen(true)
-    setSelectedExercise(null)
-    apiGet(`/api/v1/exercises/${exerciseId}`)
-      .then(data => setSelectedExercise(data.exercise))
-      .catch(() => {})
-      .finally(() => setDetailLoading(false))
+    setDetailExerciseId(exerciseId)
+    setDetailOpen(true)
   }, [])
 
   const closeSheet = useCallback(() => {
-    setSheetOpen(false)
-    setSelectedExercise(null)
+    setDetailOpen(false)
   }, [])
 
   // Toggle helpers
@@ -493,18 +351,7 @@ export default function LibraryPage() {
       )}
 
       {/* Detail Bottom Sheet */}
-      <BottomSheet open={sheetOpen} onClose={closeSheet}>
-        {detailLoading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', padding: 'var(--space-2) 0' }}>
-            <Skeleton width="60%" height={20} />
-            <Skeleton height={160} radius={12} />
-            <Skeleton width="40%" height={14} />
-            <Skeleton height={60} />
-          </div>
-        ) : (
-          <ExerciseDetail exercise={selectedExercise} t={t} />
-        )}
-      </BottomSheet>
+      <ExerciseDetailSheet exerciseId={detailExerciseId} open={detailOpen} onClose={closeSheet} />
     </div>
   )
 }

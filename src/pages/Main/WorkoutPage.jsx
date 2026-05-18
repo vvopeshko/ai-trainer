@@ -22,6 +22,7 @@ import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
+import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
 import BigStepper from '../../components/ui/BigStepper.jsx'
 import { getExerciseUnit, setExerciseUnit, kgToLbs, lbsToKg } from '../../utils/weightUnit.js'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
@@ -404,7 +405,7 @@ function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, hasAl
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse, onDeletePartialSet, onSwapAlternative }) {
+function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse, onDeletePartialSet, onSwapAlternative, onInfo }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
@@ -426,10 +427,29 @@ function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults
           <Icon name="chevronDown" size={13} style={{ color: 'rgba(236,234,239,0.35)' }} />
         </div>
         <div style={{
-          fontSize: 20, fontWeight: 600, lineHeight: 1.15, marginTop: 6,
-          color: '#fff', fontFamily: 'var(--font-display)',
+          display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
         }}>
-          {planExercise.nameRu}
+          <div style={{
+            fontSize: 20, fontWeight: 600, lineHeight: 1.15,
+            color: '#fff', fontFamily: 'var(--font-display)',
+            flex: 1, minWidth: 0,
+          }}>
+            {planExercise.nameRu}
+          </div>
+          {onInfo && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onInfo(planExercise.exerciseId) }}
+              style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: 'rgba(255,255,255,0.06)',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'rgba(236,234,239,0.5)',
+              }}
+            >
+              <Icon name="info" size={14} />
+            </button>
+          )}
         </div>
         <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.45)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
           {planExercise.restSec && (
@@ -749,6 +769,7 @@ export default function WorkoutPage() {
   const [lastResultsCache, setLastResultsCache] = useState({})
   const [partialSets, setPartialSets] = useState({}) // { exerciseId: [...sets] }
   const [weightUnit, setWeightUnit] = useState('kg')
+  const [detailExerciseId, setDetailExerciseId] = useState(null)
 
   // Plan state
   const [planExercises, setPlanExercises] = useState(null)
@@ -1753,6 +1774,7 @@ export default function WorkoutPage() {
                         }}
                         onDeletePartialSet={partial ? (setIdx) => handleDeletePartialSet(pe.exerciseId, setIdx) : null}
                         onSwapAlternative={handleSwapUpcoming}
+                        onInfo={setDetailExerciseId}
                       />
                     ) : (
                       <UpcomingExerciseItem
@@ -1870,6 +1892,13 @@ export default function WorkoutPage() {
           ))}
         </div>
       </BottomSheet>
+
+      {/* Exercise Detail Sheet */}
+      <ExerciseDetailSheet
+        exerciseId={detailExerciseId}
+        open={!!detailExerciseId}
+        onClose={() => setDetailExerciseId(null)}
+      />
     </div>
   )
 }

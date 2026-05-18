@@ -185,6 +185,7 @@ export const translations = {
     'library.instructions': 'Техника выполнения',
     'library.mistakes': 'Типичные ошибки',
     'library.description': 'Описание',
+    'library.videos': 'Видео',
     // Muscle groups
     'library.muscle.chest': 'Грудь',
     'library.muscle.back': 'Спина',
