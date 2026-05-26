@@ -687,21 +687,245 @@ code, pre, .code {
   section { position: relative; padding: 96px 0; }
   @media (min-width: 768px) { section { padding: 128px 0; } }
 
-  /* ── Pain narrative (editorial column) ─────────────────── */
-  .narrative p {
-    font-size: 19px;
-    line-height: 1.6;
-    color: var(--fg-2);
-    margin: 0;
+  /* ── Pain narrative cards: rejected attempts ──────────── */
+  .tried-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
   }
-  .narrative p + p { margin-top: 22px; }
-  .narrative .pull {
+  @media (min-width: 768px) { .tried-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .tried {
+    position: relative;
+    padding: 22px 22px 20px;
+    background: rgba(22,22,28,0.5);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    transition: border-color .2s, background .2s, transform .2s;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .tried:hover { border-color: var(--border-medium); background: rgba(28,28,34,0.62); transform: translateY(-2px); }
+  .tried::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.10), transparent);
+  }
+  .tried .verdict {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-3);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tried .verdict svg { width: 11px; height: 11px; color: var(--fg-3); }
+  .tried .name {
     font-family: var(--font-display);
-    font-size: 22px;
-    line-height: 1.35;
+    font-weight: 700;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.022em;
+    margin-top: 14px;
+    color: var(--fg-2);
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: hsla(0, 60%, 60%, 0.55);
+  }
+  .tried .reason {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+  .tried .tag {
+    margin-top: auto;
+    padding-top: 18px;
+    display: flex; align-items: baseline; gap: 8px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    margin-top: 18px;
+  }
+  .tried .tag .k { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+  .tried .tag .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--fg-1); font-weight: 600; }
+
+  /* Pull quote display */
+  .pull-block {
+    position: relative;
+    padding: 24px 0 0;
+  }
+  .pull-block .quote {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 3.4vw, 44px);
+    letter-spacing: -0.024em;
+    line-height: 1.08;
     color: var(--fg-1);
-    font-weight: 600;
-    letter-spacing: -0.012em;
+  }
+  .pull-block .quote em {
+    font-style: normal;
+    background: linear-gradient(180deg, hsl(var(--accent-h), 60%, 72%), hsl(var(--accent-h), 55%, 58%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .pull-block .meta {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--fg-3);
+  }
+
+  /* ── Chasm illustration (SVG-based) ─────────────────────── */
+  .chasm {
+    position: relative;
+    margin-top: 36px;
+    min-height: 420px;
+    border-radius: 18px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(0,0,0,0.9), transparent 70%),
+      linear-gradient(180deg, rgba(8,8,11,0.4) 0%, #020205 100%);
+    border: 1px solid var(--border-subtle);
+  }
+  .chasm > svg.canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* Labels on cliff tops (HTML overlays) */
+  .cliff-card {
+    position: absolute;
+    top: 28px;
+    width: 30%;
+    max-width: 280px;
+    padding: 16px 18px;
+    z-index: 3;
+  }
+  .cliff-card.left  { left: 4%; text-align: left; }
+  .cliff-card.right { right: 4%; text-align: right; }
+  .cliff-card .verdict {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 8px;
+  }
+  .cliff-card.right .verdict { color: hsl(var(--accent-h), 55%, 75%); }
+  .cliff-card .name {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 2.8vw, 36px);
+    font-weight: 700;
+    letter-spacing: -0.024em;
+    line-height: 1;
+  }
+  .cliff-card.left  .name { color: var(--fg-2); }
+  .cliff-card.right .name { color: hsl(var(--accent-h), 55%, 82%); }
+  .cliff-card ul {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .cliff-card.right ul { align-items: flex-end; }
+  .cliff-card li {
+    font-size: 13px;
+    color: var(--fg-2);
+    display: inline-flex; align-items: center; gap: 8px;
+    line-height: 1.35;
+  }
+  .cliff-card.right li { flex-direction: row-reverse; }
+  .cliff-card li svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .cliff-card.left  li svg { color: rgba(236,234,239,0.4); }
+  .cliff-card.right li svg { color: hsl(var(--accent-h), 55%, 72%); }
+
+  /* Bridge pill */
+  .chasm .bridge-pill {
+    position: absolute;
+    top: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),65%,32%,0.95), hsla(var(--accent-h),65%,18%,0.95));
+    border: 1px solid hsla(var(--accent-h), 65%, 55%, 0.55);
+    box-shadow:
+      0 0 0 5px rgba(2,2,5,0.7),
+      0 8px 28px hsla(var(--accent-h),65%,40%,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--accent-h), 55%, 88%);
+    white-space: nowrap;
+  }
+  .chasm .bridge-pill svg { width: 11px; height: 11px; }
+
+  /* Centered word & debris (text overlays) */
+  .chasm .word {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 3.4vw, 46px);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    color: transparent;
+    background: linear-gradient(180deg,
+      hsla(var(--accent-h), 35%, 80%, 0.70) 0%,
+      hsla(var(--accent-h), 30%, 60%, 0.32) 55%,
+      hsla(var(--accent-h), 25%, 40%, 0.10) 90%,
+      transparent 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    pointer-events: none;
+    white-space: nowrap;
+    filter: drop-shadow(0 2px 14px hsla(var(--accent-h), 60%, 35%, 0.45));
+  }
+  .chasm .debris {
+    position: absolute;
+    bottom: 22px; left: 0; right: 0;
+    z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    pointer-events: none;
+  }
+  .chasm .debris span {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    color: rgba(236,234,239,0.34);
+    text-align: center;
+  }
+  .chasm .debris span:nth-child(2) { color: rgba(236,234,239,0.22); }
+  .chasm .debris span:nth-child(3) { color: rgba(236,234,239,0.12); }
+
+  /* Mobile: stack cliffs vertically, hide cliff illustration drama */
+  @media (max-width: 767px) {
+    .chasm { min-height: 0; padding: 0; }
+    .chasm > svg.canvas { position: relative; height: 200px; }
+    .cliff-card { position: relative; width: 100%; max-width: none; top: auto; left: auto; right: auto; padding: 18px 20px; text-align: left; }
+    .cliff-card.right { text-align: left; }
+    .cliff-card.right ul { align-items: flex-start; }
+    .cliff-card.right li { flex-direction: row; }
+    .chasm .bridge-pill { position: relative; top: auto; left: auto; transform: none; margin: 12px auto; display: flex; width: max-content; }
+    .chasm .word, .chasm .debris { display: none; }
+  }
+
+  /* Narrative head split (eyebrow + h2 + lead next to each other) */
+  .narr-head {
+    display: grid; gap: 32px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 900px) { .narr-head { grid-template-columns: 1.15fr 0.85fr; align-items: end; gap: 56px; } }
+  .narr-head .lead {
+    padding-bottom: 6px;
   }
 
   /* ── Pain cards ────────────────────────────────────────── */
@@ -1265,32 +1489,187 @@ code, pre, .code {
 </section>
 
 <!-- ─── Pain narrative ─── -->
-<section style="padding-top: 32px;">
+<section style="padding-top: 32px; padding-bottom: 80px;">
   <div class="aurora top"></div>
-  <div class="wrap" style="max-width: 760px;">
-    <div class="eyebrow mute reveal" style="margin-bottom: 22px;">знакомо?</div>
-    <h2 class="section text-balance reveal" style="margin-bottom: 36px; --rd: 80ms;">
-      Зал есть. А что с ним делать —<br/>
-      <span style="color: var(--fg-3);">непонятно.</span>
-    </h2>
+  <div class="wrap" style="max-width: 1080px;">
+    <div class="narr-head">
+      <div>
+        <div class="eyebrow mute reveal" style="margin-bottom: 20px;">знакомо?</div>
+        <h2 class="section text-balance reveal" style="--rd: 80ms;">
+          Зал есть. А что<br/>
+          с ним делать —<br/>
+          <span style="color: var(--fg-3);">непонятно.</span>
+        </h2>
+      </div>
+      <p class="lead reveal" style="--rd: 160ms;">
+        Купил абонемент, ходишь раз в неделю, иногда два. Месяц-другой — результата нет, и сам толком не понимаешь, всё ли делаешь правильно.
+      </p>
+    </div>
 
-    <div class="narrative reveal" style="--rd: 160ms;">
-      <p>
-        Купил абонемент, ходишь раз в неделю, иногда два. Месяц-другой — результата нет,
-        и сам толком не понимаешь, всё ли делаешь правильно.
-      </p>
-      <p>
-        Пробовал тренера — но это как ещё одна ипотека: тридцать тысяч в месяц, его расписание,
-        плюс в выходной всё равно сам. Пробовал приложения — фиксируешь подходы в блокноте,
-        но никто не подсказывает, не спрашивает, не реагирует. Подписан на блогеров — копишь
-        шортсы, но чтобы из них сложилась система, уходят месяцы.
-      </p>
-      <p class="pull">
-        Зал становится чемоданом без ручек: и бросить жалко, и тащить тяжело.
-      </p>
-      <p style="color: var(--fg-1); font-weight: 500;">
-        Так получается, потому что между «трекером» и «тренером» — пропасть. Мы её закрываем.
-      </p>
+    <div class="reveal" style="margin-top: 56px; --rd: 200ms;">
+      <div class="flex items-center justify-between flex-wrap gap-3" style="margin-bottom: 18px;">
+        <div class="eyebrow mute">что пробовал · не сложилось</div>
+        <div class="mono" style="font-size: 11.5px; color: var(--fg-3); letter-spacing: 0.04em;">03 · попытки</div>
+      </div>
+
+      <div class="tried-grid">
+        <div class="tried">
+          <div class="verdict">
+            <svg style="width:11px;height:11px"><use href="#i-x"/></svg>
+            не подошло
+          </div>
+          <div class="name">тренер</div>
+          <p class="reason">Тридцать тысяч в&nbsp;месяц, плюс его расписание, плюс в&nbsp;выходной всё равно сам. Это как ещё одна ипотека.</p>
+          <div class="tag">
+            <span class="k">цена</span>
+            <span class="v">30&nbsp;000&nbsp;₽/мес</span>
+          </div>
+        </div>
+
+        <div class="tried">
+          <div class="verdict">
+            <svg style="width:11px;height:11px"><use href="#i-x"/></svg>
+            не подошло
+          </div>
+          <div class="name">приложения</div>
+          <p class="reason">Фиксируешь подходы в&nbsp;блокноте, но никто не&nbsp;подсказывает, не&nbsp;спрашивает, не&nbsp;реагирует на&nbsp;тебя.</p>
+          <div class="tag">
+            <span class="k">режим</span>
+            <span class="v">ты&nbsp;вводишь · оно&nbsp;молчит</span>
+          </div>
+        </div>
+
+        <div class="tried">
+          <div class="verdict">
+            <svg style="width:11px;height:11px"><use href="#i-x"/></svg>
+            не подошло
+          </div>
+          <div class="name">блогеры</div>
+          <p class="reason">Копишь шортсы, но чтобы из&nbsp;них сложилась система, уходят месяцы. И&nbsp;всё равно на&nbsp;тебе не&nbsp;проверено.</p>
+          <div class="tag">
+            <span class="k">время</span>
+            <span class="v">месяцы на сборку</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pull-block reveal" style="margin-top: 56px; --rd: 280ms;">
+      <div class="quote text-balance">
+        Зал становится <em>чемоданом без&nbsp;ручек</em>:<br/>
+        и бросить жалко, и тащить тяжело.
+      </div>
+      <div class="meta">— знакомое каждому, кто ходит дольше двух месяцев</div>
+    </div>
+
+    <div class="chasm reveal" style="--rd: 340ms;">
+      <svg class="canvas" viewBox="0 0 1080 420" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="rgba(28,28,34,0.85)"/>
+            <stop offset="60%" stop-color="rgba(18,18,22,0.55)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </linearGradient>
+          <linearGradient id="bridgeGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="hsla(158,65%,55%,0)"/>
+            <stop offset="15%"  stop-color="hsla(158,65%,60%,0.7)"/>
+            <stop offset="50%"  stop-color="hsla(158,65%,75%,1)"/>
+            <stop offset="85%"  stop-color="hsla(158,65%,60%,0.7)"/>
+            <stop offset="100%" stop-color="hsla(158,65%,55%,0)"/>
+          </linearGradient>
+          <filter id="bridgeGlow" x="-20%" y="-200%" width="140%" height="500%">
+            <feGaussianBlur stdDeviation="3"/>
+          </filter>
+        </defs>
+
+        <!-- Left cliff cross-section -->
+        <path d="M 0 420 L 0 162 L 30 159 L 72 163 L 120 156 L 178 161 L 232 156 L 274 160 L 305 164 L 315 180 L 308 208 L 320 240 L 312 280 L 322 322 L 314 360 L 326 396 L 320 420 Z"
+              fill="url(#rock)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <!-- Left cliff rock striations -->
+        <g stroke="rgba(255,255,255,0.05)" stroke-width="1" fill="none">
+          <path d="M 12 200 L 300 200" stroke-dasharray="2 4"/>
+          <path d="M 14 248 L 298 248" stroke-dasharray="2 6"/>
+          <path d="M 18 300 L 304 300" stroke-dasharray="2 5"/>
+          <path d="M 22 354 L 296 354" stroke-dasharray="2 7"/>
+        </g>
+
+        <!-- Right cliff cross-section -->
+        <path d="M 1080 420 L 1080 162 L 1050 159 L 1008 164 L 956 156 L 902 162 L 848 158 L 800 161 L 778 165 L 768 182 L 776 210 L 766 244 L 774 282 L 764 322 L 772 360 L 762 396 L 768 420 Z"
+              fill="url(#rock)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <g stroke="rgba(255,255,255,0.05)" stroke-width="1" fill="none">
+          <path d="M 782 200 L 1066 200" stroke-dasharray="2 4"/>
+          <path d="M 786 248 L 1062 248" stroke-dasharray="2 6"/>
+          <path d="M 776 300 L 1058 300" stroke-dasharray="2 5"/>
+          <path d="M 778 354 L 1056 354" stroke-dasharray="2 7"/>
+        </g>
+
+        <!-- Depth stripes inside the void — getting fainter as they go down -->
+        <g stroke-linecap="round">
+          <line x1="350" y1="220" x2="730" y2="222" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+          <line x1="370" y1="260" x2="710" y2="262" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="390" y1="298" x2="690" y2="300" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="412" y1="334" x2="668" y2="336" stroke="rgba(255,255,255,0.025)" stroke-width="1"/>
+          <line x1="436" y1="368" x2="644" y2="370" stroke="rgba(255,255,255,0.015)" stroke-width="1"/>
+        </g>
+
+        <!-- Falling debris dots -->
+        <g fill="rgba(255,255,255,0.18)">
+          <circle cx="430" cy="232" r="1.2"/>
+          <circle cx="510" cy="218" r="1"/>
+          <circle cx="606" cy="240" r="1.4"/>
+          <circle cx="558" cy="276" r="0.9"/>
+          <circle cx="478" cy="310" r="1.1"/>
+          <circle cx="640" cy="294" r="0.8"/>
+          <circle cx="540" cy="350" r="1"/>
+        </g>
+
+        <!-- Bridge glow underlay -->
+        <path d="M 305 164 Q 540 96 778 165"
+              fill="none" stroke="hsla(158,65%,55%,0.5)" stroke-width="3" filter="url(#bridgeGlow)"/>
+        <!-- Bridge line -->
+        <path d="M 305 164 Q 540 96 778 165"
+              fill="none" stroke="url(#bridgeGrad)" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Bridge anchor circles -->
+        <circle cx="305" cy="164" r="4" fill="hsl(158, 65%, 72%)"/>
+        <circle cx="305" cy="164" r="9" fill="none" stroke="hsla(158,65%,55%,0.4)" stroke-width="1"/>
+        <circle cx="778" cy="165" r="4" fill="hsl(158, 65%, 72%)"/>
+        <circle cx="778" cy="165" r="9" fill="none" stroke="hsla(158,65%,55%,0.4)" stroke-width="1"/>
+      </svg>
+
+      <!-- HTML overlays positioned on top of cliff tops -->
+      <div class="cliff-card left">
+        <div class="verdict">был</div>
+        <div class="name">«трекер»</div>
+        <ul>
+          <li><svg><use href="#i-x"/></svg>считает подходы</li>
+          <li><svg><use href="#i-x"/></svg>хранит числа</li>
+          <li><svg><use href="#i-x"/></svg>молчит и ждёт</li>
+        </ul>
+      </div>
+
+      <div class="cliff-card right">
+        <div class="verdict">стало</div>
+        <div class="name">«тренер»</div>
+        <ul>
+          <li><svg><use href="#i-check"/></svg>помнит контекст</li>
+          <li><svg><use href="#i-check"/></svg>реагирует первым</li>
+          <li><svg><use href="#i-check"/></svg>объясняет, зачем</li>
+        </ul>
+      </div>
+
+      <!-- Pill on the bridge -->
+      <div class="bridge-pill">
+        <svg><use href="#i-sparkles"/></svg>
+        мы её закрываем
+      </div>
+
+      <!-- Falling word + debris labels -->
+      <div class="word">пропасть</div>
+      <div class="debris">
+        <span>3 тренера · 9 приложений · 12 шортсов</span>
+        <span>годы попыток собрать систему</span>
+        <span>0 результата</span>
+      </div>
     </div>
   </div>
 </section>
