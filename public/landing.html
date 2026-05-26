@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-тренер — Тренер, который всегда рядом</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --accent-h: 158;
+      --accent: hsl(var(--accent-h), 72%, 55%);
+      --accent-soft: hsl(var(--accent-h), 65%, 72%);
+      --accent-deep: hsl(var(--accent-h), 75%, 42%);
+      --accent-glow: hsla(var(--accent-h), 72%, 55%, 0.35);
+      --accent-glow-soft: hsla(var(--accent-h), 72%, 55%, 0.12);
+
+      --bg-base: #07090a;
+      --bg-elevated: #0d1112;
+
+      --surface-0: rgba(255, 255, 255, 0.025);
+      --surface-1: rgba(255, 255, 255, 0.05);
+      --surface-2: rgba(255, 255, 255, 0.08);
+      --surface-3: rgba(255, 255, 255, 0.11);
+
+      --border-soft: rgba(255, 255, 255, 0.07);
+      --border-mid: rgba(255, 255, 255, 0.12);
+      --border-strong: rgba(255, 255, 255, 0.18);
+
+      --fg-primary: rgba(255, 255, 255, 0.96);
+      --fg-secondary: rgba(255, 255, 255, 0.68);
+      --fg-tertiary: rgba(255, 255, 255, 0.45);
+      --fg-quaternary: rgba(255, 255, 255, 0.28);
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+    }
+
+    * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--fg-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+      font-feature-settings: 'ss01' on, 'cv11' on;
+      letter-spacing: -0.01em;
+    }
+
+    .container-page { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    @media (min-width: 768px) { .container-page { padding: 0 40px; } }
+
+    /* ───── Glass ───── */
+    .glass {
+      background: var(--surface-1);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+    }
+    .glass-strong {
+      background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-lg);
+    }
+    .glass-soft {
+      background: var(--surface-0);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+    }
+
+    /* ───── Accents ───── */
+    .accent-text {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .accent-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent), 0 0 4px var(--accent);
+    }
+
+    /* ───── Buttons ───── */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+      color: #04100c;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      padding: 16px 28px;
+      transition: transform .15s ease, box-shadow .25s ease, filter .15s ease;
+      box-shadow:
+        0 1px 0 0 hsla(var(--accent-h), 80%, 75%, 0.5) inset,
+        0 0 0 1px hsla(var(--accent-h), 80%, 35%, 0.4),
+        0 14px 40px var(--accent-glow);
+      letter-spacing: -0.01em;
+    }
+    .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface-1);
+      color: var(--fg-primary);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      padding: 14px 22px;
+      font-weight: 500;
+      transition: background .15s ease;
+    }
+    .btn-ghost:hover { background: var(--surface-2); }
+
+    /* ───── Chips ───── */
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--surface-1);
+      border: 1px solid var(--border-soft);
+      font-size: 13px;
+      color: var(--fg-secondary);
+      font-weight: 500;
+      backdrop-filter: blur(8px);
+    }
+    .chip-accent {
+      background: linear-gradient(135deg, hsla(var(--accent-h), 60%, 55%, 0.12), hsla(var(--accent-h), 60%, 55%, 0.04));
+      border-color: hsla(var(--accent-h), 60%, 55%, 0.25);
+      color: var(--accent-soft);
+    }
+
+    /* ───── Hero glow ───── */
+    .hero-wrap { position: relative; overflow: hidden; }
+    .hero-glow {
+      position: absolute;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(60px);
+      opacity: 0.7;
+    }
+    .hero-glow-1 {
+      top: -200px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 900px;
+      background: radial-gradient(circle, hsla(var(--accent-h), 70%, 55%, 0.35) 0%, transparent 60%);
+    }
+    .hero-glow-2 {
+      bottom: -300px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, hsla(var(--accent-h), 80%, 45%, 0.2) 0%, transparent 70%);
+    }
+
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse at center top, black 30%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at center top, black 30%, transparent 75%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ───── Chat preview ───── */
+    .chat-frame {
+      background: linear-gradient(180deg, var(--surface-2), var(--surface-0));
+      border: 1px solid var(--border-mid);
+      border-radius: 28px;
+      padding: 24px 20px 20px;
+      box-shadow:
+        0 1px 0 0 rgba(255,255,255,0.06) inset,
+        0 50px 100px rgba(0,0,0,0.5),
+        0 20px 40px rgba(0,0,0,0.3);
+      backdrop-filter: blur(20px);
+    }
+    .chat-header {
+      display: flex; align-items: center; gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-soft);
+      margin-bottom: 16px;
+    }
+    .chat-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      display: flex; align-items: center; justify-content: center;
+      color: #04100c;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 14.5px;
+      line-height: 1.45;
+      animation: bubbleIn .4s ease both;
+    }
+    .bubble-bot {
+      background: var(--surface-2);
+      border: 1px solid var(--border-soft);
+      border-bottom-left-radius: 6px;
+      color: var(--fg-primary);
+    }
+    .bubble-user {
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      color: #04100c;
+      font-weight: 500;
+      border-bottom-right-radius: 6px;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    .bubble-photo {
+      padding: 8px;
+      max-width: 200px;
+    }
+    .bubble-photo .photo-stub {
+      height: 110px;
+      border-radius: 12px;
+      background:
+        linear-gradient(135deg, hsla(var(--accent-h), 30%, 30%, 0.3), hsla(var(--accent-h), 40%, 15%, 0.5)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 16px);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      color: var(--fg-tertiary);
+    }
+    .bubble-typing {
+      display: inline-flex; gap: 4px;
+      padding: 14px 18px;
+    }
+    .bubble-typing span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--fg-tertiary);
+      animation: typing 1.4s infinite ease-in-out;
+    }
+    .bubble-typing span:nth-child(2) { animation-delay: 0.15s; }
+    .bubble-typing span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+    @keyframes bubbleIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .bubble-row { display: flex; }
+
+    /* ───── Numbered step ───── */
+    .step-num {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, hsla(var(--accent-h), 60%, 55%, 0.18), hsla(var(--accent-h), 60%, 55%, 0.04));
+      border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.3);
+      font-weight: 600;
+      color: var(--accent-soft);
+      flex-shrink: 0;
+    }
+
+    /* ───── Pricing ───── */
+    .price-card {
+      position: relative;
+      padding: 32px 28px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-1);
+      border: 1px solid var(--border-soft);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+    .price-card:hover { transform: translateY(-3px); border-color: var(--border-mid); }
+    .price-card.featured {
+      background:
+        linear-gradient(180deg, hsla(var(--accent-h), 60%, 55%, 0.08), hsla(var(--accent-h), 60%, 55%, 0.02)),
+        var(--surface-2);
+      border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.35);
+      box-shadow:
+        0 1px 0 0 hsla(var(--accent-h), 80%, 75%, 0.15) inset,
+        0 20px 60px hsla(var(--accent-h), 70%, 30%, 0.25);
+    }
+    .price-badge {
+      position: absolute;
+      top: -12px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      color: #04100c;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ───── Pain cards ───── */
+    .pain-card {
+      padding: 24px;
+      background: var(--surface-0);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      transition: background .2s ease, border-color .2s ease;
+    }
+    .pain-card:hover {
+      background: var(--surface-1);
+      border-color: var(--border-mid);
+    }
+    .pain-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: hsla(var(--accent-h), 60%, 55%, 0.1);
+      border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-soft);
+      margin-bottom: 16px;
+    }
+
+    /* ───── Benefits ───── */
+    .benefit-card {
+      padding: 28px;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface-0));
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .benefit-card::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, hsla(var(--accent-h), 70%, 65%, 0.4), transparent);
+    }
+    .benefit-card h3 {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    /* ───── Section spacing ───── */
+    section { position: relative; padding: 80px 0; }
+    @media (min-width: 768px) { section { padding: 120px 0; } }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+    .eyebrow::before {
+      content: ''; width: 24px; height: 1px; background: var(--accent-soft);
+    }
+
+    h1 { font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; }
+    h2 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+    h3 { font-weight: 600; letter-spacing: -0.02em; }
+
+    .text-balance { text-wrap: balance; }
+
+    /* ───── Top nav ───── */
+    .topnav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      background: rgba(7, 9, 10, 0.7);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .brand-mark {
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      display: flex; align-items: center; justify-content: center;
+      color: #04100c;
+      font-weight: 800;
+      font-size: 14px;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .icon-svg { width: 18px; height: 18px; }
+
+    .price-feature {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14.5px;
+      color: var(--fg-secondary);
+      padding: 6px 0;
+    }
+    .price-feature svg {
+      width: 16px; height: 16px; flex-shrink: 0; margin-top: 3px;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Top Nav ─── -->
+  <nav class="topnav">
+    <div class="container-page flex items-center justify-between py-4">
+      <div class="flex items-center gap-3">
+        <div class="brand-mark">AI</div>
+        <span class="font-semibold">AI-тренер</span>
+      </div>
+      <a href="#cta" class="btn-ghost text-sm hidden sm:inline-flex">
+        Открыть в Telegram
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ─── Hero ─── -->
+  <section class="hero-wrap pt-16 md:pt-24">
+    <div class="grid-bg"></div>
+    <div class="hero-glow hero-glow-1"></div>
+    <div class="hero-glow hero-glow-2"></div>
+
+    <div class="container-page relative z-10">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div>
+          <div class="chip chip-accent mb-6">
+            <span class="accent-dot"></span>
+            Запущено в Telegram
+          </div>
+
+          <h1 class="text-balance text-5xl md:text-6xl lg:text-7xl mb-6">
+            Тренер, который<br/>
+            всегда рядом.<br/>
+            <span class="accent-text">В 10 раз дешевле.</span>
+          </h1>
+
+          <p class="text-balance text-lg md:text-xl mb-8" style="color: var(--fg-secondary); line-height: 1.55;">
+            Не программа упражнений и не блокнот для подходов — <span style="color: var(--fg-primary); font-weight: 500;">тренер</span>.
+            Помнит твою историю, видит, что ты делаешь в зале, объясняет зачем и не даёт забить.
+          </p>
+
+          <div class="flex flex-wrap gap-2 mb-10">
+            <span class="chip">В 10 раз дешевле живого тренера</span>
+            <span class="chip">24/7, без чужого расписания</span>
+            <span class="chip">На свежих исследованиях</span>
+            <span class="chip">Ведёт, а не считает подходы</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <a href="#cta" class="btn-primary">
+              Открыть в Telegram
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+            <span class="text-sm" style="color: var(--fg-tertiary);">30 секунд — и ассистент собирает программу</span>
+          </div>
+        </div>
+
+        <!-- ─── Chat preview ─── -->
+        <div class="relative">
+          <div class="chat-frame">
+            <div class="chat-header">
+              <div class="chat-avatar">AI</div>
+              <div>
+                <div class="text-sm font-semibold">AI-тренер</div>
+                <div class="text-xs" style="color: var(--accent);">● онлайн</div>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <div class="bubble-row">
+                <div class="bubble bubble-bot">
+                  Привет. На прошлой тренировке ты жал лёжа <b>80×8</b>. Готов сегодня к <b>82,5×8</b>?
+                </div>
+              </div>
+
+              <div class="bubble-row">
+                <div class="bubble bubble-user">Готов. А что с плечом?</div>
+              </div>
+
+              <div class="bubble-row">
+                <div class="bubble bubble-bot">
+                  Помню, в среду беспокоило правое. Разминаем плечевой пояс 5 минут, в первом подходе берём 70 — посмотрим, как пойдёт.
+                </div>
+              </div>
+
+              <div class="bubble-row">
+                <div class="bubble bubble-user bubble-photo">
+                  <div class="photo-stub">📷</div>
+                  <div class="text-xs mt-2 text-center" style="color: rgba(4,16,12,0.7); font-weight: 600;">тренажёр свободен</div>
+                </div>
+              </div>
+
+              <div class="bubble-row">
+                <div class="bubble bubble-bot">
+                  Hammer Strength для груди. Подойдёт как замена жиму гантелей — 3×10. Технику показать?
+                </div>
+              </div>
+
+              <div class="bubble-row">
+                <div class="bubble bubble-bot bubble-typing">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Pain narrative ─── -->
+  <section>
+    <div class="container-page max-w-3xl">
+      <div class="eyebrow">Знакомо?</div>
+      <h2 class="text-balance text-4xl md:text-5xl mb-8">
+        Зал есть. А что с ним делать —<br/>
+        <span style="color: var(--fg-tertiary);">непонятно.</span>
+      </h2>
+
+      <div class="space-y-6 text-lg" style="color: var(--fg-secondary); line-height: 1.65;">
+        <p>
+          Купил абонемент, ходишь раз в неделю, иногда два. Месяц-другой — результата нет, и сам толком не понимаешь, всё ли делаешь правильно.
+        </p>
+        <p>
+          Пробовал тренера — но это как ещё одна ипотека: тридцать тысяч в месяц, его расписание, плюс в выходной всё равно сам. Пробовал приложения — фиксируешь подходы в блокноте, но никто не подсказывает, не спрашивает, не реагирует. Подписан на блогеров — копишь шортсы, но чтобы из них сложилась система, уходят месяцы.
+        </p>
+        <p>
+          Зал становится <span style="color: var(--fg-primary); font-weight: 500;">чемоданом без ручек</span>: и бросить жалко, и тащить тяжело.
+        </p>
+        <p style="color: var(--fg-primary);">
+          Так получается, потому что между «трекером» и «тренером» — пропасть. Мы её закрываем.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Additional pains ─── -->
+  <section style="background: linear-gradient(180deg, transparent, var(--bg-elevated), transparent);">
+    <div class="container-page">
+      <div class="eyebrow">Если хотя бы одно про тебя</div>
+      <h2 class="text-balance text-4xl md:text-5xl mb-12 max-w-2xl">
+        Узнаёшь хоть одно?
+      </h2>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="pain-card">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          </div>
+          <h3 class="text-lg mb-2">Не уверен, что делаешь правильно</h3>
+          <p style="color: var(--fg-secondary); line-height: 1.55;">
+            Форму подсказать некому. Видео блогеров на тебе не проверяются.
+          </p>
+        </div>
+
+        <div class="pain-card">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M3 17l6-6 4 4 8-8M17 7h4v4"/></svg>
+          </div>
+          <h3 class="text-lg mb-2">Прогресс встал</h3>
+          <p style="color: var(--fg-secondary); line-height: 1.55;">
+            Веса не растут уже месяцами, а почему — непонятно: то ли программа не та, то ли восстановления мало.
+          </p>
+        </div>
+
+        <div class="pain-card">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6V4M17 6V4M3 11h18"/></svg>
+          </div>
+          <h3 class="text-lg mb-2">Тренажёр занят или незнакомый</h3>
+          <p style="color: var(--fg-secondary); line-height: 1.55;">
+            Стоишь у плана и не знаешь, чем заменить. Уходишь раздражённый, половина тренировки слита.
+          </p>
+        </div>
+
+        <div class="pain-card">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <h3 class="text-lg mb-2">Тренер — это ипотека</h3>
+          <p style="color: var(--fg-secondary); line-height: 1.55;">
+            Тридцать тысяч в месяц, плюс его график, плюс в выходной снова сам. Эти деньги нужны на семью.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Benefits ─── -->
+  <section>
+    <div class="container-page">
+      <div class="eyebrow">Что меняется</div>
+      <h2 class="text-balance text-4xl md:text-5xl mb-6 max-w-3xl">
+        Ощущение как от персонального тренера — <span class="accent-text">в десять раз дешевле</span> и без чужого графика.
+      </h2>
+      <p class="text-lg max-w-2xl mb-16" style="color: var(--fg-secondary); line-height: 1.6;">
+        Личный контакт, твой контекст, твоя история. Доступен 24/7 и работает на свежих исследованиях.
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="benefit-card">
+          <h3 class="text-xl mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" style="color: var(--accent);"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 3"/></svg>
+            Знает твой контекст
+          </h3>
+          <p style="color: var(--fg-secondary); line-height: 1.6;">
+            Не «ты ввёл 80 кг», а «в прошлый раз ты жал 80 на 8 — возьми 82». Помнит, что было неделю и месяц назад. Видит общую картину, а не отдельные подходы.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <h3 class="text-xl mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" style="color: var(--accent);"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Видит, что ты делаешь в зале
+          </h3>
+          <p style="color: var(--fg-secondary); line-height: 1.6;">
+            Сфоткал тренажёр — получил упражнение, технику и замену. Работает с конкретным железом в твоём зале, а не с абстрактным планом из учебника.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <h3 class="text-xl mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" style="color: var(--accent);"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+            Не даёт забить
+          </h3>
+          <p style="color: var(--fg-secondary); line-height: 1.6;">
+            Пишет первым после тренировки. Спрашивает, как прошло, что болит, что было тяжело. Подкидывает рилсы, если ты пропадаешь. Закрывает функцию «якоря дисциплины», ради которой и берут тренера.
+          </p>
+        </div>
+
+        <div class="benefit-card">
+          <h3 class="text-xl mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" style="color: var(--accent);"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+            Объясняет, зачем
+          </h3>
+          <p style="color: var(--fg-secondary); line-height: 1.6;">
+            Снимает страх «делаю не так». На каждое упражнение — короткое объяснение, на каждую правку — обоснование. И всё это на свежих исследованиях, а не на том, чему его учили в 2008 году.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── How it works ─── -->
+  <section style="background: var(--bg-elevated);">
+    <div class="container-page">
+      <div class="eyebrow">Как это работает</div>
+      <h2 class="text-balance text-4xl md:text-5xl mb-16 max-w-2xl">
+        Четыре шага — от знакомства до тренировки в зале.
+      </h2>
+
+      <div class="grid lg:grid-cols-2 gap-x-12 gap-y-8 max-w-5xl">
+        <div class="flex gap-5">
+          <div class="step-num">1</div>
+          <div>
+            <h3 class="text-xl mb-2">Знакомство</h3>
+            <p style="color: var(--fg-secondary); line-height: 1.6;">
+              Ассистент в Telegram спрашивает: цели, опыт, ограничения, расписание, что не любишь делать. Не анкета на пятьдесят пунктов — короткий живой диалог.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-5">
+          <div class="step-num">2</div>
+          <div>
+            <h3 class="text-xl mb-2">Программа</h3>
+            <p style="color: var(--fg-secondary); line-height: 1.6;">
+              Ассистент собирает программу под тебя и объясняет, почему именно такая. Не «универсальный PPL для всех», а под твою историю и твой зал.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-5">
+          <div class="step-num">3</div>
+          <div>
+            <h3 class="text-xl mb-2">Тренировка</h3>
+            <p style="color: var(--fg-secondary); line-height: 1.6;">
+              В зале — мини-апп с тренировкой дня: подходы, веса, повторы. База на 924 упражнения, замена в один тап, резюме после.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-5">
+          <div class="step-num">4</div>
+          <div>
+            <h3 class="text-xl mb-2">После зала</h3>
+            <p style="color: var(--fg-secondary); line-height: 1.6;">
+              Тренер пишет первым: как прошло, что болело, что было тяжело. Подбрасывает технику, если ты на чём-то застрял, и мотивирующие рилсы, если начинаешь пропускать.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Extras -->
+      <div class="mt-16 glass-strong p-8 md:p-10">
+        <div class="text-sm font-semibold uppercase tracking-wider mb-6" style="color: var(--accent-soft);">И ещё</div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3">
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent);"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>Подбор упражнения по фото тренажёра</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent);"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>Альтернатива, если твой тренажёр занят</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent);"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>Адаптация под конкретный зал</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent);"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>Анализ прогресса и подсказка, когда менять программу</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent);"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>Выбор тона ассистента — тренер, девочка-тренер, друган</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent);"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>База на 924 упражнения с техникой и видео</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Pricing ─── -->
+  <section id="cta">
+    <div class="container-page">
+      <div class="text-center mb-16">
+        <div class="eyebrow justify-center" style="justify-content: center;">Сколько стоит</div>
+        <h2 class="text-balance text-4xl md:text-5xl mb-4 max-w-3xl mx-auto">
+          Тренер в зале обойдётся <span style="color: var(--fg-tertiary); text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.25);">в&nbsp;30 000&nbsp;₽+</span> за месяц.
+        </h2>
+        <p class="text-lg" style="color: var(--fg-secondary);">Здесь — другой порядок.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+        <div class="price-card">
+          <div class="text-sm font-semibold mb-2" style="color: var(--fg-tertiary); text-transform: uppercase; letter-spacing: 0.05em;">Неделя</div>
+          <div class="flex items-baseline gap-1 mb-4">
+            <span class="text-5xl font-bold">990</span>
+            <span style="color: var(--fg-tertiary);">₽</span>
+          </div>
+          <p class="mb-6 text-sm" style="color: var(--fg-secondary); line-height: 1.5;">
+            Попробовать без обязательств.
+          </p>
+          <div class="space-y-1 mb-8">
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Программа под тебя
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Тренировки в мини-аппе
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Чат с ассистентом
+            </div>
+          </div>
+          <a href="#" class="btn-ghost w-full justify-center">Попробовать</a>
+        </div>
+
+        <div class="price-card featured">
+          <div class="price-badge">Рекомендуем</div>
+          <div class="text-sm font-semibold mb-2" style="color: var(--accent-soft); text-transform: uppercase; letter-spacing: 0.05em;">Месяц</div>
+          <div class="flex items-baseline gap-1 mb-4">
+            <span class="text-5xl font-bold accent-text">3 000</span>
+            <span style="color: var(--fg-tertiary);">₽</span>
+          </div>
+          <p class="mb-6 text-sm" style="color: var(--fg-secondary); line-height: 1.5;">
+            Цена одной тренировки с живым тренером — но безлимит и 24/7.
+          </p>
+          <div class="space-y-1 mb-8">
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Всё из тарифа «Неделя»
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Подбор по фото тренажёра
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Анализ прогресса и плато
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Поддержка после тренировки
+            </div>
+          </div>
+          <a href="#" class="btn-primary w-full justify-center">Подключить</a>
+        </div>
+
+        <div class="price-card">
+          <div class="text-sm font-semibold mb-2" style="color: var(--fg-tertiary); text-transform: uppercase; letter-spacing: 0.05em;">Lifetime</div>
+          <div class="flex items-baseline gap-1 mb-4">
+            <span class="text-5xl font-bold">15 000</span>
+            <span style="color: var(--fg-tertiary);">₽</span>
+          </div>
+          <p class="mb-6 text-sm" style="color: var(--fg-secondary); line-height: 1.5;">
+            Меньше, чем годовой абонемент в зал. Один раз — и навсегда.
+          </p>
+          <div class="space-y-1 mb-8">
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Всё из тарифа «Месяц»
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Без подписки — на всю жизнь
+            </div>
+            <div class="price-feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Все будущие апдейты
+            </div>
+          </div>
+          <a href="#" class="btn-ghost w-full justify-center">Взять навсегда</a>
+        </div>
+      </div>
+
+      <!-- Final CTA -->
+      <div class="mt-20 text-center max-w-2xl mx-auto">
+        <h3 class="text-3xl md:text-4xl mb-4 text-balance">
+          Запусти ассистента и собери программу <span class="accent-text">за 30 секунд</span>.
+        </h3>
+        <p class="mb-8 text-lg" style="color: var(--fg-secondary);">
+          Никаких регистраций. Telegram — и всё.
+        </p>
+        <a href="#" class="btn-primary text-lg">
+          Открыть в Telegram
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Footer ─── -->
+  <footer style="border-top: 1px solid var(--border-soft); padding: 40px 0;">
+    <div class="container-page flex flex-col md:flex-row items-center justify-between gap-4 text-sm" style="color: var(--fg-tertiary);">
+      <div class="flex items-center gap-3">
+        <div class="brand-mark" style="width: 28px; height: 28px; font-size: 12px;">AI</div>
+        <span>AI-тренер · 2026</span>
+      </div>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-white transition-colors">Telegram</a>
+        <a href="#" class="hover:text-white transition-colors">Поддержка</a>
+        <a href="#" class="hover:text-white transition-colors">Оферта</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
