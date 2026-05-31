@@ -509,6 +509,8 @@ function InstructionsTab({ exercise, t }) {
     ? exercise.instructions.split('\n').map(s => s.trim()).filter(Boolean)
     : []
 
+  const hasRuContent = exercise.descriptionRu || exercise.typicalMistakes
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* GIF / Video preview */}
@@ -520,27 +522,22 @@ function InstructionsTab({ exercise, t }) {
         />
       )}
 
-      {/* Videos */}
-      {videos.length > 0 && (
+      {/* Russian description */}
+      {exercise.descriptionRu && (
         <div>
-          <SectionLabel>{t('library.videos')}</SectionLabel>
-          <VideoRow videos={videos} />
+          <SectionLabel>{t('library.description')}</SectionLabel>
+          <Glass radius={12} padding="12px 13px">
+            <p style={{
+              fontSize: 12.5, color: 'rgba(236,234,239,0.85)',
+              lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
+            }}>
+              {exercise.descriptionRu}
+            </p>
+          </Glass>
         </div>
       )}
 
-      {/* Technique steps */}
-      {steps.length > 0 && (
-        <div>
-          <SectionLabel>{t('exercise.technique')}</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {steps.map((text, i) => (
-              <StepCard key={i} number={i + 1} text={text} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Typical mistakes */}
+      {/* Typical mistakes (RU) */}
       {exercise.typicalMistakes && (
         <div>
           <SectionLabel>{t('library.mistakes')}</SectionLabel>
@@ -555,8 +552,28 @@ function InstructionsTab({ exercise, t }) {
         </div>
       )}
 
+      {/* Videos */}
+      {videos.length > 0 && (
+        <div>
+          <SectionLabel>{t('library.videos')}</SectionLabel>
+          <VideoRow videos={videos} />
+        </div>
+      )}
+
+      {/* Technique steps (EN fallback) */}
+      {steps.length > 0 && (
+        <div>
+          <SectionLabel>{t('exercise.technique')}</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {steps.map((text, i) => (
+              <StepCard key={i} number={i + 1} text={text} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Empty state */}
-      {!hasMedia && !videos.length && !steps.length && !exercise.typicalMistakes && (
+      {!hasMedia && !videos.length && !steps.length && !hasRuContent && (
         <div style={{
           textAlign: 'center', padding: '40px 20px',
           color: 'var(--fg-tertiary)', fontSize: 13,
@@ -647,20 +664,6 @@ function MusclesTab({ exercise, t }) {
         </div>
       )}
 
-      {/* Description */}
-      {exercise.description && (
-        <div>
-          <SectionLabel>{t('library.description')}</SectionLabel>
-          <Glass radius={12} padding="12px 13px">
-            <p style={{
-              fontSize: 12.5, color: 'rgba(236,234,239,0.85)',
-              lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
-            }}>
-              {exercise.description}
-            </p>
-          </Glass>
-        </div>
-      )}
     </div>
   )
 }
