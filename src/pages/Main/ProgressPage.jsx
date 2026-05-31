@@ -4,7 +4,7 @@
  * Секции: Заголовок → Month stats (4 плитки) → Recent workouts (с swipe-to-delete).
  * Данные: monthStats + recent из HomeDataContext.
  */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from '../../components/ui/Glass.jsx'
@@ -15,9 +15,11 @@ import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
+import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
 import { apiGet, apiDelete } from '../../utils/api.js'
+import { formatDuration, formatDateLine, WEEKDAYS_RU } from '../../utils/formatters.js'
 
 // ─── Month Stats Skeleton ─────────────────────────────────────────────
 
@@ -69,97 +71,7 @@ function RecentListSkeleton() {
   )
 }
 
-const WEEKDAYS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
-
-function formatDuration(sec, t) {
-  if (sec == null) return null
-  const mins = Math.round(sec / 60)
-  if (mins < 1) return '< 1 мин'
-  return t('home.durationMin', { n: mins })
-}
-
-function formatDateLine(dateStr, t) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const diffDays = Math.round((todayStart - dateStart) / 86400000)
-
-  const weekday = WEEKDAYS_RU[date.getDay()]
-  if (diffDays === 0) return `${weekday}, ${t('home.today').toLowerCase()}`
-  if (diffDays === 1) return `${weekday}, ${t('home.yesterday').toLowerCase()}`
-  return `${weekday}, ${t('home.daysAgo', { n: diffDays })}`
-}
-
-function SwipeRow({ children, onDelete }) {
-  const trackRef = useRef(null)
-  const startX = useRef(0)
-  const currentX = useRef(0)
-  const opened = useRef(false)
-  const DELETE_W = 72
-
-  const handleTouchStart = useCallback((e) => {
-    startX.current = e.touches[0].clientX
-    currentX.current = opened.current ? -DELETE_W : 0
-  }, [])
-
-  const handleTouchMove = useCallback((e) => {
-    const dx = e.touches[0].clientX - startX.current
-    let offset = opened.current ? dx - DELETE_W : dx
-    offset = Math.min(0, Math.max(-DELETE_W - 20, offset))
-
-    if (trackRef.current) {
-      trackRef.current.style.transition = 'none'
-      trackRef.current.style.transform = `translateX(${offset}px)`
-    }
-    currentX.current = offset
-  }, [])
-
-  const handleTouchEnd = useCallback(() => {
-    if (!trackRef.current) return
-    trackRef.current.style.transition = 'transform 0.25s ease-out'
-
-    if (currentX.current < -DELETE_W / 2) {
-      trackRef.current.style.transform = `translateX(-${DELETE_W}px)`
-      opened.current = true
-    } else {
-      trackRef.current.style.transform = 'translateX(0)'
-      opened.current = false
-    }
-  }, [])
-
-  return (
-    <div style={{ overflow: 'hidden' }}>
-      <div
-        ref={trackRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          display: 'flex',
-          transition: 'transform 0.25s ease-out',
-        }}
-      >
-        <div style={{ flex: '0 0 100%', minWidth: 0 }}>
-          {children}
-        </div>
-        <div
-          onClick={onDelete}
-          style={{
-            flex: `0 0 ${DELETE_W}px`,
-            background: 'var(--danger, hsl(0,65%,50%))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <Icon name="trash" size={18} style={{ color: '#fff' }} />
-        </div>
-      </div>
-    </div>
-  )
-}
+// SwipeRow, formatDuration, formatDateLine, WEEKDAYS_RU — imported from shared modules
 
 function RecentList({ workouts, onDelete, onTap }) {
   const { t } = useTranslation()
@@ -182,7 +94,7 @@ function RecentList({ workouts, onDelete, onTap }) {
             ? `${t('home.dayN', { n: (w.programDayIndex ?? 0) + 1 })} · ${w.dayTitle}`
             : (w.exercises?.length > 0 ? w.exercises.join(', ') : t('home.freeformWorkout'))
           const duration = formatDuration(w.durationSec, t)
-          const dateLine = formatDateLine(w.startedAt, t)
+          const dateLine = formatDateLine(w.startedAt, t, WEEKDAYS_RU)
 
           return (
             <SwipeRow key={w.id} onDelete={() => onDelete(w.id)}>
@@ -247,7 +159,7 @@ function WorkoutDetailSheet({ recentItem, workoutDetail, onClose }) {
     ? `${t('home.dayN', { n: (recentItem.programDayIndex ?? 0) + 1 })} · ${recentItem.dayTitle}`
     : (recentItem.exercises?.length > 0 ? recentItem.exercises.join(', ') : t('home.freeformWorkout'))
   const duration = formatDuration(recentItem.durationSec, t)
-  const dateLine = formatDateLine(recentItem.startedAt, t)
+  const dateLine = formatDateLine(recentItem.startedAt, t, WEEKDAYS_RU)
 
   // Group sets by exerciseOrder (maintaining order)
   const exerciseGroups = []

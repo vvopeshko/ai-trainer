@@ -15,8 +15,6 @@ router.use('/stats', statsRoutes)
 router.use('/programs', programRoutes)
 router.use('/progress', progressRoutes)
 
-// Следующие роуты подключаем по мере работы:
-//   router.use('/chat', chatRoutes)
-//   router.use('/analytics', analyticsRoutes)
+// TODO: /chat (AI-тренер диалог) и /analytics (серверная аналитика) — подключить при реализации
 
 export default router

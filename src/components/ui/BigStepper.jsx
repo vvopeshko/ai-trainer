@@ -119,4 +119,5 @@ const BigStepper = forwardRef(function BigStepper(
   )
 })
 
+export { BigStepper }
 export default BigStepper

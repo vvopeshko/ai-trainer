@@ -7,19 +7,25 @@ import { TranslationProvider } from './i18n/TranslationProvider.jsx'
 import { TelegramProvider } from './components/TelegramProvider.jsx'
 import { HomeDataProvider } from './contexts/HomeDataContext.jsx'
 import { ProgressDataProvider } from './contexts/ProgressDataContext.jsx'
+import { ErrorBoundary } from './components/ErrorBoundary.jsx'
+import { ToastProvider } from './components/ui/Toast.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <TranslationProvider>
-        <TelegramProvider>
-          <HomeDataProvider>
-            <ProgressDataProvider>
-              <App />
-            </ProgressDataProvider>
-          </HomeDataProvider>
-        </TelegramProvider>
-      </TranslationProvider>
+      <ErrorBoundary>
+        <TranslationProvider>
+          <TelegramProvider>
+            <ToastProvider>
+              <HomeDataProvider>
+                <ProgressDataProvider>
+                  <App />
+                </ProgressDataProvider>
+              </HomeDataProvider>
+            </ToastProvider>
+          </TelegramProvider>
+        </TranslationProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
 )

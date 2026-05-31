@@ -6,8 +6,9 @@ import Anthropic from '@anthropic-ai/sdk'
 // Здесь же — место для retry, timeout, логирования, смены провайдера.
 // На MVP-этапе оставляем максимально просто, расширяем по необходимости.
 
-const DEFAULT_MODEL = 'claude-sonnet-4-6'
-const DEFAULT_MAX_TOKENS = 1024
+const DEFAULT_MODEL = process.env.LLM_MODEL || 'claude-sonnet-4-6'
+const DEFAULT_MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS) || 1024
+const DEFAULT_TIMEOUT_MS = 60_000
 
 let _client = null
 function client() {
@@ -25,19 +26,33 @@ function client() {
  * @param {{ system?: string, model?: string, maxTokens?: number }} [options]
  * @returns {Promise<{ text: string, model: string, usage: object }>}
  */
+/**
+ * Оборачивает промис в таймаут. При превышении — AbortError.
+ */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`LLM request timed out after ${ms}ms`)), ms)
+    promise.then(resolve, reject).finally(() => clearTimeout(timer))
+  })
+}
+
 export async function chat(messages, options = {}) {
   const model = options.model ?? DEFAULT_MODEL
   const maxRetries = options.retries ?? 2
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
   let lastError
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await client().messages.create({
-        model,
-        max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-        system: options.system,
-        messages,
-      })
+      const res = await withTimeout(
+        client().messages.create({
+          model,
+          max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+          system: options.system,
+          messages,
+        }),
+        timeout,
+      )
       return {
         text: res.content?.[0]?.text ?? '',
         model: res.model,
@@ -66,26 +81,30 @@ export async function chat(messages, options = {}) {
  */
 export async function vision(imageBase64, prompt, options = {}) {
   const model = options.model ?? DEFAULT_MODEL
-  const res = await client().messages.create({
-    model,
-    max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: options.mediaType ?? 'image/jpeg',
-              data: imageBase64,
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
+  const res = await withTimeout(
+    client().messages.create({
+      model,
+      max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: options.mediaType ?? 'image/jpeg',
+                data: imageBase64,
+              },
             },
-          },
-          { type: 'text', text: prompt },
-        ],
-      },
-    ],
-  })
+            { type: 'text', text: prompt },
+          ],
+        },
+      ],
+    }),
+    timeout,
+  )
   return {
     text: res.content?.[0]?.text ?? '',
     model: res.model,

@@ -94,4 +94,5 @@ const TopBar = forwardRef(function TopBar(
   )
 })
 
+export { TopBar }
 export default TopBar

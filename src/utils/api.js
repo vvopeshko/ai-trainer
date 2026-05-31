@@ -2,6 +2,7 @@
 // В Telegram WebApp: отдаём initData. В dev без Telegram: dev_bypass.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const DEFAULT_TIMEOUT = 15_000
 
 function authHeader() {
   const initData = window.Telegram?.WebApp?.initData
@@ -10,49 +11,56 @@ function authHeader() {
   return 'tma dev_bypass'
 }
 
-export async function apiGet(path) {
-  const res = await fetch(`${API_URL}${path}`, {
+function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(id))
+}
+
+export async function apiGet(path, { timeout } = {}) {
+  const res = await fetchWithTimeout(`${API_URL}${path}`, {
     headers: {
       Authorization: authHeader(),
     },
-  })
+  }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiPost(path, body) {
-  const res = await fetch(`${API_URL}${path}`, {
+export async function apiPost(path, body, { timeout } = {}) {
+  const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
-  })
+  }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiPatch(path, body) {
-  const res = await fetch(`${API_URL}${path}`, {
+export async function apiPatch(path, body, { timeout } = {}) {
+  const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
-  })
+  }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiDelete(path) {
-  const res = await fetch(`${API_URL}${path}`, {
+export async function apiDelete(path, { timeout } = {}) {
+  const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'DELETE',
     headers: {
       Authorization: authHeader(),
     },
-  })
+  }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }

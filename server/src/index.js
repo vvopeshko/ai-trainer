@@ -4,8 +4,11 @@ import { createBot } from './bot/index.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
-// Настройка сериализации BigInt в JSON: Prisma возвращает telegramId как BigInt,
-// а стандартный JSON.stringify на нём падает с TypeError.
+// BigInt → JSON monkey-patch.
+//
+// Prisma возвращает telegramId как BigInt, а стандартный JSON.stringify на нём
+// падает с TypeError. Патч конвертирует BigInt в строку при сериализации.
+// Альтернатива — JSON.stringify replacer в каждом res.json() — менее практична.
 // eslint-disable-next-line no-extend-native
 BigInt.prototype.toJSON = function () {
   return this.toString()

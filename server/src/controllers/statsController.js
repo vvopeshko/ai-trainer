@@ -1,5 +1,8 @@
 import prisma from '../utils/prisma.js'
 
+// 4 тренировки/неделю × 52 = 208. Переопределяется через env.
+const ANNUAL_WORKOUT_TARGET = Number(process.env.ANNUAL_WORKOUT_TARGET) || 208
+
 /**
  * GET /api/v1/stats/month
  *
@@ -60,7 +63,7 @@ export async function getYear(req, res) {
   res.json({
     year: now.getFullYear(),
     done,
-    target: 208, // 4 тренировки/неделю × 52
+    target: ANNUAL_WORKOUT_TARGET,
   })
 }
 
