@@ -208,6 +208,28 @@ export const translations = {
     'library.cat.compound': 'Базовое',
     'library.cat.isolation': 'Изолирующее',
 
+    // Exercise detail tabs
+    'exercise.tab.muscles': 'Мышцы',
+    'exercise.tab.instructions': 'Инструкции',
+    'exercise.tab.settings': 'Настройки',
+    'exercise.primary': 'Основные',
+    'exercise.secondary': 'Вспомогательные',
+    'exercise.settings.unit': 'Единицы веса',
+    'exercise.settings.step': 'Шаг веса',
+    'exercise.settings.minWeight': 'Мин. вес',
+    'exercise.settings.maxWeight': 'Макс. вес',
+    'exercise.settings.type': 'Тип упражнения',
+    'exercise.settings.typeReps': 'Повторения',
+    'exercise.settings.typeTimer': 'Таймер',
+    'exercise.settings.stepHint': 'На сколько меняется вес по кнопкам ± во время тренировки.',
+    'exercise.settings.typeRepsHint': 'Подходы считаются в повторениях — вес × повторы.',
+    'exercise.settings.typeTimerHint': 'Подходы считаются по времени — удержание / интервал.',
+    'exercise.settings.save': 'Сохранить',
+    'exercise.characteristics': 'характеристики',
+    'exercise.technique': 'техника выполнения',
+    'exercise.front': 'спереди',
+    'exercise.back': 'сзади',
+
     // Summary screen (BRD §12.3)
     'summary.title': 'Готово!',
     'summary.subtitle': 'Тренировка записана.',

@@ -32,3 +32,14 @@ export function getMuscleGroup(key) {
 export function getMuscleName(key) {
   return MUSCLE_NAME[key] || key
 }
+
+export const EQUIPMENT_NAME = {
+  barbell: 'штанга', dumbbell: 'гантели', 'body only': 'своё тело',
+  cable: 'тренажёр', machine: 'тренажёр', kettlebells: 'гиря',
+  bands: 'резинка', 'e-z curl bar': 'EZ-гриф', 'foam roll': 'ролл',
+  other: 'другое', medicine_ball: 'медбол',
+}
+
+export function getEquipmentName(key) {
+  return EQUIPMENT_NAME[key] || key
+}
