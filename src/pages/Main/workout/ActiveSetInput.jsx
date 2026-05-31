@@ -4,7 +4,7 @@ import { kgToLbs, lbsToKg } from '../../../utils/weightUnit.js'
 
 // ─── ActiveSetInput (accent-tinted stepper card) ────────────────────────
 
-export function ActiveSetInput({ exercise, unit, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
+export function ActiveSetInput({ exercise, unit, step: stepProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
   const { t } = useTranslation()
   const prevUnit = useRef(unit)
   const [weight, setWeight] = useState(() => {
@@ -13,8 +13,9 @@ export function ActiveSetInput({ exercise, unit, setOrder, plannedSets, lastWeig
   })
   const [reps, setReps] = useState(lastReps ?? plannedReps ?? 10)
 
-  const step = unit === 'lbs' ? 5 : 2.5
-  const maxWeight = unit === 'lbs' ? 1100 : 500
+  const step = stepProp ?? (unit === 'lbs' ? 5 : 2.5)
+  const minWeight = minProp ?? 0
+  const maxWeight = maxProp ?? (unit === 'lbs' ? 1100 : 500)
 
   // Reset from lastWeight on exercise / data change
   useEffect(() => {
@@ -72,7 +73,7 @@ export function ActiveSetInput({ exercise, unit, setOrder, plannedSets, lastWeig
           background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button onClick={() => setWeight(w => Math.max(0, w - step))} style={{
+          <button onClick={() => setWeight(w => Math.max(minWeight, w - step))} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>−</button>

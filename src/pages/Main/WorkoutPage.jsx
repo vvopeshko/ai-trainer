@@ -22,7 +22,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
-import { getExerciseUnit, setExerciseUnit } from '../../utils/weightUnit.js'
+import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 import { WorkoutTopBar } from './workout/WorkoutTopBar.jsx'
@@ -60,7 +60,7 @@ export default function WorkoutPage() {
   const [expandedDoneIndex, setExpandedDoneIndex] = useState(null)
   const [lastResultsCache, setLastResultsCache] = useState({})
   const [partialSets, setPartialSets] = useState({}) // { exerciseId: [...sets] }
-  const [weightUnit, setWeightUnit] = useState('kg')
+  const [exerciseSettings, setExerciseSettingsState] = useState(() => getExerciseSettings(null))
   const [detailExerciseId, setDetailExerciseId] = useState(null)
 
   // Plan state
@@ -84,16 +84,15 @@ export default function WorkoutPage() {
     doneExIdsRef.current = new Set(allExercises.map(e => e.exercise.id))
   }, [allExercises])
 
-  // ── Weight unit per exercise (kg/lbs) ──
+  // ── Exercise settings (unit, step, weight range) ──
   useEffect(() => {
     if (currentExercise?.slug) {
-      setWeightUnit(getExerciseUnit(currentExercise.slug))
+      setExerciseSettingsState(getExerciseSettings(currentExercise.slug))
     }
   }, [currentExercise?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleToggleWeightUnit = (newUnit) => {
-    setWeightUnit(newUnit)
-    setExerciseUnit(currentExercise?.slug || '', newUnit)
+  const handleExerciseSettingsChange = (newSettings) => {
+    setExerciseSettingsState(newSettings)
   }
 
   const handleDragStart = (e, exerciseId) => {
@@ -796,10 +795,26 @@ export default function WorkoutPage() {
                 }
               </div>
               <div style={{
-                fontSize: 20, fontWeight: 600, lineHeight: 1.15, marginTop: 6,
-                color: '#fff', fontFamily: 'var(--font-display)',
+                display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
               }}>
-                {currentExercise.nameRu}
+                <div style={{
+                  fontSize: 20, fontWeight: 600, lineHeight: 1.15,
+                  color: '#fff', fontFamily: 'var(--font-display)', flex: 1,
+                }}>
+                  {currentExercise.nameRu}
+                </div>
+                <button
+                  onClick={() => setDetailExerciseId(currentExercise.id)}
+                  style={{
+                    width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'rgba(236,234,239,0.5)',
+                  }}
+                >
+                  <Icon name="info" size={14} />
+                </button>
               </div>
               <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {currentPlanExercise && <span>{exerciseScheme(currentPlanExercise)}</span>}
@@ -816,20 +831,13 @@ export default function WorkoutPage() {
                   </button>
                 )}
                 <div style={{ flex: 1 }} />
-                <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', background: 'rgba(255,255,255,0.04)' }}>
-                  <button onClick={() => handleToggleWeightUnit('kg')} style={{
-                    padding: '6px 12px', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
-                    letterSpacing: '0.02em', borderRadius: 0, minHeight: 32,
-                    background: weightUnit === 'kg' ? 'rgba(255,255,255,0.15)' : 'transparent',
-                    color: weightUnit === 'kg' ? '#fff' : 'rgba(255,255,255,0.35)',
-                  }}>КГ</button>
-                  <button onClick={() => handleToggleWeightUnit('lbs')} style={{
-                    padding: '6px 12px', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
-                    letterSpacing: '0.02em', borderRadius: 0, minHeight: 32,
-                    background: weightUnit === 'lbs' ? 'rgba(255,255,255,0.15)' : 'transparent',
-                    color: weightUnit === 'lbs' ? '#fff' : 'rgba(255,255,255,0.35)',
-                  }}>LBS</button>
-                </div>
+                <span style={{
+                  fontSize: 10.5, fontWeight: 600,
+                  color: 'rgba(236,234,239,0.4)',
+                  letterSpacing: '0.02em',
+                }}>
+                  {exerciseSettings.unit === 'lbs' ? 'LBS' : 'КГ'}
+                </span>
               </div>
             </div>
 
@@ -912,7 +920,10 @@ export default function WorkoutPage() {
               ) : (
                 <ActiveSetInput
                   exercise={currentExercise}
-                  unit={weightUnit}
+                  unit={exerciseSettings.unit}
+                  step={exerciseSettings.step}
+                  minWeight={exerciseSettings.minWeight}
+                  maxWeight={exerciseSettings.maxWeight}
                   setOrder={doneSets.length}
                   plannedSets={currentPlanExercise?.sets || null}
                   lastWeight={doneSets.length > 0
@@ -1190,6 +1201,7 @@ export default function WorkoutPage() {
         exerciseId={detailExerciseId}
         open={!!detailExerciseId}
         onClose={() => setDetailExerciseId(null)}
+        onSettingsChange={handleExerciseSettingsChange}
       />
     </div>
   )
