@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-05-17
+**Последнее обновление:** 2026-05-31
 
 ---
 
@@ -37,7 +37,7 @@
 ### Параллельно: инфра и улучшения
 
 - [ ] Railway автодеплой — починить (GitHub Repo not found)
-- [ ] Дозагрузить GIF (36 упражнений без анимации)
+- [ ] Медиа-обогащение: запустить `enrich:media` для всех упражнений активной программы (GIF + YouTube)
 - [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
 
 ---
@@ -52,6 +52,29 @@
 ---
 
 ## ✅ Выполнено
+
+### Landing page — Liquid Glass (2026-05-27–29) ✅
+
+- [x] Статический HTML-лендинг в `public/landing.html`
+- [x] Дизайн-система Liquid Glass (glassmorphism + градиенты)
+- [x] Pain narrative с tried-cards и chasm SVG
+- [x] Product tour с мокапами приложения
+- [x] Pricing секция
+
+### ExerciseDetailSheet (2026-05-19) ✅
+
+- [x] Выделен переиспользуемый компонент из LibraryPage
+- [x] Кнопки info на 3 экранах: WorkoutPage, ProgramEditPage
+- [x] Named export через barrel
+
+### Медиа-обогащение упражнений (2026-05 — in progress) ✅ pipeline готов
+
+- [x] Поле `videos Json?` на Exercise (массив YouTube-видео с url, title, channel, source, lang)
+- [x] Скрипт `enrichProgramMedia.js` — pilot mode (только упражнения активной программы)
+- [x] GIF: fetch из ExerciseDB OSS API с rate limiting
+- [x] YouTube: LLM-powered 3-step pipeline (генерация запросов → скрейпинг через yt-search → LLM-ранжирование)
+- [x] Зависимость `yt-search` добавлена
+- [x] Скрипт `dedupeExercises.js` — миграция ai_generated дубликатов на seed-эквиваленты
 
 ### BodyMap — анатомическая карта мышц (2026-05-17) ✅
 
@@ -183,7 +206,7 @@
 ## 🐞 Баги
 
 - Railway автодеплой сломан ("GitHub Repo not found") — нужно переподключить репо
-- ExerciseDB OSS rate limiting: GIF покрытие 21/57, скрипт дозагрузки готов
+- ~~ExerciseDB OSS rate limiting: GIF покрытие 21/57~~ → решено через `enrichProgramMedia.js` (pilot mode, rate limiting 4s)
 
 ---
 

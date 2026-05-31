@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
     "seed:exercises": "node scripts/seedExercises.js",
-    "seed:dev": "node scripts/seedDevData.js"
+    "seed:dev": "node scripts/seedDevData.js",
+    "enrich:media": "node --env-file=.env scripts/enrichProgramMedia.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.33.0",
@@ -22,6 +23,7 @@
     "express": "^5.0.1",
     "node-cron": "^3.0.3",
     "telegraf": "^4.16.3",
+    "yt-search": "^2.13.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {

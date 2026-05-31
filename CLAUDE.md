@@ -21,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/UPDATES.md](product/UPDATES.md)** | Changelog по датам |
 | **[product/machine-scanning.md](product/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
 | **[product/implementation-plan.md](product/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
+| **[product/CODESTYLE.md](product/CODESTYLE.md)** | Code style guide: именование, компоненты, стили, паттерны |
 | **[product/design/DESIGN_BRIEF.md](product/design/DESIGN_BRIEF.md)** | Дизайн-бриф (Glass UI) |
 | **[product/marketing/](product/marketing/)** | Лендинг-копирайт, позиционирование |
 | **[product/competitors/](product/competitors/)** | Анализ конкурентов (Arvo и др.) |

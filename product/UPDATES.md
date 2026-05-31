@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-05-27–29 — Landing page (Liquid Glass)
+
+### Лендинг продукта
+
+- Статический HTML-лендинг в `public/landing.html` — доступен по `/landing.html` через Vercel
+- Дизайн-система **Liquid Glass** — glassmorphism + градиенты + backdrop-filter
+- Маркетинговые копирайты в `docs/landing-copy.md`
+
+**Секции лендинга:**
+- Hero с CTA
+- Pain narrative — "tried-cards" (приложения, которые пробовали и бросили) + SVG-иллюстрация "chasm" между тренером и приложением
+- Product tour — секции с реальными мокапами из приложения
+- Pricing — тарифы с ценами
+- CTA footer
+
+### Итерации
+
+- Первая версия как static asset (5c86166)
+- Полный редизайн в Liquid Glass (440f90d)
+- Pain narrative с tried-cards и chasm SVG (288ac88)
+- Product tour с мокапами приложения (8727856)
+- Множество копирайт-итераций
+
+---
+
+## 2026-05-19 — ExerciseDetailSheet, BodyMap fix
+
+### ExerciseDetailSheet — выделение компонента (0ca20fb)
+
+- Извлечён `ExerciseDetailSheet` из LibraryPage в отдельный переиспользуемый компонент (`src/components/ui/ExerciseDetailSheet.jsx`)
+- Named export через barrel `index.js`
+- Добавлены кнопки info (ⓘ) на 3 экранах: WorkoutPage (активное и предстоящее упражнение), ProgramEditPage (строка упражнения)
+- По тапу — BottomSheet с полной инфой об упражнении (мышцы, оборудование, описание, GIF)
+
+### BodyMap SVG clipping fix (9e106d9)
+
+- BodyMap SVG обрезалась снизу — fix через масштабирование в контейнер по высоте
+
+---
+
 ## 2026-05-17 — Body Map, импорт программы, guidelines, RIR
 
 ### BodyMap — анатомическая карта мышц (body-muscles)

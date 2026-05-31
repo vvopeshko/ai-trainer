@@ -117,6 +117,7 @@ model Exercise {
   youtubeUrl       String?
   imageUrl         String?
   gifUrl           String?            // анимированная GIF-демонстрация (ExerciseDB OSS, кэшируется при seed)
+  videos           Json?              // [{url, title, channel, source: 'youtube', lang: 'ru'|'en'}]
 
   // Синонимы для подбора по распознаванию тренажёра и текстового поиска.
   aliases          String[]           @default([])
