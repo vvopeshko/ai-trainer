@@ -187,7 +187,7 @@ function DemoMedia({ url, alt, isVideo }) {
           src={url}
           autoPlay loop muted playsInline
           style={{
-            width: '100%', height: '100%', objectFit: 'contain',
+            width: '100%', height: '100%', objectFit: 'cover',
             display: 'block',
           }}
         />
@@ -196,9 +196,8 @@ function DemoMedia({ url, alt, isVideo }) {
           src={url}
           alt={alt}
           style={{
-            width: '100%', height: '100%', objectFit: 'contain',
+            width: '100%', height: '100%', objectFit: 'cover',
             display: 'block',
-            mixBlendMode: 'screen',
           }}
         />
       )}
