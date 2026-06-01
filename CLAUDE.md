@@ -34,7 +34,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **AI:** Claude API (`@anthropic-ai/sdk`, модель `claude-sonnet-4-6`) — и для чата, и для vision
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR) + Cloudflare R2 (фото)
 - **Auth:** Telegram initData → HMAC-SHA256 на бэке
-- **Язык:** JavaScript (без TypeScript). ESM everywhere (`"type": "module"` — `import`/`export`, не `require()`). Нет тестового фреймворка.
+- **Язык:** JavaScript (без TypeScript). ESM everywhere (`"type": "module"` — `import`/`export`, не `require()`).
+- **Тесты:** Vitest (фронт + бэк). Pre-push хук (Husky) блокирует push при падении тестов/билда.
 
 ## Dev-команды
 
@@ -53,6 +54,11 @@ cd server && npm run seed:exercises
 
 # Lint (только фронтенд, ESLint 9 flat config; server/ excluded)
 npm run lint
+
+# Тесты
+npm test                                             # фронтенд (src/)
+cd server && npm test                                # бэкенд (server/src/)
+npm run test:all                                     # оба сразу
 
 # Проверить билд перед коммитом
 npm run build
@@ -172,6 +178,8 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 **BodyMap** — React-обёртка над `body-muscles` (70+ SVG-зон, front+back вид). Принимает `muscles={[{ muscle, setsActual, setsTarget }]}`, автоматически рассчитывает интенсивность. Маппинг 20 внутренних muscle ID → зоны библиотеки в `MUSCLE_ZONE_MAP`. Используется на 5 экранах (Progress, Home, ProgramEdit, Workout, ProgrammeHero).
 
+**ExerciseDetailSheet** — fullscreen overlay с 3 вкладками (Инструкции, Мышцы, Настройки). Используется на WorkoutPage, LibraryPage, ProgramEditPage. Props: `{ exerciseId, open, onClose, onSettingsChange }`. Настройки упражнения (unit, step, weight range) хранятся в localStorage через `getExerciseSettings()`/`setExerciseSettings()` из `utils/weightUnit.js`.
+
 ### Правила
 
 1. **Не хардкодить цвета** — использовать токены (`var(--fg-primary)`, `var(--success)` и т.д.).
@@ -241,6 +249,6 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 2. **BigInt.prototype.toJSON monkey-patch.** Prisma возвращает `telegramId` как BigInt, JSON.stringify на нём падает. Патч в `server/src/index.js` конвертирует BigInt → string. Альтернатива (replacer в каждом `res.json()`) менее практична.
 
-3. **Нет тестов.** MVP-этап, один разработчик. Тесты запланированы как отдельная инициатива. Build (`npm run build`) и lint проверяются перед коммитом.
+3. **Vitest + Husky pre-push.** Тесты покрывают чистые функции и middleware (utils, errorHandler, telegramAuth). Pre-push хук запускает `build + test` перед каждым push — блокирует деплой сломанного кода.
 
 4. **DesignSystemDemo (`/demo`)** — dev-утилита, lazy-loaded, не попадает в основной бандл. Оставлена намеренно для визуальной проверки UI-компонентов.

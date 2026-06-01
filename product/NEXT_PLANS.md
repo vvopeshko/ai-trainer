@@ -39,6 +39,8 @@
 - [ ] Railway автодеплой — починить (GitHub Repo not found)
 - [ ] Медиа-обогащение: запустить `enrich:media` для всех упражнений активной программы (GIF + YouTube)
 - [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
+- [ ] Расширить покрытие тестов: контроллеры (с моком Prisma), интеграционные тесты API
+- [ ] GitHub Actions CI (когда появится второй разработчик)
 
 ---
 
@@ -60,6 +62,14 @@
 - [x] Pain narrative с tried-cards и chasm SVG
 - [x] Product tour с мокапами приложения
 - [x] Pricing секция
+
+### ExerciseDetailSheet — visual polish (2026-06-01) ✅
+
+- [x] Production-quality glass UI по дизайн-макету (Header, SegTabs, DemoMedia, VideoRow, StepCard, Chip, Toggle2, Stepper, NumberField, SaveButton)
+- [x] Русский контент (descriptionRu, typicalMistakes) на вкладке "Инструкции"
+- [x] Per-exercise settings (unit, step, weight range) через overlay → ActiveSetInput
+- [x] Кнопка info (ⓘ) на WorkoutPage, fadeUp-анимация табов
+- [x] `EQUIPMENT_NAME` маппинг, `getExerciseSettings`/`setExerciseSettings`
 
 ### ExerciseDetailSheet (2026-05-19) ✅
 

@@ -4,6 +4,69 @@
 
 ---
 
+## 2026-06-01 — ExerciseDetailSheet: визуальная полировка
+
+### Production-quality glass UI
+
+ExerciseDetailSheet переработан из прототипа в production-ready по дизайн-макету:
+
+**Новые компоненты:**
+- **Header** — круглые кнопки 38px (back + swap-заглушка), двустрочный центр (название + «мышца · оборудование»)
+- **SegTabs** — pill-контейнер, active tab с accent-цветом
+- **DemoMedia** — 4:3 карточка с radial gradient, pill-бейдж (GIF/Video), objectFit cover
+- **VideoRow** — единая Glass-карточка, строки с разделителями, 62×42 превью с play overlay
+- **StepCard** — пронумерованные Glass-карточки для шагов техники (accent-tinted номера)
+- **Chip** — 3 варианта (primary/neutral/meta) с иконками
+- **Toggle2** — glass-контейнер, иконки для типа упражнения (list/clock)
+- **Stepper** — заменил `<input type="number">` для шага веса (−/+ кнопки, десятичная запятая)
+- **NumberField** — стилизованный инпут с суффиксом
+- **Save button** — accent, иконка check, сохраняет + закрывает overlay
+
+**Контент:**
+- Русское описание (`descriptionRu`) и типичные ошибки перенесены на вкладку "Инструкции"
+- Секция "Характеристики" (difficulty + category с иконками) на вкладке "Мышцы"
+- BodyMap с подписями "спереди"/"сзади"
+- fadeUp-анимация при переключении табов
+
+**Интеграция с WorkoutPage:**
+- Кнопка info (ⓘ) рядом с названием упражнения
+- Настройки (unit, step, weight range) передаются из overlay в ActiveSetInput
+- Убран inline kg/lbs toggle — теперь через ExerciseDetailSheet
+
+**Утилиты:**
+- `EQUIPMENT_NAME` + `getEquipmentName()` в muscleMapping.js
+- `getExerciseSettings()` / `setExerciseSettings()` в weightUnit.js (localStorage, миграция из старого формата)
+- 8 новых i18n-ключей
+
+---
+
+## 2026-05-31 — Тесты + pre-push хук
+
+### Тестовая инфраструктура
+
+- **Vitest** — фронтенд + бэкенд (ESM-native, подхватывает Vite-конфиг)
+- **Husky** pre-push хук — блокирует `git push` если build или тесты падают
+- 8 тестовых файлов, 61 тест на чистые функции и middleware
+
+**Бэкенд (29 тестов):**
+- `parseJsonFromLLM` — парсинг JSON из LLM-ответов (fences, braces, невалидный вход)
+- `errorHandler` — ZodError → 400, кастомный status, fallback 500
+- `telegramAuth` — HMAC-SHA256, dev_bypass, отсутствие заголовка
+- `exerciseResolver` (slugify) — трансформация строк в slug
+
+**Фронтенд (32 теста):**
+- `weightUnit` — lbsToKg/kgToLbs конверсии
+- `muscleMapping` — slug → группа/название
+- `formatters` — formatDuration, formatDateLine
+- `api` — формирование объекта ошибки
+
+**Конфигурация:**
+- `vite.config.js` — `test.include: ['src/**/*.test.js']` (ограничивает scope фронта)
+- `server/vitest.config.js` — отдельный конфиг бэка (без react-plugin warnings)
+- `.husky/pre-push` — `npm run build && npm test && cd server && npm test`
+
+---
+
 ## 2026-05-27–29 — Landing page (Liquid Glass)
 
 ### Лендинг продукта
