@@ -42,6 +42,7 @@ model User {
   chatMessages           ChatMessage[]
   machineIdentifications MachineIdentification[]
   analyticsEvents        AnalyticsEvent[]
+  exerciseSettings       UserExerciseSettings[]
 }
 
 // ═══════════════════════════════════════════════
@@ -282,6 +283,30 @@ model MachineIdentification {
   createdAt           DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ═══════════════════════════════════════════════
+// UserExerciseSettings — per-exercise settings (unit, step, presets)
+// Synced from client localStorage for cross-device persistence.
+// ═══════════════════════════════════════════════
+model UserExerciseSettings {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseSlug String
+
+  preset       String?
+  unit         String   @default("kg")
+  step         Float    @default(2.5)
+  stepUnit     String   @default("kg")
+  minWeight    Float    @default(0)
+  maxWeight    Float    @default(500)
+  type         String   @default("reps")
+
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, exerciseSlug])
+  @@index([userId])
 }
 
 // ═══════════════════════════════════════════════

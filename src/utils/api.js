@@ -41,6 +41,19 @@ export async function apiPost(path, body, { timeout } = {}) {
   return res.json()
 }
 
+export async function apiPut(path, body, { timeout } = {}) {
+  const res = await fetchWithTimeout(`${API_URL}${path}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader(),
+    },
+    body: JSON.stringify(body ?? {}),
+  }, timeout)
+  if (!res.ok) throw await makeError(res)
+  return res.json()
+}
+
 export async function apiPatch(path, body, { timeout } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'PATCH',

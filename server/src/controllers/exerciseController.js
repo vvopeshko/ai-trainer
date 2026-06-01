@@ -83,6 +83,81 @@ export async function search(req, res) {
 }
 
 /**
+ * GET /api/v1/exercises/settings
+ *
+ * All exercise settings for the current user.
+ * Returns { settings: { [slug]: { preset, unit, step, ... } } }
+ */
+export async function getAllSettings(req, res) {
+  const rows = await prisma.userExerciseSettings.findMany({
+    where: { userId: req.user.id },
+  })
+
+  const settings = {}
+  for (const row of rows) {
+    settings[row.exerciseSlug] = {
+      preset: row.preset,
+      unit: row.unit,
+      step: row.step,
+      stepUnit: row.stepUnit,
+      minWeight: row.minWeight,
+      maxWeight: row.maxWeight,
+      type: row.type,
+      updatedAt: row.updatedAt,
+    }
+  }
+
+  res.json({ settings })
+}
+
+/**
+ * PUT /api/v1/exercises/settings/:slug
+ *
+ * Upsert exercise settings for a given slug.
+ */
+export async function upsertSettings(req, res) {
+  const { slug } = req.params
+
+  const body = z.object({
+    preset: z.string().nullable().optional(),
+    unit: z.enum(['kg', 'lbs']).optional(),
+    step: z.number().positive().max(100).optional(),
+    stepUnit: z.enum(['kg', 'lbs']).optional(),
+    minWeight: z.number().min(0).optional(),
+    maxWeight: z.number().positive().optional(),
+    type: z.enum(['reps', 'timer']).optional(),
+  }).parse(req.body)
+
+  const record = await prisma.userExerciseSettings.upsert({
+    where: {
+      userId_exerciseSlug: {
+        userId: req.user.id,
+        exerciseSlug: slug,
+      },
+    },
+    create: {
+      userId: req.user.id,
+      exerciseSlug: slug,
+      ...body,
+    },
+    update: body,
+  })
+
+  res.json({
+    setting: {
+      preset: record.preset,
+      unit: record.unit,
+      step: record.step,
+      stepUnit: record.stepUnit,
+      minWeight: record.minWeight,
+      maxWeight: record.maxWeight,
+      type: record.type,
+      updatedAt: record.updatedAt,
+    },
+  })
+}
+
+/**
  * POST /api/v1/exercises/batch-last-results
  *
  * Последние результаты пользователя по нескольким упражнениям за один запрос.

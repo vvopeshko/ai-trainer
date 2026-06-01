@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet } from '../../utils/api.js'
-import { getExerciseSettings, setExerciseSettings } from '../../utils/weightUnit.js'
+import { getExerciseSettings, setExerciseSettings, saveSettingsToServer, PRESETS, getDefaultPreset, getPresetsForEquipment } from '../../utils/weightUnit.js'
 import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
 import { BodyMap } from './BodyMap.jsx'
 import { Skeleton } from './Skeleton.jsx'
@@ -669,41 +669,186 @@ function MusclesTab({ exercise, t }) {
 
 // ─── Settings Tab ────────────────────────────────────────────────────
 
+function PresetChips({ presetIds, active, onChange, t }) {
+  return (
+    <div style={{
+      display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 4,
+      WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+    }}>
+      {presetIds.map(id => {
+        const isActive = id === active
+        return (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            style={{
+              flexShrink: 0, height: 34, borderRadius: 999,
+              border: isActive ? 'none' : '1px solid rgba(255,255,255,0.08)',
+              padding: '0 14px', cursor: 'pointer',
+              fontSize: 12, fontWeight: isActive ? 700 : 500,
+              whiteSpace: 'nowrap',
+              background: isActive ? 'hsl(var(--accent-h),55%,55%)' : 'rgba(255,255,255,0.06)',
+              color: isActive ? '#0a1815' : 'rgba(236,234,239,0.7)',
+              transition: 'all .18s ease',
+            }}
+          >
+            {t(`exercise.preset.${id}`)}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
+  const presetIds = getPresetsForEquipment(exercise?.equipment)
+  const activePreset = settings.preset || 'custom'
+  const isCustom = activePreset === 'custom'
+
+  const handlePreset = (presetId) => {
+    if (presetId === 'custom') {
+      onSettingsChange({ ...settings, preset: 'custom' })
+      return
+    }
+    const p = PRESETS[presetId]
+    if (!p) return
+    onSettingsChange({
+      ...settings,
+      preset: presetId,
+      unit: p.unit,
+      step: p.step,
+      stepUnit: p.stepUnit,
+      minWeight: p.minWeight,
+      maxWeight: p.maxWeight,
+    })
+  }
+
   const handleUnit = (unit) => {
-    onSettingsChange({ ...settings, unit })
+    onSettingsChange({ ...settings, unit, preset: 'custom' })
+  }
+
+  const handleStepUnit = (stepUnit) => {
+    onSettingsChange({ ...settings, stepUnit, preset: 'custom' })
   }
 
   const handleStep = (v) => {
-    if (v > 0 && v <= 50) onSettingsChange({ ...settings, step: v })
+    if (v > 0 && v <= 50) onSettingsChange({ ...settings, step: v, preset: 'custom' })
   }
 
   const handleMin = (v) => {
-    if (v >= 0) onSettingsChange({ ...settings, minWeight: v })
+    if (v >= 0) onSettingsChange({ ...settings, minWeight: v, preset: 'custom' })
   }
 
   const handleMax = (v) => {
-    if (v > 0) onSettingsChange({ ...settings, maxWeight: v })
+    if (v > 0) onSettingsChange({ ...settings, maxWeight: v, preset: 'custom' })
   }
 
   const handleType = (type) => {
     onSettingsChange({ ...settings, type })
   }
 
+  const unitLabel = settings.unit === 'lbs' ? 'lbs' : 'кг'
+  const stepUnitLabel = settings.stepUnit === 'lbs' ? 'lbs' : 'кг'
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Unit toggle */}
+      {/* Preset chips */}
       <div>
-        <SectionLabel>{t('exercise.settings.unit')}</SectionLabel>
-        <Toggle2
-          value={settings.unit}
-          onChange={handleUnit}
-          options={[
-            { value: 'kg', label: 'КГ' },
-            { value: 'lbs', label: 'LBS' },
-          ]}
-        />
+        <SectionLabel>{t('exercise.settings.preset')}</SectionLabel>
+        <PresetChips presetIds={presetIds} active={activePreset} onChange={handlePreset} t={t} />
       </div>
+
+      {/* Preset summary (when not custom) */}
+      {!isCustom && (
+        <Glass radius={12} padding="12px 14px">
+          <div style={{
+            fontSize: 12.5, color: 'rgba(236,234,239,0.75)', lineHeight: 1.6,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'rgba(236,234,239,0.45)' }}>{t('exercise.settings.unit')}</span>
+              <span>{unitLabel.toUpperCase()}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'rgba(236,234,239,0.45)' }}>{t('exercise.settings.step')}</span>
+              <span>{formatDecimal(settings.step)} {stepUnitLabel}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'rgba(236,234,239,0.45)' }}>{t('exercise.settings.minWeight')} / {t('exercise.settings.maxWeight')}</span>
+              <span>{settings.minWeight} – {settings.maxWeight} {unitLabel}</span>
+            </div>
+          </div>
+        </Glass>
+      )}
+
+      {/* Custom fields (only when preset is 'custom') */}
+      {isCustom && (
+        <>
+          {/* Unit toggle */}
+          <div>
+            <SectionLabel>{t('exercise.settings.unit')}</SectionLabel>
+            <Toggle2
+              value={settings.unit}
+              onChange={handleUnit}
+              options={[
+                { value: 'kg', label: 'КГ' },
+                { value: 'lbs', label: 'LBS' },
+              ]}
+            />
+          </div>
+
+          {/* Step unit toggle */}
+          <div>
+            <SectionLabel>{t('exercise.settings.stepUnit')}</SectionLabel>
+            <Toggle2
+              value={settings.stepUnit || 'kg'}
+              onChange={handleStepUnit}
+              options={[
+                { value: 'kg', label: 'КГ' },
+                { value: 'lbs', label: 'LBS' },
+              ]}
+            />
+          </div>
+
+          {/* Weight step */}
+          <div>
+            <SectionLabel>{t('exercise.settings.step')}</SectionLabel>
+            <Stepper
+              value={settings.step}
+              onChange={handleStep}
+              step={0.5}
+              min={0.5}
+              suffix={settings.stepUnit || settings.unit}
+            />
+            <div style={{
+              fontSize: 10.5, color: 'rgba(236,234,239,0.4)',
+              marginTop: 6, padding: '0 2px',
+            }}>
+              {t('exercise.settings.stepHint')}
+            </div>
+          </div>
+
+          {/* Min / Max weight */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <SectionLabel>{t('exercise.settings.minWeight')}</SectionLabel>
+              <NumberField
+                value={settings.minWeight}
+                onChange={handleMin}
+                suffix={settings.unit}
+              />
+            </div>
+            <div>
+              <SectionLabel>{t('exercise.settings.maxWeight')}</SectionLabel>
+              <NumberField
+                value={settings.maxWeight}
+                onChange={handleMax}
+                suffix={settings.unit}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Exercise type toggle */}
       <div>
@@ -723,44 +868,6 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
           {settings.type === 'reps'
             ? t('exercise.settings.typeRepsHint')
             : t('exercise.settings.typeTimerHint')}
-        </div>
-      </div>
-
-      {/* Weight step */}
-      <div>
-        <SectionLabel>{t('exercise.settings.step')}</SectionLabel>
-        <Stepper
-          value={settings.step}
-          onChange={handleStep}
-          step={0.5}
-          min={0.5}
-          suffix={settings.unit}
-        />
-        <div style={{
-          fontSize: 10.5, color: 'rgba(236,234,239,0.4)',
-          marginTop: 6, padding: '0 2px',
-        }}>
-          {t('exercise.settings.stepHint')}
-        </div>
-      </div>
-
-      {/* Min / Max weight */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div>
-          <SectionLabel>{t('exercise.settings.minWeight')}</SectionLabel>
-          <NumberField
-            value={settings.minWeight}
-            onChange={handleMin}
-            suffix={settings.unit}
-          />
-        </div>
-        <div>
-          <SectionLabel>{t('exercise.settings.maxWeight')}</SectionLabel>
-          <NumberField
-            value={settings.maxWeight}
-            onChange={handleMax}
-            suffix={settings.unit}
-          />
         </div>
       </div>
 
@@ -822,7 +929,21 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
     apiGet(`/api/v1/exercises/${exerciseId}`)
       .then(data => {
         setExercise(data.exercise)
-        setSettings(getExerciseSettings(data.exercise.slug))
+        const saved = getExerciseSettings(data.exercise.slug)
+        // Auto-detect preset from equipment if no preset saved
+        if (!saved.preset) {
+          const presetId = getDefaultPreset(data.exercise.equipment)
+          const p = PRESETS[presetId]
+          if (p) {
+            const withPreset = { ...saved, preset: presetId, ...p }
+            setSettings(withPreset)
+            setExerciseSettings(data.exercise.slug, withPreset)
+          } else {
+            setSettings(saved)
+          }
+        } else {
+          setSettings(saved)
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -832,6 +953,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
     setSettings(newSettings)
     if (exercise?.slug) {
       setExerciseSettings(exercise.slug, newSettings)
+      saveSettingsToServer(exercise.slug, newSettings)
     }
     onSettingsChange?.(newSettings)
   }, [exercise?.slug, onSettingsChange])

@@ -7,6 +7,7 @@
  */
 import { createContext, useContext, useState, useCallback } from 'react'
 import { apiGet } from '../utils/api.js'
+import { syncSettingsFromServer } from '../utils/weightUnit.js'
 
 const HomeDataContext = createContext()
 
@@ -26,14 +27,20 @@ export function HomeDataProvider({ children }) {
   const [data, setData] = useState(INITIAL)
 
   const refresh = useCallback(async () => {
-    const [year, month, recentData, active, prog, next] = await Promise.all([
+    const [year, month, recentData, active, prog, next, exSettings] = await Promise.all([
       apiGet('/api/v1/stats/year').catch(() => null),
       apiGet('/api/v1/stats/month').catch(() => null),
       apiGet('/api/v1/workouts/recent?limit=4').catch(() => null),
       apiGet('/api/v1/workouts/active').catch(() => null),
       apiGet('/api/v1/programs/active').catch(() => null),
       apiGet('/api/v1/programs/active/next-workout').catch(() => null),
+      apiGet('/api/v1/exercises/settings').catch(() => null),
     ])
+
+    // Sync exercise settings from server → localStorage
+    if (exSettings?.settings) {
+      syncSettingsFromServer(exSettings.settings)
+    }
     setData({
       yearStats: year || { done: 0, target: 208 },
       monthStats: month || { workouts: 0, tonnageKg: 0, streak: 0 },
