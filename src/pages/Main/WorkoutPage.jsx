@@ -922,6 +922,7 @@ export default function WorkoutPage() {
                   exercise={currentExercise}
                   unit={exerciseSettings.unit}
                   step={exerciseSettings.step}
+                  stepUnit={exerciseSettings.stepUnit}
                   minWeight={exerciseSettings.minWeight}
                   maxWeight={exerciseSettings.maxWeight}
                   setOrder={doneSets.length}

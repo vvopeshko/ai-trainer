@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
-import { kgToLbs, lbsToKg } from '../../../utils/weightUnit.js'
+import { kgToLbs, lbsToKg, stepWeight } from '../../../utils/weightUnit.js'
 
 // ─── ActiveSetInput (accent-tinted stepper card) ────────────────────────
 
-export function ActiveSetInput({ exercise, unit, step: stepProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
+export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepUnitProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
   const { t } = useTranslation()
   const prevUnit = useRef(unit)
   const [weight, setWeight] = useState(() => {
@@ -14,6 +14,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, minWeight: minP
   const [reps, setReps] = useState(lastReps ?? plannedReps ?? 10)
 
   const step = stepProp ?? (unit === 'lbs' ? 5 : 2.5)
+  const stepUnit = stepUnitProp || unit
   const minWeight = minProp ?? 0
   const maxWeight = maxProp ?? (unit === 'lbs' ? 1100 : 500)
 
@@ -73,7 +74,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, minWeight: minP
           background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button onClick={() => setWeight(w => Math.max(minWeight, w - step))} style={{
+          <button onClick={() => setWeight(w => Math.max(minWeight, stepWeight(w, -1, step, stepUnit, unit)))} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>−</button>
@@ -85,7 +86,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, minWeight: minP
               {unit === 'lbs' ? 'lbs' : 'кг'}
             </div>
           </div>
-          <button onClick={() => setWeight(w => Math.min(maxWeight, w + step))} style={{
+          <button onClick={() => setWeight(w => Math.min(maxWeight, stepWeight(w, 1, step, stepUnit, unit)))} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>+</button>
