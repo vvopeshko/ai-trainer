@@ -141,7 +141,7 @@ cd server && npx prisma generate       # регенерация клиента (
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)
 
-`apiGet(path)`, `apiPost(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrappers над `fetch`. Автоматически аттачат `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`. При ошибке возвращает кастомный объект с JSON-payload сервера.
+`apiGet(path)`, `apiPost(path, body)`, `apiPut(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrappers над `fetch`. Автоматически аттачат `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`. При ошибке возвращает кастомный объект с JSON-payload сервера.
 
 ### Бэкенд: архитектура
 
@@ -178,7 +178,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 **BodyMap** — React-обёртка над `body-muscles` (70+ SVG-зон, front+back вид). Принимает `muscles={[{ muscle, setsActual, setsTarget }]}`, автоматически рассчитывает интенсивность. Маппинг 20 внутренних muscle ID → зоны библиотеки в `MUSCLE_ZONE_MAP`. Используется на 5 экранах (Progress, Home, ProgramEdit, Workout, ProgrammeHero).
 
-**ExerciseDetailSheet** — fullscreen overlay с 3 вкладками (Инструкции, Мышцы, Настройки). Используется на WorkoutPage, LibraryPage, ProgramEditPage. Props: `{ exerciseId, open, onClose, onSettingsChange }`. Настройки упражнения (unit, step, weight range) хранятся в localStorage через `getExerciseSettings()`/`setExerciseSettings()` из `utils/weightUnit.js`.
+**ExerciseDetailSheet** — fullscreen overlay с 3 вкладками (Инструкции, Мышцы, Настройки). Используется на WorkoutPage, LibraryPage, ProgramEditPage. Props: `{ exerciseId, open, onClose, onSettingsChange }`. Настройки упражнения (unit, step, weight range) хранятся в localStorage (кэш) + синхронизируются на сервер (`UserExerciseSettings`) через fire-and-forget `saveSettingsToServer()`. При старте приложения `HomeDataContext` подтягивает настройки с сервера через `syncSettingsFromServer()`.
 
 ### Правила
 
@@ -190,7 +190,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Prisma / БД
 
-9 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`. Полная схема — `server/prisma/schema.prisma`.
+10 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`). Полная схема — `server/prisma/schema.prisma`.
 
 **Миграций НЕТ, только `prisma db push`.** В референсном проекте `db push` однажды дропнул все таблицы (2026-03-08) при добавлении NOT NULL колонки. Спасла Neon PITR.
 

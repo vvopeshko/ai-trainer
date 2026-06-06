@@ -2,7 +2,7 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-05-17
+**Последнее обновление:** 2026-06-02
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
@@ -40,6 +40,13 @@
 ### Язык
 
 JavaScript в MVP (как в daily balancer). Перейти на TypeScript — рассмотрим, когда появится заметная AI-логика с JSON-схемами (возможно, только для `server/src/services/aiTrainer/`). Решение пока открыто; см. [NEXT_PLANS.md](NEXT_PLANS.md).
+
+### Тестирование и качество
+
+- **Vitest** — тестовый фреймворк (фронт + бэк). ESM-native, подхватывает Vite-конфиг.
+- **Husky** — pre-push git-хук: `build → test (front) → test (back)`. Блокирует деплой сломанного кода.
+- Покрытие: чистые функции (`parseJsonFromLLM`, `slugify`, `weightUnit`, `formatters`, `muscleMapping`) + middleware (`errorHandler`, `telegramAuth`).
+- CI (GitHub Actions) пока нет — для соло-разработки хватает локальных хуков.
 
 ---
 
@@ -264,6 +271,7 @@ erDiagram
     User ||--o{ ChatMessage : "chat history"
     User ||--o{ MachineIdentification : "photos"
     User ||--o{ AnalyticsEvent : "events"
+    User ||--o{ UserExerciseSettings : "exercise prefs"
 
     Program ||--o{ Workout : "по программе"
     Workout ||--o{ WorkoutSet : "подходы"
@@ -381,6 +389,20 @@ erDiagram
         json payload
         datetime createdAt
     }
+
+    UserExerciseSettings {
+        string id PK
+        string userId FK
+        string exerciseSlug
+        string preset
+        string unit
+        float step
+        string stepUnit
+        float minWeight
+        float maxWeight
+        string type
+        datetime updatedAt
+    }
 ```
 
 ### 4.2 Prisma-схема (черновик v1)
@@ -423,6 +445,7 @@ model User {
   chatMessages           ChatMessage[]
   machineIdentifications MachineIdentification[]
   analyticsEvents        AnalyticsEvent[]
+  exerciseSettings       UserExerciseSettings[]
 }
 
 // ═══════════════════════════════════════════════
@@ -650,6 +673,30 @@ model MachineIdentification {
 }
 
 // ═══════════════════════════════════════════════
+// UserExerciseSettings — per-exercise settings (unit, step, presets)
+// Synced from client localStorage for cross-device persistence.
+// ═══════════════════════════════════════════════
+model UserExerciseSettings {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseSlug String
+
+  preset       String?
+  unit         String   @default("kg")
+  step         Float    @default(2.5)
+  stepUnit     String   @default("kg")
+  minWeight    Float    @default(0)
+  maxWeight    Float    @default(500)
+  type         String   @default("reps")
+
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, exerciseSlug])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════
 // AnalyticsEvent — fire-and-forget события
 // ═══════════════════════════════════════════════
 model AnalyticsEvent {
@@ -680,6 +727,7 @@ model AnalyticsEvent {
 - **Каскадные удаления через `onDelete: Cascade`** на данных юзера — чтобы удаление юзера (GDPR) убирало всё одной транзакцией. `AnalyticsEvent` — `SetNull` (сохраняем агрегатную аналитику).
 - **Enum vs string-массив для мышц/оборудования.** Взяли `String[]`, а не enum — даёт гибкость добавлять новые метки без миграции. Для консистентности — валидатор на уровне приложения (Zod-схема "известные мышцы").
 - **Нет явной таблицы `Equipment` / `MuscleGroup`.** Хардкодим списки в Zod-схемах и константах. Добавим таблицу, если понадобится i18n или отдельные метаданные.
+- **`UserExerciseSettings` по slug, не по exerciseId.** Ключ `@@unique([userId, exerciseSlug])` — не FK на Exercise. Причина: настройки могут создаваться до того, как упражнение появится в БД (auto-created при resolve), а slug стабильнее UUID. localStorage также использует slug как ключ.
 
 ### 4.4 Индексы (под ключевые запросы)
 
@@ -690,6 +738,7 @@ model AnalyticsEvent {
 | `SELECT Workout WHERE userId=? ORDER BY startedAt DESC` | `@@index([userId, startedAt])` |
 | `SELECT ChatMessage WHERE userId=? ORDER BY createdAt DESC LIMIT N` | `@@index([userId, createdAt])` |
 | `SELECT AnalyticsEvent WHERE event=? AND createdAt > ?` | `@@index([event, createdAt])` |
+| `SELECT UserExerciseSettings WHERE userId=?` | `@@index([userId])` + `@@unique([userId, exerciseSlug])` |
 
 ### 4.5 Миграции
 
@@ -764,6 +813,8 @@ model AnalyticsEvent {
 |-------|------|-----------|
 | `GET` | `/exercises` | Список упражнений |
 | `GET` | `/exercises/search?q=` | Поиск |
+| `GET` | `/exercises/settings` | Все настройки упражнений юзера |
+| `PUT` | `/exercises/settings/:slug` | Upsert настроек упражнения |
 | `POST` | `/exercises/batch-last-results` | Прошлые результаты (batch) |
 | `POST` | `/workouts` | Создать/возобновить тренировку |
 | `GET` | `/workouts/active` | Активная тренировка |

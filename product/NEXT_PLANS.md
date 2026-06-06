@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-05-31
+**Последнее обновление:** 2026-06-02
 
 ---
 
@@ -62,6 +62,15 @@
 - [x] Pain narrative с tried-cards и chasm SVG
 - [x] Product tour с мокапами приложения
 - [x] Pricing секция
+
+### Exercise settings — backend persistence (2026-06-02) ✅
+
+- [x] Prisma-модель `UserExerciseSettings` (preset, unit, step, stepUnit, minWeight, maxWeight, type)
+- [x] `GET /api/v1/exercises/settings` + `PUT /api/v1/exercises/settings/:slug`
+- [x] `apiPut()` в frontend API-клиенте
+- [x] `syncSettingsFromServer()` / `saveSettingsToServer()` в weightUnit.js
+- [x] Fetch настроек в `HomeDataContext` при инициализации
+- [x] Fire-and-forget save в `ExerciseDetailSheet` при изменении
 
 ### ExerciseDetailSheet — visual polish (2026-06-01) ✅
 

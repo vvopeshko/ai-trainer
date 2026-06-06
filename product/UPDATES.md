@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-06-02 — Backend persistence для настроек упражнений
+
+### Серверная синхронизация exercise settings
+
+Настройки упражнений (preset, unit, step, stepUnit, minWeight, maxWeight, type) ранее хранились только в localStorage. Добавлена серверная персистенция для синхронизации между устройствами.
+
+**Backend:**
+- Новая Prisma-модель `UserExerciseSettings` — `@@unique([userId, exerciseSlug])`, все колонки с default → безопасно через `db push`
+- `GET /api/v1/exercises/settings` — все настройки пользователя как `{ [slug]: {...} }`
+- `PUT /api/v1/exercises/settings/:slug` — upsert с Zod-валидацией
+- Роуты зарегистрированы перед `/:id` (иначе `settings` ловится как id)
+
+**Frontend:**
+- `apiPut()` — новая функция в `src/utils/api.js`
+- `syncSettingsFromServer(settingsMap)` — мёрж серверных настроек в localStorage (сервер приоритетнее)
+- `saveSettingsToServer(slug, settings)` — fire-and-forget PUT при каждом изменении настроек
+- `HomeDataContext` — fetch настроек параллельно с остальными данными при инициализации
+- `ExerciseDetailSheet` — `handleSettingsChange` вызывает `saveSettingsToServer` fire-and-forget
+
+**Архитектура:** localStorage остаётся как кэш для мгновенного чтения, сервер — source of truth для cross-device sync.
+
+---
+
 ## 2026-06-01 — ExerciseDetailSheet: визуальная полировка
 
 ### Production-quality glass UI
