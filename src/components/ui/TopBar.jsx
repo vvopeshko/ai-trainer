@@ -25,7 +25,7 @@ const TopBar = forwardRef(function TopBar(
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 48,
+        minHeight: 48,
         padding: '0 var(--space-3)',
         background: 'var(--bg-app)',
         borderBottom: '1px solid var(--border-subtle)',
