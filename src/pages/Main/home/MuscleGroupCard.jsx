@@ -1,5 +1,4 @@
 import { useTranslation } from '../../../i18n/useTranslation.js'
-import { Glass } from '../../../components/ui/Glass.jsx'
 import { Icon } from '../../../components/ui/Icon.jsx'
 
 // ─── Constants ──────────────────────────────────────────────────────────
@@ -25,11 +24,11 @@ function getStatus(actual, target) {
 }
 
 const STATUS_STYLES = {
-  none: { ring: 'var(--fg-disabled)', badge: 'transparent', text: 'var(--fg-disabled)' },
-  low: { ring: 'hsl(35,80%,55%)', badge: 'hsla(35,80%,50%,0.15)', text: 'hsl(35,80%,60%)' },
-  optimal: { ring: 'hsl(140,55%,55%)', badge: 'hsla(140,55%,45%,0.15)', text: 'hsl(140,55%,60%)' },
-  over: { ring: 'hsl(140,55%,55%)', badge: 'hsla(140,55%,45%,0.15)', text: 'hsl(140,55%,60%)' },
-  overload: { ring: 'hsl(0,65%,55%)', badge: 'hsla(0,60%,50%,0.15)', text: 'hsl(0,65%,65%)' },
+  none: { ring: 'var(--gd-faint)', badge: 'transparent', text: 'var(--gd-faint)' },
+  low: { ring: 'var(--gd-warn)', badge: 'rgba(245,194,75,0.12)', text: 'var(--gd-warn)' },
+  optimal: { ring: 'var(--gd-success)', badge: 'rgba(61,219,134,0.12)', text: 'var(--gd-success)' },
+  over: { ring: 'var(--gd-success)', badge: 'rgba(61,219,134,0.12)', text: 'var(--gd-success)' },
+  overload: { ring: 'var(--gd-danger)', badge: 'rgba(244,112,127,0.12)', text: 'var(--gd-danger)' },
 }
 
 // ─── RingChart ──────────────────────────────────────────────────────────
@@ -47,9 +46,9 @@ function RingChart({ actual, target, size = 56 }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <span style={{
-          fontSize: size * 0.32, fontWeight: 600,
+          fontSize: size * 0.32, fontWeight: 700,
           fontVariantNumeric: 'tabular-nums',
-          color: 'var(--fg-secondary)',
+          color: 'var(--gd-sub)',
         }}>{actual}</span>
       </div>
     )
@@ -71,14 +70,14 @@ function RingChart({ actual, target, size = 56 }) {
       {status === 'overload' && (
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%',
-          boxShadow: '0 0 14px 2px hsla(0,65%,50%,0.45)',
+          boxShadow: '0 0 14px 2px rgba(244,112,127,0.35)',
         }} />
       )}
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={cx} cy={cy} r={r}
-          stroke="rgba(255,255,255,0.08)" strokeWidth={5} fill="none" />
+          stroke="var(--gd-line-soft)" strokeWidth={5} fill="none" />
         <circle cx={cx} cy={cy} r={r}
-          stroke="hsla(140,55%,55%,0.25)" strokeWidth={5} fill="none"
+          stroke="rgba(61,219,134,0.2)" strokeWidth={5} fill="none"
           strokeDasharray={`${greenLen} ${circ}`}
           strokeDashoffset={`${-circ * (angOf(min) / 360)}`} />
         {actual > 0 && (
@@ -94,7 +93,7 @@ function RingChart({ actual, target, size = 56 }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <span style={{
-          fontSize: size * 0.3, fontWeight: 600,
+          fontSize: size * 0.3, fontWeight: 700,
           fontVariantNumeric: 'tabular-nums',
           color: colors.ring,
         }}>{actual}</span>
@@ -115,7 +114,7 @@ function DotLadder({ actual, min, max }) {
     if (min && i === min) {
       elements.push(
         <span key={`ml-${i}`} style={{
-          width: 1, height: 12, background: 'rgba(255,255,255,0.3)',
+          width: 1, height: 12, background: 'var(--gd-line)',
           alignSelf: 'center', flexShrink: 0,
         }} />
       )
@@ -124,15 +123,15 @@ function DotLadder({ actual, min, max }) {
     let bg, border
     if (i > actual) {
       bg = 'transparent'
-      border = '1.5px solid rgba(255,255,255,0.1)'
+      border = '1.5px solid var(--gd-line-soft)'
     } else if (min && i < min) {
-      bg = 'rgba(255,255,255,0.3)'
+      bg = 'var(--gd-faint)'
       border = 'none'
     } else if (max && i > max) {
-      bg = 'hsl(0,65%,60%)'
+      bg = 'var(--gd-danger)'
       border = 'none'
     } else {
-      bg = 'hsl(140,55%,55%)'
+      bg = 'var(--gd-success)'
       border = 'none'
     }
 
@@ -146,7 +145,7 @@ function DotLadder({ actual, min, max }) {
     if (max && i === max) {
       elements.push(
         <span key={`mr-${i}`} style={{
-          width: 1, height: 12, background: 'rgba(255,255,255,0.3)',
+          width: 1, height: 12, background: 'var(--gd-line)',
           alignSelf: 'center', flexShrink: 0,
         }} />
       )
@@ -156,7 +155,7 @@ function DotLadder({ actual, min, max }) {
   if (overflowCount > 0) {
     elements.push(
       <span key="overflow" style={{
-        fontSize: 10, color: 'hsl(0,65%,60%)',
+        fontSize: 10, color: 'var(--gd-danger)',
         marginLeft: 2, flexShrink: 0,
       }}>+{overflowCount}</span>
     )
@@ -190,7 +189,7 @@ function StatusBadge({ actual, target, t }) {
   return (
     <span style={{
       fontSize: 11, fontWeight: 600,
-      padding: '2px 8px', borderRadius: 6,
+      padding: '3px 9px', borderRadius: 8,
       background: styles.badge, color: styles.text,
       whiteSpace: 'nowrap',
     }}>
@@ -209,40 +208,58 @@ export function MuscleGroupCard({ group, onTap }) {
   const max = group.setsTarget
 
   return (
-    <Glass
-      style={{ padding: 'var(--space-4)', cursor: onTap ? 'pointer' : undefined }}
+    <div
+      style={{
+        background: 'var(--gd-card)',
+        borderRadius: 20,
+        padding: 16,
+        boxShadow: 'var(--gd-card-shadow)',
+        cursor: onTap ? 'pointer' : undefined,
+      }}
       onClick={onTap ? () => onTap(group) : undefined}
     >
       <div style={{
         display: 'flex', justifyContent: 'space-between',
-        alignItems: 'flex-start', gap: 'var(--space-3)',
+        alignItems: 'flex-start', gap: 10,
       }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
+          {/* Icon square */}
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-            marginBottom: 4,
+            width: 36,
+            height: 36,
+            borderRadius: 11,
+            background: 'var(--gd-inset)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
           }}>
-            <Icon name={iconName} size={18} style={{
-              color: 'hsl(var(--accent-h,158),55%,72%)',
+            <Icon name={iconName} size={18} strokeWidth={1.8} style={{
+              color: 'var(--gd-accent-ink)',
             }} />
-            <span style={{
-              fontSize: 'var(--text-base)', fontWeight: 600,
-              color: 'var(--fg-primary)',
-            }}>
-              {group.nameRu}
-            </span>
           </div>
 
-          {hasTarget && (
+          {/* Text */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)',
-              marginBottom: 6,
+              fontSize: 14.5, fontWeight: 700,
+              color: 'var(--gd-ink)',
+              marginBottom: 2,
             }}>
-              {t('progress.muscle.target', { min, max })}
+              {group.nameRu}
             </div>
-          )}
 
-          <StatusBadge actual={group.setsActual} target={group.setsTarget} t={t} />
+            {hasTarget && (
+              <div style={{
+                fontSize: 11.5, color: 'var(--gd-sub)',
+                marginBottom: 8,
+              }}>
+                {t('progress.muscle.target', { min, max })}
+              </div>
+            )}
+
+            <StatusBadge actual={group.setsActual} target={group.setsTarget} t={t} />
+          </div>
         </div>
 
         <RingChart actual={group.setsActual} target={group.setsTarget} size={56} />
@@ -251,11 +268,11 @@ export function MuscleGroupCard({ group, onTap }) {
       {group.subMuscles && group.subMuscles.length > 1 && (
         <>
           <div style={{
-            height: 1, background: 'rgba(255,255,255,0.05)',
-            margin: 'var(--space-3) 0',
+            height: 1, background: 'var(--gd-line-soft)',
+            margin: '12px 0',
           }} />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {group.subMuscles.map(sub => {
               const subMin = getMin(sub.setsTarget)
               const subMax = sub.setsTarget
@@ -264,10 +281,10 @@ export function MuscleGroupCard({ group, onTap }) {
                 <div key={sub.muscle}>
                   <div style={{
                     display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', marginBottom: 4,
+                    alignItems: 'center', marginBottom: 5,
                   }}>
                     <span style={{
-                      fontSize: 'var(--text-sm)', color: 'var(--fg-primary)',
+                      fontSize: 13, color: 'var(--gd-ink)',
                     }}>
                       {sub.nameRu}
                     </span>
@@ -276,7 +293,7 @@ export function MuscleGroupCard({ group, onTap }) {
                       flexShrink: 0,
                     }}>
                       <span style={{
-                        fontSize: 'var(--text-sm)', fontWeight: 600,
+                        fontSize: 13, fontWeight: 700,
                         fontVariantNumeric: 'tabular-nums',
                         color: STATUS_STYLES[getStatus(sub.setsActual, sub.setsTarget)].text,
                       }}>
@@ -284,7 +301,7 @@ export function MuscleGroupCard({ group, onTap }) {
                       </span>
                       {sub.setsTarget && (
                         <span style={{
-                          fontSize: 10, color: 'var(--fg-disabled)',
+                          fontSize: 11, color: 'var(--gd-faint)',
                         }}>
                           /{subMin}–{subMax}
                         </span>
@@ -307,8 +324,8 @@ export function MuscleGroupCard({ group, onTap }) {
       {group.subMuscles && group.subMuscles.length === 1 && (
         <>
           <div style={{
-            height: 1, background: 'rgba(255,255,255,0.05)',
-            margin: 'var(--space-3) 0',
+            height: 1, background: 'var(--gd-line-soft)',
+            margin: '12px 0',
           }} />
           <DotLadder
             actual={group.setsActual}
@@ -317,6 +334,6 @@ export function MuscleGroupCard({ group, onTap }) {
           />
         </>
       )}
-    </Glass>
+    </div>
   )
 }

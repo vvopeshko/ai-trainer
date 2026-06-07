@@ -143,7 +143,7 @@ export async function getProgress(req, res) {
     // 2. Тренировки за неделю → plan adherence
     prisma.workout.findMany({
       where: { userId, finishedAt: { not: null }, startedAt: { gte: weekStart } },
-      select: { programDayIndex: true },
+      select: { programDayIndex: true, startedAt: true },
     }),
 
     // 3. Активная программа → planned days + targets
@@ -236,6 +236,8 @@ export async function getProgress(req, res) {
     done,
     extra,
     weekStart: formatLocalDate(weekStart),
+    doneDayIndices: weekWorkouts.map(w => w.programDayIndex).filter(i => i != null),
+    doneDates: weekWorkouts.map(w => formatLocalDate(w.startedAt)),
   }
 
   // ── Muscle volume (per individual muscle, then aggregate to groups) ──

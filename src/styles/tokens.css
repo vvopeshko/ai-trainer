@@ -117,4 +117,24 @@
   --z-nav:     5;
   --z-overlay: 10;
   --z-modal:   20;
+
+  /* --- GD (Green Dark) — Home screen redesign -------------------- */
+  --gd-bg: #1B1D26;
+  --gd-card: #272A35;
+  --gd-card-soft: #2E313D;
+  --gd-inset: #21242E;
+  --gd-ink: #F4F5F9;
+  --gd-sub: #9BA1B2;
+  --gd-faint: #6B7180;
+  --gd-line: #363A47;
+  --gd-line-soft: #30333E;
+  --gd-chip: #323643;
+  --gd-accent: #0C9268;
+  --gd-accent-ink: #4ED9A0;
+  --gd-accent-soft: rgba(20,160,115,0.18);
+  --gd-success: #3DDB86;
+  --gd-danger: #F4707F;
+  --gd-warn: #F5C24B;
+  --gd-card-shadow: 0 2px 12px rgba(0,0,0,0.30);
+  --gd-hero-shadow: 0 18px 44px rgba(7,80,58,0.5);
 }

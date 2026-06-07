@@ -1,7 +1,7 @@
 /**
- * Home Page — главный экран мини-аппа (BRD §12.1).
+ * Home Page — главный экран мини-аппа (GD redesign).
  *
- * Секции: YearHeader → ProgrammeHero → WeeklyCard → MuscleGroups → Records.
+ * Секции: HeroBlock → QuickActions → MyPlanSection → MonthStatsTiles.
  * Данные: HomeDataContext + ProgressDataContext.
  */
 import { useState, useEffect } from 'react'
@@ -14,22 +14,20 @@ import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
+import { useTelegram } from '../../components/TelegramProvider.jsx'
 
-import { YearHeader } from './home/YearHeader.jsx'
-import { ProgrammeHeroSkeleton, ProgrammeHero } from './home/ProgrammeHero.jsx'
-import { WeeklyCard } from './home/WeeklyCard.jsx'
+import { HeroBlock, HeroBlockSkeleton } from './home/HeroBlock.jsx'
+import { MyPlanSection } from './home/MyPlanSection.jsx'
 import { MuscleGroupCard, MUSCLE_ICONS } from './home/MuscleGroupCard.jsx'
-import { MonthlyRecordsList } from './home/MonthlyRecordsList.jsx'
-import { MostlyEmptyHint } from './home/MostlyEmptyHint.jsx'
-import { ProgressSectionSkeleton } from './home/ProgressSectionSkeleton.jsx'
 
 // ─── Main Component ────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { yearStats, activeWorkout, program, nextWorkout, loaded, refresh, setData } = useHomeData()
-  const { state: progressState, planAdherence, muscleVolume, records, loaded: progressLoaded, refresh: refreshProgress } = useProgressData()
+  const { user } = useTelegram()
+  const { yearStats, monthStats, activeWorkout, program, nextWorkout, loaded, refresh, setData } = useHomeData()
+  const { planAdherence, muscleVolume, records, loaded: progressLoaded, refresh: refreshProgress } = useProgressData()
 
   const [starting, setStarting] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -102,77 +100,78 @@ export default function HomePage() {
 
   const showSkeletons = !loaded
 
+  // Merge doneDates from planAdherence
+  const doneDates = planAdherence?.doneDates || []
+
   // Filter muscle groups with data or targets
   const visibleMuscles = (muscleVolume || []).filter(
     g => g.setsActual > 0 || (g.setsTarget != null && g.setsTarget > 0)
   )
 
   return (
-    <div style={{ padding: 'var(--space-4)', maxWidth: 480, margin: '0 auto' }}>
-      <YearHeader
-        done={yearStats?.done ?? 0}
-        target={yearStats?.target ?? 208}
-        loading={showSkeletons}
-      />
-
+    <div style={{
+      background: 'var(--gd-bg)',
+      minHeight: '100vh',
+      position: 'relative',
+      zIndex: 1,
+    }}>
+      {/* Hero */}
       {showSkeletons ? (
-        <ProgrammeHeroSkeleton />
+        <HeroBlockSkeleton />
       ) : (
-        <ProgrammeHero
+        <HeroBlock
+          user={user}
+          streak={monthStats?.streak || 0}
           program={program}
+          nextWorkout={nextWorkout}
           activeWorkout={activeWorkout}
-          nextDay={nextWorkout?.day}
-          nextWorkoutData={nextWorkout}
+          doneDates={doneDates}
           onStart={handleStart}
           onContinue={handleContinue}
           onResume={handleResume}
           onCancel={() => setConfirmCancel(true)}
           onPickDay={() => setShowDayPicker(true)}
-          onProgramTap={() => program && navigate('/program/' + program.id)}
           loading={starting}
         />
       )}
 
-      {/* Progress section */}
-      {!progressLoaded ? (
-        <ProgressSectionSkeleton />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-          {/* Weekly adherence */}
-          {planAdherence && <WeeklyCard data={planAdherence} />}
+      {/* My plan section */}
+      {program && progressLoaded && planAdherence && (
+        <MyPlanSection
+          planAdherence={planAdherence}
+          program={program}
+          onProgramTap={() => navigate('/program/' + program.id)}
+        />
+      )}
 
-          {/* Muscle volume */}
-          {visibleMuscles.length > 0 && (
-            <div>
-              <div style={{
-                fontSize: 11, fontWeight: 700,
-                letterSpacing: 'var(--tracking-caps, 0.08em)',
-                textTransform: 'uppercase',
-                color: 'var(--fg-tertiary)',
-                marginBottom: 'var(--space-3)',
-              }}>
-                {t('progress.muscle.sectionTitle')}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                {visibleMuscles.map(g => (
-                  <MuscleGroupCard
-                    key={g.group}
-                    group={g}
-                    onTap={g.exercises?.length > 0 ? setSelectedMuscle : undefined}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Monthly records */}
-          {records && <MonthlyRecordsList records={records} />}
-
-          {/* Mostly empty hint */}
-          {progressState === 'mostly_empty' && <MostlyEmptyHint />}
+      {/* Muscle volume */}
+      {progressLoaded && visibleMuscles.length > 0 && (
+        <div style={{ padding: '0 18px', marginTop: 22 }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--gd-faint)',
+            marginBottom: 10,
+          }}>
+            {t('progress.muscle.sectionTitle')}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {visibleMuscles.map(g => (
+              <MuscleGroupCard
+                key={g.group}
+                group={g}
+                onTap={g.exercises?.length > 0 ? setSelectedMuscle : undefined}
+              />
+            ))}
+          </div>
         </div>
       )}
 
+      {/* Bottom spacer */}
+      <div style={{ height: 24 }} />
+
+      {/* Cancel workout confirmation */}
       <ConfirmDialog
         open={confirmCancel}
         title={t('workout.cancelWorkoutTitle')}
