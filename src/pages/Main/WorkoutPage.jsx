@@ -60,6 +60,7 @@ export default function WorkoutPage() {
   const [expandedDoneIndex, setExpandedDoneIndex] = useState(null)
   const [lastResultsCache, setLastResultsCache] = useState({})
   const [partialSets, setPartialSets] = useState({}) // { exerciseId: [...sets] }
+  const pendingDeletionsRef = useRef(new Set()) // tempId'ы сетов, удалённых до ответа POST
   const [exerciseSettings, setExerciseSettingsState] = useState(() => getExerciseSettings(null))
   const [detailExerciseId, setDetailExerciseId] = useState(null)
 
@@ -334,16 +335,13 @@ export default function WorkoutPage() {
   const handleSetDone = async ({ weight, reps }) => {
     if (!workoutId || !currentExercise) return
 
-    const newSet = { weightKg: weight, reps, exerciseId: currentExercise.id }
-    const updatedSets = [...doneSets, newSet]
-    setDoneSets(updatedSets)
+    const tempId = crypto.randomUUID()
+    const newSet = { weightKg: weight, reps, exerciseId: currentExercise.id, tempId }
+    setDoneSets(prev => [...prev, newSet])
 
     try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
-
-    // Always show rest timer (including after last set)
     setResting(true)
 
-    // API call in background — save set.id for potential deletion
     try {
       const { set } = await apiPost(`/api/v1/workouts/${workoutId}/sets`, {
         exerciseId: currentExercise.id,
@@ -352,10 +350,33 @@ export default function WorkoutPage() {
         weightKg: weight || null,
         reps,
       })
-      // Patch the optimistic entry with server id
-      setDoneSets(prev => prev.map((s, i) =>
-        i === prev.length - 1 && !s.id ? { ...s, id: set.id } : s
+
+      // Сет удалили пока POST летел → сразу удаляем на сервере
+      if (pendingDeletionsRef.current.has(tempId)) {
+        pendingDeletionsRef.current.delete(tempId)
+        apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+        return
+      }
+
+      // Патчим id по tempId (не по позиции)
+      setDoneSets(prev => prev.map(s =>
+        s.tempId === tempId ? { ...s, id: set.id } : s
       ))
+      setAllExercises(prev => prev.map(ex => ({
+        ...ex,
+        sets: ex.sets.map(s => s.tempId === tempId ? { ...s, id: set.id } : s),
+      })))
+      setPartialSets(prev => {
+        let changed = false
+        const result = {}
+        for (const [exId, sets] of Object.entries(prev)) {
+          result[exId] = sets.map(s => {
+            if (s.tempId === tempId) { changed = true; return { ...s, id: set.id } }
+            return s
+          })
+        }
+        return changed ? result : prev
+      })
     } catch (err) {
       console.error('Failed to log set:', err)
     }
@@ -377,6 +398,8 @@ export default function WorkoutPage() {
     const set = item.sets[setIndex]
     if (set?.id && workoutId) {
       apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+    } else if (set?.tempId && !set.id) {
+      pendingDeletionsRef.current.add(set.tempId)
     }
     setAllExercises(prev => {
       const updated = [...prev]
@@ -397,7 +420,11 @@ export default function WorkoutPage() {
     // Delete all sets in background
     if (workoutId) {
       for (const set of item.sets) {
-        if (set?.id) apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+        if (set?.id) {
+          apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+        } else if (set?.tempId && !set.id) {
+          pendingDeletionsRef.current.add(set.tempId)
+        }
       }
     }
     setAllExercises(prev => prev.filter((_, i) => i !== exerciseIndex))
@@ -422,6 +449,8 @@ export default function WorkoutPage() {
     const lastSet = doneSets[doneSets.length - 1]
     if (lastSet?.id && workoutId) {
       apiDelete(`/api/v1/workouts/${workoutId}/sets/${lastSet.id}`).catch(() => {})
+    } else if (lastSet?.tempId && !lastSet.id) {
+      pendingDeletionsRef.current.add(lastSet.tempId)
     }
     setDoneSets(prev => prev.slice(0, -1))
     setResting(false)
@@ -431,6 +460,8 @@ export default function WorkoutPage() {
     const set = doneSets[setIndex]
     if (set?.id && workoutId) {
       apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+    } else if (set?.tempId && !set.id) {
+      pendingDeletionsRef.current.add(set.tempId)
     }
     setDoneSets(prev => prev.filter((_, i) => i !== setIndex))
   }
@@ -455,6 +486,8 @@ export default function WorkoutPage() {
     const set = sets[setIndex]
     if (set?.id && workoutId) {
       apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+    } else if (set?.tempId && !set.id) {
+      pendingDeletionsRef.current.add(set.tempId)
     }
     setPartialSets(prev => {
       const newSets = prev[exerciseId].filter((_, i) => i !== setIndex)
@@ -594,7 +627,11 @@ export default function WorkoutPage() {
   const executeSwap = (alt) => {
     // Delete any logged sets for current exercise from backend
     for (const s of doneSets) {
-      if (s?.id && workoutId) apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+      if (s?.id && workoutId) {
+        apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+      } else if (s?.tempId && !s.id) {
+        pendingDeletionsRef.current.add(s.tempId)
+      }
     }
 
     // Swap in planExercises: current ↔ alternative
@@ -636,7 +673,11 @@ export default function WorkoutPage() {
     if (partial?.length > 0) {
       // Delete partial sets from backend
       for (const s of partial) {
-        if (s?.id && workoutId) apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+        if (s?.id && workoutId) {
+          apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+        } else if (s?.tempId && !s.id) {
+          pendingDeletionsRef.current.add(s.tempId)
+        }
       }
       setPartialSets(prev => { const next = { ...prev }; delete next[planEx.exerciseId]; return next })
     }

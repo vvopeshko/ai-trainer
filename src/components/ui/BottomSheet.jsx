@@ -12,13 +12,19 @@ export function BottomSheet({ open, onClose, children }) {
 
   const DURATION = 250 // ms — совпадает с CSS
 
-  // Открытие
+  // Открытие / программное закрытие
   useEffect(() => {
     if (open) {
       setClosing(false)
       setVisible(true)
+    } else if (visible && !closing) {
+      setClosing(true)
+      setTimeout(() => {
+        setVisible(false)
+        setClosing(false)
+      }, DURATION)
     }
-  }, [open])
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Закрытие с анимацией
   const handleClose = useCallback(() => {

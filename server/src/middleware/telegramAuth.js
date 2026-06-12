@@ -93,7 +93,10 @@ function parseAndValidateInitData(initData, botToken) {
   const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest()
   const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
 
-  if (computedHash !== receivedHash) {
+  const computedBuf = Buffer.from(computedHash, 'hex')
+  const receivedBuf = Buffer.from(receivedHash, 'hex')
+  if (computedBuf.length !== receivedBuf.length ||
+      !crypto.timingSafeEqual(computedBuf, receivedBuf)) {
     return { ok: false, error: 'initData hash mismatch' }
   }
 
