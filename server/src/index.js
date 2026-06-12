@@ -3,6 +3,7 @@ import cors from 'cors'
 import { createBot } from './bot/index.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { globalLimiter } from './middleware/rateLimiter.js'
 
 // BigInt → JSON monkey-patch.
 //
@@ -23,12 +24,13 @@ app.use(
     credentials: true,
   }),
 )
-app.use(express.json({ limit: '10mb' }))
+app.use(express.json({ limit: '1mb' }))
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() })
 })
 
+app.use('/api/v1', globalLimiter)
 app.use('/api/v1', apiRoutes)
 
 app.use(errorHandler)

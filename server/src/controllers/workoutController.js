@@ -33,6 +33,16 @@ export async function create(req, res) {
     }
   }
 
+  if (data.programId) {
+    const program = await prisma.program.findFirst({
+      where: { id: data.programId, userId: req.user.id },
+      select: { id: true },
+    })
+    if (!program) {
+      return res.status(403).json({ error: 'Program not found' })
+    }
+  }
+
   const workout = await prisma.workout.create({
     data: {
       userId: req.user.id,
@@ -67,8 +77,8 @@ export async function getActive(req, res) {
   let planDayTitle = null
 
   if (workout?.programId && workout.programDayIndex != null) {
-    const program = await prisma.program.findUnique({
-      where: { id: workout.programId },
+    const program = await prisma.program.findFirst({
+      where: { id: workout.programId, userId: req.user.id },
       select: { planJson: true },
     })
     const day = program?.planJson?.days?.[workout.programDayIndex]

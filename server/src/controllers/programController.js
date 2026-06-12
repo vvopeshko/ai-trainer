@@ -255,7 +255,7 @@ export async function activateProgram(req, res) {
  * Импорт программы из markdown-текста через LLM.
  */
 const importBodySchema = z.object({
-  text: z.string().min(100),
+  text: z.string().min(100).max(50000),
 })
 
 export async function importProgramHandler(req, res) {

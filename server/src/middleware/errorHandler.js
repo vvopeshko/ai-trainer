@@ -13,6 +13,6 @@ export function errorHandler(err, req, res, next) {
   console.error('[error]', req.method, req.path, err)
   const status = err.status ?? 500
   res.status(status).json({
-    error: err.message ?? 'Internal Server Error',
+    error: status >= 500 ? 'Internal Server Error' : (err.message ?? 'Internal Server Error'),
   })
 }

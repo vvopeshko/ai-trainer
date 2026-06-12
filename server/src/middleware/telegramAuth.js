@@ -21,8 +21,8 @@ export async function telegramAuth(req, res, next) {
     let tgUser
 
     if (raw === DEV_BYPASS_VALUE) {
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(401).json({ error: 'dev_bypass is disabled in production' })
+      if (process.env.ALLOW_DEV_BYPASS !== 'true') {
+        return res.status(401).json({ error: 'dev_bypass is disabled' })
       }
       tgUser = {
         id: 0,
@@ -95,6 +95,11 @@ function parseAndValidateInitData(initData, botToken) {
 
   if (computedHash !== receivedHash) {
     return { ok: false, error: 'initData hash mismatch' }
+  }
+
+  const authDate = Number(params.get('auth_date'))
+  if (!authDate || Date.now() / 1000 - authDate > 86400) {
+    return { ok: false, error: 'initData is expired' }
   }
 
   const userJson = params.get('user')
