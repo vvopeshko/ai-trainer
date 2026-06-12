@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-06-02
+**Последнее обновление:** 2026-06-12
 
 ---
 
@@ -30,8 +30,6 @@
 
 - [ ] Профиль-экран (`/me`) — сейчас placeholder
 - [ ] Deep-links из бота в мини-апп
-- [ ] Toast-уведомления
-- [ ] Error states (сетевые ошибки, пустые состояния)
 - [ ] Offline-очередь pending-подходов
 
 ### Параллельно: инфра и улучшения
@@ -41,6 +39,7 @@
 - [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
 - [ ] Расширить покрытие тестов: контроллеры (с моком Prisma), интеграционные тесты API
 - [ ] GitHub Actions CI (когда появится второй разработчик)
+- [ ] Таймзонные баги в стриках — сбор timezone с клиента, ревизия raw SQL запросов (отложено из Фазы 1)
 
 ---
 
@@ -54,6 +53,30 @@
 ---
 
 ## ✅ Выполнено
+
+### Фаза 1: Корректность и устойчивость (2026-06-12) ✅
+
+- [x] Workout race condition → `prisma.$transaction()` в workoutController.create()
+- [x] Auth debounce: in-memory Map, lastSeenAt обновляется раз в 5 мин (не на каждый запрос)
+- [x] Alternatives: slug → UUID через `resolveExercise()` в generateProgram + importProgram
+- [x] `api.js`: AbortSignal support через `AbortSignal.any()`
+- [x] `HomeDataContext`: AbortController ref + error state + race fix
+- [x] `ProgressDataContext`: error state
+- [x] Toast-уведомления: `useToast()` в HomePage, WorkoutPage, ProgramEditPage
+- [x] 4 i18n-ключа для ошибок (errors.network, workoutStart, workoutFinish, saveFailed)
+- [x] Реальные тесты: api.test.js (9 тестов), exerciseResolver.test.js (5 тестов)
+- [x] ESLint для server/ (отдельный блок в eslint.config.js)
+- [x] Pre-push: lint добавлен перед build + тестами
+
+### Security hardening (2026-06-12) ✅
+
+- [x] telegramAuth: `auth_date` валидация (24h expiry, replay prevention)
+- [x] telegramAuth: `dev_bypass` → `ALLOW_DEV_BYPASS=true` env var (fail-closed)
+- [x] workoutController: IDOR fix — проверка владельца `programId` в create/getActive
+- [x] errorHandler: скрытие internal errors при status >= 500
+- [x] Rate limiting: глобальный 100 req/мин + LLM 5 req/мин (`express-rate-limit`)
+- [x] Input validation: `.max(50000)` на import text, body limit 10MB → 1MB
+- [x] Тесты обновлены: telegramAuth (7 тестов), errorHandler (4 теста)
 
 ### Landing page — Liquid Glass (2026-05-27–29) ✅
 
@@ -233,7 +256,7 @@
 
 - Дополнить aliases в seed по результатам реального использования
 - `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию Home ↔ Workout
-- Error handling в WorkoutPage — сейчас ошибки молча глотаются (пустой экран при сбое API)
+- ~~Error handling в WorkoutPage — сейчас ошибки молча глотаются (пустой экран при сбое API)~~ ✅ toast + error states
 - ~~Loading states — нет скелетонов/спиннеров при загрузке данных~~ ✅ скелетоны + HomeDataContext
 - ~~Автоподстановка веса/повторов из прошлого подхода того же упражнения~~ ✅
 - ~~Редактирование/удаление отдельных подходов~~ ✅ удаление реализовано

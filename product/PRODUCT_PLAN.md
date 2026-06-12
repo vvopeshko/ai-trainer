@@ -2,7 +2,7 @@
 
 Стратегический план развития продукта по доменам. Каждая фича — с текущим статусом.
 
-**Обновлён:** 2026-06-02
+**Обновлён:** 2026-06-12
 
 **Связь с другими документами:**
 - **PRODUCT_PLAN** (этот файл) — стратегический: все фичи продукта, сгруппированные по доменам, с текущим статусом
@@ -15,7 +15,7 @@
 Первый контакт с продуктом, сбор данных о пользователе, персонализация.
 
 - ✅ **Визард генерации программы** — диалог в боте: пол, возраст, цель, уровень, дни, оборудование, ограничения (9 шагов, WizardScene)
-- ✅ **Авторизация через Telegram** — HMAC-SHA256 валидация initData, dev_bypass для разработки
+- ✅ **Авторизация через Telegram** — HMAC-SHA256 валидация initData + auth_date expiry (24h), dev_bypass через `ALLOW_DEV_BYPASS` env var (fail-closed)
 - ✅ **Модель UserProfile** — Prisma-схема с полями цели, опыта, ограничений, оборудования
 - 🔜 **Профиль-экран в мини-аппе (`/me`)** — сейчас placeholder; анкета, настройки, годовая цель
 - 📋 **Онбординг нового пользователя** — полноценный welcome-flow при первом /start (сейчас сразу визард)
@@ -77,6 +77,9 @@
 - 📋 **Суперсеты** — объединение двух упражнений, чередование подходов
 - 📋 **Пропуск упражнения** — отметка "пропущено" с причиной
 - 📋 **Quick actions** — "Спросить тренера" и "Фото тренажёра" прямо из тренировки
+- ✅ **Toast-уведомления для ошибок** — useToast() в HomePage, WorkoutPage, ProgramEditPage с i18n-ключами
+- ✅ **Error states** — HomeDataContext и ProgressDataContext с полем `error`, race condition fix через AbortController
+- ✅ **Workout race condition fix** — `prisma.$transaction()` в create, предотвращает двойные тренировки
 - 📋 **Offline-очередь подходов** — localStorage-очередь при потере связи, синхронизация
 - 📋 **RPE (воспринимаемая нагрузка)** — ввод RPE для intermediate/advanced (скрыт для новичков)
 - 📋 **ActiveWorkoutProvider** — React Context, тренировка переживает навигацию без потери состояния
@@ -190,6 +193,25 @@
 - 📋 **Оплата через Telegram Stars** — нативные платежи внутри Telegram
 - 📋 **Внешний платёжный провайдер** — Stripe или аналог для рынков без Stars
 - 📋 **Управление подпиской** — просмотр, отмена, смена тарифа
+
+---
+
+## 10. Безопасность и инфра
+
+Защита API, авторизация, rate limiting, мониторинг.
+
+- ✅ **HMAC-SHA256 авторизация** — telegramAuth middleware, валидация initData
+- ✅ **auth_date expiry** — отклонение initData старше 24 часов (replay prevention)
+- ✅ **Fail-closed dev_bypass** — `ALLOW_DEV_BYPASS=true` env var вместо `NODE_ENV` проверки
+- ✅ **IDOR protection** — проверка владельца ресурса (programId в workoutController)
+- ✅ **Rate limiting** — глобальный 100 req/мин + LLM 5 req/мин (express-rate-limit)
+- ✅ **Error message hiding** — generic "Internal Server Error" при status >= 500
+- ✅ **Input validation** — body limit 1MB, text max 50KB на LLM-импорт
+- ✅ **Auth debounce** — in-memory Map, lastSeenAt обновляется раз в 5 мин (не на каждый запрос), снижение нагрузки на БД
+- ✅ **ESLint для server/** — серверный блок в eslint.config.js, lint в pre-push хуке
+- 📋 **CSRF protection** — дополнительная защита для state-changing операций
+- 📋 **Аудит-лог** — логирование security-relevant событий (failed auth, rate limit hits)
+- 📋 **Helmet.js** — HTTP security headers (CSP, HSTS, etc.)
 
 ---
 

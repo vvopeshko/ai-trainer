@@ -2,7 +2,7 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-06-02
+**Последнее обновление:** 2026-06-12
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
@@ -44,8 +44,9 @@ JavaScript в MVP (как в daily balancer). Перейти на TypeScript —
 ### Тестирование и качество
 
 - **Vitest** — тестовый фреймворк (фронт + бэк). ESM-native, подхватывает Vite-конфиг.
-- **Husky** — pre-push git-хук: `build → test (front) → test (back)`. Блокирует деплой сломанного кода.
-- Покрытие: чистые функции (`parseJsonFromLLM`, `slugify`, `weightUnit`, `formatters`, `muscleMapping`) + middleware (`errorHandler`, `telegramAuth`).
+- **ESLint 9** — flat config с двумя блоками: Frontend (`src/**/*.{js,jsx}`, React plugins) + Server (`server/src/**/*.js`, Node globals).
+- **Husky** — pre-push git-хук: `lint → build → test (front) → test (back)`. Блокирует деплой сломанного кода.
+- Покрытие: чистые функции (`parseJsonFromLLM`, `slugify`, `weightUnit`, `formatters`, `muscleMapping`) + middleware (`errorHandler`, `telegramAuth`) + сервисы (`exerciseResolver`) + API-клиент (`api.js`).
 - CI (GitHub Actions) пока нет — для соло-разработки хватает локальных хуков.
 
 ---
@@ -240,8 +241,9 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
         ├── controllers/               # exercise, workout, program, stats
         ├── routes/                    # exercises, workouts, programs, stats
         ├── middleware/
-        │   ├── telegramAuth.js        # HMAC-SHA256 + dev_bypass (telegramId=0)
-        │   └── errorHandler.js
+        │   ├── telegramAuth.js        # HMAC-SHA256 + auth_date expiry + dev_bypass
+        │   ├── rateLimiter.js         # express-rate-limit (global 100/min + LLM 5/min)
+        │   └── errorHandler.js        # ZodError → 400, 500 → generic message
         ├── bot/
         │   ├── index.js               # createBot() → Telegraf
         │   ├── scenes/                # WizardScene для /program (generateProgram.js)
@@ -753,13 +755,29 @@ model AnalyticsEvent {
 **Middleware `telegramAuth`** на всех защищённых роутах `/api/v1/*`:
 1. Читает `Authorization: tma <initData>`.
 2. Валидирует initData через HMAC-SHA256 с `BOT_TOKEN`.
-3. Upsert `User` по `telegramId`.
-4. `req.user` доступен в контроллерах.
-5. Side-effect: update `lastSeenAt`, `sessionsCount`, fire analytics `user_seen`.
+3. Проверяет `auth_date` — отклоняет initData старше 24 часов (replay prevention).
+4. Upsert `User` по `telegramId` (с пустым `update: {}` — без лишних writes).
+5. `req.user` доступен в контроллерах.
+6. Side-effect (debounced, раз в 5 мин): update `lastSeenAt` fire-and-forget, fire analytics `user_seen`. In-memory `Map` хранит timestamp последнего обновления на юзера.
 
-**Dev-bypass:** в `NODE_ENV=development` заголовок `Authorization: tma dev_bypass` создаёт/использует тестового юзера без Telegram. Удобно для локальной разработки с обычным браузером.
+**Dev-bypass:** при `ALLOW_DEV_BYPASS=true` в env заголовок `Authorization: tma dev_bypass` создаёт/использует тестового юзера без Telegram. Fail-closed: без явной переменной bypass отключён (в т.ч. на Railway, где переменная не задана).
 
 Правило: каждый новый роут-модуль начинается с `router.use(telegramAuth)`, иначе `TypeError: Cannot read properties of undefined (reading 'id')` на `req.user.id`.
+
+### 5.1.1 Rate Limiting
+
+**Middleware `rateLimiter`** (`server/src/middleware/rateLimiter.js`) на базе `express-rate-limit`:
+- **Глобальный лимит:** 100 req/мин на юзера (по `Authorization` header), применяется ко всем `/api/v1` роутам.
+- **LLM-лимит:** 5 req/мин на юзера, применяется к `POST /programs/import` (защита от LLM cost abuse).
+- Ключ — Authorization header (не IP), `validate: { ip: false }`.
+- Глобальный body limit: `1MB` (`express.json({ limit: '1mb' })`).
+
+### 5.1.2 Error Handling
+
+**Middleware `errorHandler`** (`server/src/middleware/errorHandler.js`):
+- `ZodError` → 400 с `{ error: 'Validation failed', issues }`.
+- Status >= 500 → generic `{ error: 'Internal Server Error' }` (не утекает `err.message`).
+- Status < 500 → `{ error: err.message }` (клиентские ошибки возвращают конкретику).
 
 ### 5.2 Работа с Prisma
 

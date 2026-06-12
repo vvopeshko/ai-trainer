@@ -4,6 +4,103 @@
 
 ---
 
+## 2026-06-12 — Фаза 1: Корректность и устойчивость
+
+### Backend: race condition, auth debounce, alternatives fix
+
+**Workout race condition → `$transaction`:**
+- `workoutController.create()` обёрнут в `prisma.$transaction()` — findFirst + delete + create атомарны
+- Исключает создание дублирующих тренировок при двойном тапе / конкурентных запросах
+
+**Auth: debounce DB writes:**
+- `telegramAuth` больше не делает upsert с `lastSeenAt` + `sessionsCount` на КАЖДЫЙ HTTP-запрос
+- In-memory `Map` с debounce 5 мин: `lastSeenAt` обновляется fire-and-forget раз в 5 мин
+- Upsert оставлен с пустым `update: {}` (для первого визита)
+- Снижение нагрузки на БД: ~10 writes → 1 за 5 мин на юзера
+
+**Alternatives: slug → UUID:**
+- `generateProgram.js` и `importProgram.js` теперь резолвят alternative slugs через `resolveExercise()`
+- Раньше LLM возвращал slug-строки, workoutController искал их как UUID → альтернативы всегда пустые
+
+### Frontend: AbortSignal, race fix, error state
+
+**`api.js` — AbortSignal support:**
+- `fetchWithTimeout()` совмещает внешний signal с timeout-controller через `AbortSignal.any()`
+- Все функции (`apiGet`, `apiPost`, `apiPut`, `apiPatch`, `apiDelete`) принимают `{ signal }` в options
+
+**`HomeDataContext` — race fix + error state:**
+- `AbortController` ref отменяет предыдущий запрос при повторном `refresh()`
+- Новое поле `error: true` при полном сбое сети (все 7 запросов вернули null)
+- `signal.aborted` проверяется перед `setState` — отменённые запросы не перетирают свежие данные
+
+**`ProgressDataContext` — error state:**
+- Аналогичное поле `error: true/false` при сбое/успехе запроса
+
+### Toast для ошибок API
+
+- `useToast()` подключён в `HomePage`, `WorkoutPage`, `ProgramEditPage`
+- `handleStart` catch → `t('errors.workoutStart')`
+- `handleSetDone` catch → `t('errors.network')`
+- `handleFinish` catch → `t('errors.workoutFinish')`
+- `handleSave` catch → `t('errors.saveFailed')`
+- `handleActivate` catch → `t('errors.network')`
+- 4 новых i18n-ключа: `errors.network`, `errors.workoutStart`, `errors.workoutFinish`, `errors.saveFailed`
+
+### Тесты и lint
+
+**Реальные тесты (замена заглушек):**
+- `src/utils/api.test.js` — 9 тестов: auth header, apiGet/apiPost/apiPatch/apiDelete, error shape, signal passthrough
+- `server/src/services/exerciseResolver.test.js` — 5 тестов: slug path, alias path, auto-create path, race condition handling
+
+**ESLint для server/:**
+- `eslint.config.js` — добавлен серверный блок (`server/src/**/*.js`, Node globals)
+- React 19 strict rules (`set-state-in-effect`, `refs`, `preserve-manual-memoization`) даунгрейднуты в warnings
+- `no-empty` с `allowEmptyCatch: true` — предотвращает ложные ошибки на catch-блоках
+
+**Pre-push:**
+- `.husky/pre-push` — добавлен `npm run lint` перед build и тестами
+
+---
+
+## 2026-06-12 — Фаза 0: Security hardening
+
+### Исправления безопасности по результатам code review
+
+5 уязвимостей закрыты, добавлен rate limiting.
+
+**telegramAuth — replay-атаки и dev_bypass:**
+- `auth_date` валидация: initData старше 24 часов отклоняется (после проверки HMAC)
+- `dev_bypass` переключён с `NODE_ENV !== 'production'` на явный `ALLOW_DEV_BYPASS=true` env var (fail-closed — без переменной bypass отключён)
+
+**workoutController — IDOR на programId:**
+- `create()`: добавлена проверка владельца программы перед созданием тренировки (403 если чужая)
+- `getActive()`: `findUnique` → `findFirst` с фильтром `userId` при загрузке связанной программы
+
+**errorHandler — утечка внутренних ошибок:**
+- При status >= 500 возвращается generic "Internal Server Error" вместо `err.message`
+- Клиентские ошибки (< 500) по-прежнему возвращают конкретное сообщение
+
+**Rate limiting (express-rate-limit):**
+- Новый middleware `server/src/middleware/rateLimiter.js`
+- Глобальный лимит: 100 req/мин на пользователя (по Authorization header) на `/api/v1`
+- LLM-лимит: 5 req/мин на `/programs/import` (защита от LLM cost abuse)
+- Ключ — Authorization header (не IP), `validate: { ip: false }`
+
+**Input validation / body limits:**
+- `importBodySchema.text`: добавлен `.max(50000)` (50KB) для защиты от гигантских LLM-запросов
+- Глобальный body limit снижен с 10MB до 1MB (`express.json({ limit: '1mb' })`)
+
+**Тесты:**
+- `telegramAuth.test.js`: обновлены тесты dev_bypass (ALLOW_DEV_BYPASS), добавлен тест expired initData
+- `errorHandler.test.js`: тест на скрытие internal errors при 500, тест на сохранение err.message при 400
+- Хелпер `buildValidInitData()` для генерации валидных initData в тестах
+
+**Конфигурация:**
+- `server/.env.example`: добавлен `ALLOW_DEV_BYPASS=true`
+- `server/.env`: добавлен `ALLOW_DEV_BYPASS=true` для локальной разработки
+
+---
+
 ## 2026-06-02 — Backend persistence для настроек упражнений
 
 ### Серверная синхронизация exercise settings
