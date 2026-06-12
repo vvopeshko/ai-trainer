@@ -268,6 +268,7 @@ export const translations = {
     'summary.subtitle': 'Тренировка записана.',
     'summary.sets': 'Подходов',
     'summary.time': 'Время',
+    'summary.exercises': 'Упражнений',
     'summary.tonnage': 'Тоннаж',
     'summary.backHome': 'К программе',
   },

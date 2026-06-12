@@ -23,7 +23,7 @@
 
 ### Фаза 4 (остаток) — Summary + Progress
 
-- [ ] Summary-экран: улучшить (сейчас минимальный)
+- [x] Summary-экран: тоннаж + мышцы + упражнения ✅
 - [ ] Progress Phase 2: графики за период, плато, дисбалансы, тренды
 
 ### Фаза 6 — Cross-cutting + polish
@@ -36,10 +36,10 @@
 
 - [ ] Railway автодеплой — починить (GitHub Repo not found)
 - [ ] Медиа-обогащение: запустить `enrich:media` для всех упражнений активной программы (GIF + YouTube)
-- [ ] `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию
+- [x] `ActiveWorkoutProvider` (React Context) — тренировка переживает навигацию Home ↔ Workout ✅
 - [ ] Расширить покрытие тестов: контроллеры (с моком Prisma), интеграционные тесты API
 - [ ] GitHub Actions CI (когда появится второй разработчик)
-- [ ] Таймзонные баги в стриках — сбор timezone с клиента, ревизия raw SQL запросов (отложено из Фазы 1)
+- [x] Таймзонные баги в стриках — X-Timezone header + PostgreSQL `AT TIME ZONE` ✅
 
 ---
 
@@ -53,6 +53,13 @@
 ---
 
 ## ✅ Выполнено
+
+### Фаза 2: UX polish (2026-06-12) ✅
+
+- [x] Timezone: X-Timezone header + `getUserTimezone()` + PostgreSQL `AT TIME ZONE` в statsController/progressController
+- [x] `ActiveWorkoutProvider`: save/restore ephemeral state при навигации Home ↔ Workout
+- [x] Summary: тоннаж (tonnageKg), мышечные группы (chips), упражнения (4-й тайл)
+- [x] `dateUtils.test.js` (5 тестов)
 
 ### Фаза 1: Корректность и устойчивость (2026-06-12) ✅
 
@@ -255,7 +262,7 @@
 ## 💸 Техдолг
 
 - Дополнить aliases в seed по результатам реального использования
-- `ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию Home ↔ Workout
+- ~~`ActiveWorkoutProvider` (React Context) — тренировка должна переживать навигацию Home ↔ Workout~~ ✅
 - ~~Error handling в WorkoutPage — сейчас ошибки молча глотаются (пустой экран при сбое API)~~ ✅ toast + error states
 - ~~Loading states — нет скелетонов/спиннеров при загрузке данных~~ ✅ скелетоны + HomeDataContext
 - ~~Автоподстановка веса/повторов из прошлого подхода того же упражнения~~ ✅

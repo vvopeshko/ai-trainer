@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js'
+import { getUserTimezone } from '../utils/dateUtils.js'
 
 // 4 тренировки/неделю × 52 = 208. Переопределяется через env.
 const ANNUAL_WORKOUT_TARGET = Number(process.env.ANNUAL_WORKOUT_TARGET) || 208
@@ -7,37 +8,35 @@ const ANNUAL_WORKOUT_TARGET = Number(process.env.ANNUAL_WORKOUT_TARGET) || 208
  * GET /api/v1/stats/month
  *
  * Статистика за текущий месяц: тренировки, тоннаж, серия (streak).
+ * Все date-boundary запросы используют AT TIME ZONE для корректной работы с TZ юзера.
  */
 export async function getMonth(req, res) {
   const userId = req.user.id
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const tz = getUserTimezone(req)
 
-  const [workouts, tonnageResult, streak] = await Promise.all([
-    // Количество завершённых тренировок за месяц
-    prisma.workout.count({
-      where: {
-        userId,
-        finishedAt: { not: null, gte: startOfMonth },
-      },
-    }),
+  const [workoutResult, tonnageResult, streak] = await Promise.all([
+    prisma.$queryRaw`
+      SELECT COUNT(*)::int AS count
+      FROM "Workout"
+      WHERE "userId" = ${userId}
+        AND "finishedAt" IS NOT NULL
+        AND "finishedAt" >= DATE_TRUNC('month', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}
+    `,
 
-    // Суммарный тоннаж: SUM(weightKg * reps) по сетам завершённых тренировок месяца
     prisma.$queryRaw`
       SELECT COALESCE(SUM(ws."weightKg" * ws.reps), 0)::float AS tonnage
       FROM "WorkoutSet" ws
       JOIN "Workout" w ON ws."workoutId" = w.id
       WHERE w."userId" = ${userId}
         AND w."finishedAt" IS NOT NULL
-        AND w."finishedAt" >= ${startOfMonth}
+        AND w."finishedAt" >= DATE_TRUNC('month', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}
     `,
 
-    // Серия: последовательные дни с хотя бы 1 завершённой тренировкой
-    computeStreak(userId),
+    computeStreak(userId, tz),
   ])
 
   res.json({
-    workouts,
+    workouts: workoutResult[0].count,
     tonnageKg: Math.round(tonnageResult[0].tonnage),
     streak,
   })
@@ -50,19 +49,24 @@ export async function getMonth(req, res) {
  */
 export async function getYear(req, res) {
   const userId = req.user.id
-  const now = new Date()
-  const startOfYear = new Date(now.getFullYear(), 0, 1)
+  const tz = getUserTimezone(req)
 
-  const done = await prisma.workout.count({
-    where: {
-      userId,
-      finishedAt: { not: null, gte: startOfYear },
-    },
-  })
+  const result = await prisma.$queryRaw`
+    SELECT COUNT(*)::int AS done
+    FROM "Workout"
+    WHERE "userId" = ${userId}
+      AND "finishedAt" IS NOT NULL
+      AND "finishedAt" >= DATE_TRUNC('year', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}
+  `
+
+  // Get year in user's timezone
+  const yearResult = await prisma.$queryRaw`
+    SELECT EXTRACT(YEAR FROM NOW() AT TIME ZONE ${tz})::int AS year
+  `
 
   res.json({
-    year: now.getFullYear(),
-    done,
+    year: yearResult[0].year,
+    done: result[0].done,
     target: ANNUAL_WORKOUT_TARGET,
   })
 }
@@ -70,10 +74,11 @@ export async function getYear(req, res) {
 /**
  * Считает streak — последовательные дни (назад от сегодня),
  * в которые была хотя бы одна завершённая тренировка.
+ * Использует AT TIME ZONE для корректных date boundaries.
  */
-async function computeStreak(userId) {
+async function computeStreak(userId, tz) {
   const rows = await prisma.$queryRaw`
-    SELECT DISTINCT DATE("finishedAt") AS d
+    SELECT DISTINCT DATE("finishedAt" AT TIME ZONE ${tz}) AS d
     FROM "Workout"
     WHERE "userId" = ${userId}
       AND "finishedAt" IS NOT NULL
@@ -82,27 +87,25 @@ async function computeStreak(userId) {
 
   if (rows.length === 0) return 0
 
-  const dates = rows.map(r => {
-    const d = new Date(r.d)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
+  // "Сегодня" в TZ юзера — из PostgreSQL для consistency
+  const todayResult = await prisma.$queryRaw`
+    SELECT DATE(NOW() AT TIME ZONE ${tz}) AS today
+  `
+  const today = todayResult[0].today
 
-  const today = new Date()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const dateSet = new Set(rows.map(r => r.d.toISOString().slice(0, 10)))
+  const todayStr = today.toISOString().slice(0, 10)
 
-  // Серия начинается с сегодня или вчера
   let streak = 0
-  let check = new Date(today)
+  const check = new Date(today)
 
   // Если сегодня нет тренировки, начинаем со вчера
-  if (dates[0] !== todayStr) {
+  if (!dateSet.has(todayStr)) {
     check.setDate(check.getDate() - 1)
   }
 
-  const dateSet = new Set(dates)
-
   for (let i = 0; i < 365; i++) {
-    const key = `${check.getFullYear()}-${String(check.getMonth() + 1).padStart(2, '0')}-${String(check.getDate()).padStart(2, '0')}`
+    const key = check.toISOString().slice(0, 10)
     if (dateSet.has(key)) {
       streak++
       check.setDate(check.getDate() - 1)

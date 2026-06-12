@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js'
+import { getUserTimezone } from '../utils/dateUtils.js'
 
 /**
  * Маппинг отдельных мышц → 6 групп для UI.
@@ -100,15 +101,6 @@ const GROUP_NAMES_RU = {
 
 const GROUP_ORDER = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core']
 
-function getMonday(date) {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
 function formatLocalDate(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -124,9 +116,18 @@ function formatLocalDate(d) {
  */
 export async function getProgress(req, res) {
   const userId = req.user.id
-  const now = new Date()
-  const weekStart = getMonday(now)
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const tz = getUserTimezone(req)
+
+  // Get week start (Monday) and month start in user's timezone from PostgreSQL
+  const [boundaryResult] = await Promise.all([
+    prisma.$queryRaw`
+      SELECT
+        (DATE_TRUNC('week', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS "weekStart",
+        (DATE_TRUNC('month', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS "monthStart"
+    `,
+  ])
+  const weekStart = boundaryResult[0].weekStart
+  const monthStart = boundaryResult[0].monthStart
 
   const [
     totalFinished,

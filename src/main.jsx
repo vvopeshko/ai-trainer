@@ -7,6 +7,7 @@ import { TranslationProvider } from './i18n/TranslationProvider.jsx'
 import { TelegramProvider } from './components/TelegramProvider.jsx'
 import { HomeDataProvider } from './contexts/HomeDataContext.jsx'
 import { ProgressDataProvider } from './contexts/ProgressDataContext.jsx'
+import { ActiveWorkoutProvider } from './contexts/ActiveWorkoutContext.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
 
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')).render(
             <ToastProvider>
               <HomeDataProvider>
                 <ProgressDataProvider>
-                  <App />
+                  <ActiveWorkoutProvider>
+                    <App />
+                  </ActiveWorkoutProvider>
                 </ProgressDataProvider>
               </HomeDataProvider>
             </ToastProvider>

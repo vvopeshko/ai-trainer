@@ -11,6 +11,18 @@ function authHeader() {
   return 'tma dev_bypass'
 }
 
+function getTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone }
+  catch { return 'UTC' }
+}
+
+function baseHeaders() {
+  return {
+    Authorization: authHeader(),
+    'X-Timezone': getTimezone(),
+  }
+}
+
 function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
   const timeoutController = new AbortController()
   const id = setTimeout(() => timeoutController.abort(), timeout)
@@ -24,9 +36,7 @@ function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
 
 export async function apiGet(path, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
-    headers: {
-      Authorization: authHeader(),
-    },
+    headers: baseHeaders(),
     signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)
@@ -37,8 +47,8 @@ export async function apiPost(path, body, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'POST',
     headers: {
+      ...baseHeaders(),
       'Content-Type': 'application/json',
-      Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
     signal,
@@ -51,8 +61,8 @@ export async function apiPut(path, body, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'PUT',
     headers: {
+      ...baseHeaders(),
       'Content-Type': 'application/json',
-      Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
     signal,
@@ -65,8 +75,8 @@ export async function apiPatch(path, body, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'PATCH',
     headers: {
+      ...baseHeaders(),
       'Content-Type': 'application/json',
-      Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
     signal,
@@ -78,9 +88,7 @@ export async function apiPatch(path, body, { timeout, signal } = {}) {
 export async function apiDelete(path, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: authHeader(),
-    },
+    headers: baseHeaders(),
     signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)

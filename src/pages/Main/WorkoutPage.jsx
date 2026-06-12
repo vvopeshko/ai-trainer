@@ -25,6 +25,7 @@ import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx
 import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
+import { useActiveWorkout } from '../../contexts/ActiveWorkoutContext.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { WorkoutTopBar } from './workout/WorkoutTopBar.jsx'
 import { CollapsedExercise } from './workout/CollapsedExercise.jsx'
@@ -43,6 +44,7 @@ export default function WorkoutPage() {
   const { activeWorkout: cachedWorkout, activePlanExercises: cachedPlan, activePlanDayTitle: cachedPlanTitle } = useHomeData()
 
   const toast = useToast()
+  const { save: saveWorkoutState, restore: restoreWorkoutState, clear: clearWorkoutState } = useActiveWorkout()
   const [workoutId, setWorkoutId] = useState(null)
   const [currentExercise, setCurrentExercise] = useState(null)
   const [doneSets, setDoneSets] = useState([])
@@ -178,6 +180,30 @@ export default function WorkoutPage() {
       setTotalPausedMs(workout.totalPausedMs || 0)
       if (workout.pausedAt) setPausedAt(new Date(workout.pausedAt).getTime())
 
+      // Try to restore saved ephemeral state (from previous navigation away)
+      const saved = restoreWorkoutState(workout.id)
+      if (saved) {
+        setCurrentExercise(saved.currentExercise)
+        setDoneSets(saved.doneSets)
+        setPartialSets(saved.partialSets)
+        if (saved.planExercises) setPlanExercises(saved.planExercises)
+        else if (data.planExercises) setPlanExercises(data.planExercises)
+        setPlanIndex(saved.planIndex)
+        setAllExercises(saved.allExercises)
+        setResting(saved.resting)
+        if (data.planExercises) setPlanDayTitle(data.planDayTitle)
+
+        // Still fetch last results for plan exercises
+        const planEx = saved.planExercises || data.planExercises
+        if (planEx) {
+          const ids = planEx.map(pe => pe.exerciseId)
+          apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: ids })
+            .then(r => { if (!cancelled) setLastResultsCache(r.results) })
+            .catch(() => {})
+        }
+        return
+      }
+
       if (data.planExercises) {
         setPlanExercises(data.planExercises)
         setPlanDayTitle(data.planDayTitle)
@@ -231,6 +257,28 @@ export default function WorkoutPage() {
       .catch(() => { if (!cancelled) { setPicking(true); setLoading(false) } })
 
     return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Save state on unmount for navigation persistence ──
+  const workoutStateRef = useRef()
+  workoutStateRef.current = { workoutId, currentExercise, doneSets, partialSets, planExercises, planIndex, allExercises, resting }
+
+  useEffect(() => {
+    return () => {
+      const s = workoutStateRef.current
+      if (s.workoutId) {
+        saveWorkoutState({
+          workoutId: s.workoutId,
+          currentExercise: s.currentExercise,
+          doneSets: s.doneSets,
+          partialSets: s.partialSets,
+          planExercises: s.planExercises,
+          planIndex: s.planIndex,
+          allExercises: s.allExercises,
+          resting: s.resting,
+        })
+      }
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Ensure workout exists ──
@@ -583,14 +631,48 @@ export default function WorkoutPage() {
     const totalSets = allExercises.reduce((sum, ex) => sum + ex.sets.length, 0) + doneSets.length + partialSetCount
     const totalExercises = allExercises.length + (doneSets.length > 0 ? 1 : 0) + Object.keys(partialSets).length
 
+    // Compute tonnage and muscles from all exercises
+    let tonnageKg = 0
+    const muscleSet = new Set()
+
+    const collectSets = (sets) => {
+      for (const s of sets) {
+        if (s.weightKg && s.reps) tonnageKg += s.weightKg * s.reps
+      }
+    }
+    const collectMuscles = (exercise) => {
+      if (exercise?.primaryMuscles) {
+        exercise.primaryMuscles.forEach(m => muscleSet.add(m))
+      }
+    }
+
+    for (const ex of allExercises) {
+      collectSets(ex.sets)
+      collectMuscles(ex.exercise)
+    }
+    collectSets(doneSets)
+    if (currentExercise) collectMuscles(currentExercise)
+    for (const sets of Object.values(partialSets)) {
+      collectSets(sets)
+    }
+
+    tonnageKg = Math.round(tonnageKg)
+
     try {
       const result = await apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'finish' })
       try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
 
+      clearWorkoutState()
       if (result.deleted) { navigate('/'); return }
 
       navigate(`/summary/${workoutId}`, {
-        state: { totalSets, totalExercises, elapsedSec },
+        state: {
+          totalSets,
+          totalExercises,
+          elapsedSec,
+          tonnageKg: tonnageKg || null,
+          muscles: [...muscleSet],
+        },
       })
     } catch (err) {
       console.error('Failed to finish workout:', err)
@@ -600,6 +682,7 @@ export default function WorkoutPage() {
   }
 
   const handleCancel = async () => {
+    clearWorkoutState()
     if (workoutId) {
       try { await apiPatch(`/api/v1/workouts/${workoutId}`, {}) } catch {}
     }
@@ -608,6 +691,7 @@ export default function WorkoutPage() {
 
   const handleCancelWorkout = async () => {
     setConfirmCancel(false)
+    clearWorkoutState()
     if (workoutId) {
       try { await apiDelete(`/api/v1/workouts/${workoutId}`) } catch {}
     }

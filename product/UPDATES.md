@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-06-12 — Фаза 2: UX polish (timezone, workout persistence, summary)
+
+### Timezone-aware date boundaries
+
+- `X-Timezone` заголовок отправляется из фронтенда во все API-запросы (`Intl.DateTimeFormat().resolvedOptions().timeZone`)
+- `telegramAuth` middleware сохраняет timezone в User при создании и обновляет при изменении (debounced)
+- `getUserTimezone(req)` хелпер в `server/src/utils/dateUtils.js` — приоритет: header > user.timezone > UTC
+- `statsController`: month/year/streak запросы используют PostgreSQL `AT TIME ZONE` вместо JS Date math
+- `progressController`: week/month boundaries через `DATE_TRUNC(..., NOW() AT TIME ZONE $tz)` из PostgreSQL
+- Удалена `getMonday()` JS-функция — заменена на SQL
+
+### ActiveWorkoutProvider — сохранение состояния тренировки при навигации
+
+- `ActiveWorkoutContext` — React Context с `useRef`-буфером (без лишних ре-рендеров)
+- WorkoutPage сохраняет ephemeral state при unmount: currentExercise, doneSets, partialSets, planExercises reorder, planIndex, resting
+- При возврате на WorkoutPage — восстановление сохранённого состояния (если workoutId совпадает)
+- При finish/cancel — `clear()` очищает буфер
+- Добавлен в provider chain: `HomeDataProvider > ProgressDataProvider > ActiveWorkoutProvider > App`
+
+### Summary — тоннаж + мышцы + упражнения
+
+- WorkoutPage `handleFinish()` вычисляет tonnageKg и собирает muscles из allExercises + doneSets + partialSets
+- SummaryPage: 2×2 grid (подходы, время, упражнения, тоннаж) вместо 2-3 колонок
+- Мышечные группы отображаются как chip-badges под тайлами
+- Новый i18n-ключ `summary.exercises`
+
+### Тесты
+
+- `dateUtils.test.js` — 5 тестов для getUserTimezone
+
+---
+
 ## 2026-06-12 — Фаза 1: Корректность и устойчивость
 
 ### Backend: race condition, auth debounce, alternatives fix

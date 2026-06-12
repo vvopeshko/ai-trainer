@@ -44,6 +44,7 @@ export async function telegramAuth(req, res, next) {
     }
 
     // Upsert User по telegramId — update: {} пустой, чтобы не писать в БД на каждый запрос
+    const tz = req.header('X-Timezone') || null
     const user = await prisma.user.upsert({
       where: { telegramId: BigInt(tgUser.id) },
       create: {
@@ -53,20 +54,23 @@ export async function telegramAuth(req, res, next) {
         username: tgUser.username ?? null,
         languageCode: tgUser.language_code ?? null,
         photoUrl: tgUser.photo_url ?? null,
+        timezone: tz,
       },
       update: {},
     })
 
     req.user = user
 
-    // Fire-and-forget lastSeenAt + analytics раз в 5 мин
+    // Fire-and-forget lastSeenAt + timezone + analytics раз в 5 мин
     const now = Date.now()
     const lastSeen = userLastSeen.get(user.id)
     if (!lastSeen || now - lastSeen > SEEN_INTERVAL) {
       userLastSeen.set(user.id, now)
+      const updateData = { lastSeenAt: new Date() }
+      if (tz && tz !== user.timezone) updateData.timezone = tz
       prisma.user.update({
         where: { id: user.id },
-        data: { lastSeenAt: new Date() },
+        data: updateData,
       }).catch(() => {})
       track(user.id, 'user_seen', { path: req.path })
     }

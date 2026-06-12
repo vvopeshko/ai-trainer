@@ -35,7 +35,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR) + Cloudflare R2 (фото)
 - **Auth:** Telegram initData → HMAC-SHA256 на бэке
 - **Язык:** JavaScript (без TypeScript). ESM everywhere (`"type": "module"` — `import`/`export`, не `require()`).
-- **Тесты:** Vitest (фронт + бэк). Pre-push хук (Husky) блокирует push при падении тестов/билда.
+- **Тесты:** Vitest (фронт + бэк). Тест-файлы: `src/**/*.test.js` (фронт) и `server/src/**/*.test.js` (бэк). Pre-push хук (Husky) последовательно запускает `build → frontend tests → backend tests` и блокирует push при любом падении.
 
 ## Dev-команды
 
@@ -59,6 +59,12 @@ npm run lint
 npm test                                             # фронтенд (src/)
 cd server && npm test                                # бэкенд (server/src/)
 npm run test:all                                     # оба сразу
+
+# Один тест / watch mode
+npx vitest run src/utils/api.test.js                 # один файл (фронтенд)
+cd server && npx vitest run src/middleware/telegramAuth.test.js  # один файл (бэкенд)
+npm run test:watch                                   # watch mode (фронтенд)
+cd server && npm run test:watch                      # watch mode (бэкенд)
 
 # Проверить билд перед коммитом
 npm run build
@@ -102,7 +108,7 @@ cd server && npx prisma generate       # регенерация клиента (
 │   ├── components/ui/       # Glass, Button, Icon, TopBar, BigStepper и др.
 │   ├── components/layout/   # TabLayout, GlassNav
 │   ├── components/TelegramProvider.jsx
-│   ├── contexts/            # HomeDataContext, ProgressDataContext
+│   ├── contexts/            # HomeDataContext, ProgressDataContext, ActiveWorkoutContext
 │   ├── i18n/                # TranslationProvider, useTranslation, translations.js
 │   ├── utils/api.js         # apiGet/apiPost/apiPatch — fetch + auth header
 │   └── styles/tokens.css    # CSS custom properties (дизайн-токены)
@@ -111,10 +117,10 @@ cd server && npx prisma generate       # регенерация клиента (
     │   ├── index.js         # entry: Express + bot.launch() + scheduler (один процесс)
     │   ├── routes/          # /api/v1/{auth,exercises,workouts,stats,programs,progress}
     │   ├── controllers/     # auth, exercise, workout, program, stats, progress
-    │   ├── middleware/       # telegramAuth.js, errorHandler.js
+    │   ├── middleware/       # telegramAuth.js, rateLimiter.js, errorHandler.js
     │   ├── bot/             # Telegraf bot (long polling) + scenes (WizardScene для /program)
     │   ├── services/aiTrainer/  # LLM-логика: identifyMachine, generateProgram, importProgram
-    │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js
+    │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js, dateUtils.js
     ├── prisma/schema.prisma
     ├── scripts/             # seedExercises.js, seedDevData.js, enrichProgramMedia.js и др.
     └── data/                # enriched-exercises.json (924 упражнения)
@@ -132,20 +138,21 @@ cd server && npx prisma generate       # регенерация клиента (
 
 ### Фронтенд: провайдеры
 
-Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `HomeDataProvider` → `ProgressDataProvider` → `App`.
+Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `HomeDataProvider` → `ProgressDataProvider` → `ActiveWorkoutProvider` → `App`.
 
 - **TelegramProvider** — `useTelegram()` → `{ user, webApp, isDev }`. В dev-режиме отдаёт мок-юзера. Устанавливает CSS-переменные `--safe-top` / `--safe-bottom` для safe area insets Telegram и слушает `safeAreaChanged`/`contentSafeAreaChanged`.
 - **TranslationProvider** — `useTranslation()` → `{ t, language, setLanguage }`.
 - **HomeDataProvider** (`src/contexts/HomeDataContext.jsx`) — `useHomeData()` → `{ yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData }`. Кэш Home-данных выше Routes, stale-while-revalidate, optimistic updates через `setData`.
 - **ProgressDataProvider** (`src/contexts/ProgressDataContext.jsx`) — `useProgressData()`. Кэш прогресс-данных, stale-while-revalidate, аналогично HomeDataProvider.
+- **ActiveWorkoutProvider** (`src/contexts/ActiveWorkoutContext.jsx`) — `useActiveWorkout()` → `{ save, restore, clear }`. Ref-based буфер ephemeral workout state (currentExercise, doneSets, partialSets, planExercises, planIndex). Переживает навигацию Home ↔ Workout без ре-рендеров.
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)
 
-`apiGet(path)`, `apiPost(path, body)`, `apiPut(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrappers над `fetch`. Автоматически аттачат `Authorization: tma <initData>` (или `dev_bypass` без Telegram). Базовый URL из `VITE_API_URL`. При ошибке возвращает кастомный объект с JSON-payload сервера.
+`apiGet(path)`, `apiPost(path, body)`, `apiPut(path, body)`, `apiPatch(path, body)`, `apiDelete(path)` — thin wrappers над `fetch`. Автоматически аттачат `Authorization: tma <initData>` (или `dev_bypass` без Telegram) и `X-Timezone` (из `Intl.DateTimeFormat`). Базовый URL из `VITE_API_URL`. При ошибке возвращает кастомный объект с JSON-payload сервера.
 
 ### Бэкенд: архитектура
 
-Монолит в одном процессе: Express API + Telegraf бот (шедулер пока не реализован). `BigInt.prototype.toJSON` monkey-patch в `server/src/index.js` — Prisma возвращает `telegramId` как BigInt, без патча `JSON.stringify` падает. JSON body limit — 10MB (`express.json({ limit: '10mb' })`).
+Монолит в одном процессе: Express API + Telegraf бот (шедулер пока не реализован). `BigInt.prototype.toJSON` monkey-patch в `server/src/index.js` — Prisma возвращает `telegramId` как BigInt, без патча `JSON.stringify` падает. JSON body limit — 1MB (`express.json({ limit: '1mb' })`). Rate limiting через `express-rate-limit`: глобальный 100 req/мин + LLM 5 req/мин.
 
 - Все роуты под `/api/v1/*`, защищены `telegramAuth` middleware.
 - Health-check: `GET /api/health` (без авторизации).
@@ -156,7 +163,7 @@ cd server && npx prisma generate       # регенерация клиента (
 - Импорт программы (`importProgram.js`) запускает два LLM-вызова параллельно (структура + гайдлайны) для ускорения.
 - Сложные аналитические запросы (прогресс, статы, стрики) написаны raw SQL (CTE, агрегации), не через Prisma query builder.
 - Zod для валидации тел запросов (схемы определяются inline в контроллерах).
-- Централизованный `errorHandler` middleware (ловит ZodError → 400).
+- Централизованный `errorHandler` middleware (ZodError → 400, status >= 500 → generic message, не утекает `err.message`).
 - **Бизнес-логика тренировок:** при старте новой тренировки пустая существующая (0 сетов) автоматически удаляется. При финише с 0 сетов — тренировка удаляется вместо сохранения. Пауза/возобновление (`pausedAt`/`totalPausedMs`) отслеживает чистое время.
 - `enrichPlanExercises()` в `programController` гидратирует exercises из `planJson` данными мышц/оборудования из таблицы Exercise на лету (не денормализовано).
 
@@ -203,9 +210,9 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Telegram auth
 
-Все защищённые роуты под `/api/v1/*` используют middleware `telegramAuth` (HMAC-SHA256 валидация initData). Без него — `TypeError: Cannot read properties of undefined (reading 'id')`.
+Все защищённые роуты под `/api/v1/*` используют middleware `telegramAuth` (HMAC-SHA256 валидация initData + проверка `auth_date` < 24h). Без него — `TypeError: Cannot read properties of undefined (reading 'id')`.
 
-Dev-bypass: в dev-окружении заголовок `Authorization: tma dev_bypass` разрешает тестирование без Telegram WebApp.
+Dev-bypass: при `ALLOW_DEV_BYPASS=true` в env заголовок `Authorization: tma dev_bypass` разрешает тестирование без Telegram WebApp. Fail-closed: без переменной bypass отключён.
 
 ### Бот: машинное распознавание
 
@@ -239,7 +246,7 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 **Фронт:** `VITE_API_URL` (локально `http://localhost:3001`).
 
-**Бэк:** `DATABASE_URL`, `BOT_TOKEN`, `FRONTEND_URL`, `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_ACCESS_KEY`/`R2_SECRET_KEY`/`R2_BUCKET`/`R2_ENDPOINT` (Cloudflare R2 для фото тренажёров), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`.
+**Бэк:** `DATABASE_URL`, `BOT_TOKEN`, `FRONTEND_URL`, `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_ACCESS_KEY`/`R2_SECRET_KEY`/`R2_BUCKET`/`R2_ENDPOINT` (Cloudflare R2 для фото тренажёров), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed).
 
 `postinstall` в server/package.json автоматически запускает `prisma generate`.
 
