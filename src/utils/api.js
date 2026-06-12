@@ -12,23 +12,28 @@ function authHeader() {
 }
 
 function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
-  const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), timeout)
-  return fetch(url, { ...options, signal: controller.signal })
+  const timeoutController = new AbortController()
+  const id = setTimeout(() => timeoutController.abort(), timeout)
+  // Если передан внешний signal, совмещаем: любой из двух прерывает запрос
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, timeoutController.signal])
+    : timeoutController.signal
+  return fetch(url, { ...options, signal })
     .finally(() => clearTimeout(id))
 }
 
-export async function apiGet(path, { timeout } = {}) {
+export async function apiGet(path, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     headers: {
       Authorization: authHeader(),
     },
+    signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiPost(path, body, { timeout } = {}) {
+export async function apiPost(path, body, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'POST',
     headers: {
@@ -36,12 +41,13 @@ export async function apiPost(path, body, { timeout } = {}) {
       Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
+    signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiPut(path, body, { timeout } = {}) {
+export async function apiPut(path, body, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'PUT',
     headers: {
@@ -49,12 +55,13 @@ export async function apiPut(path, body, { timeout } = {}) {
       Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
+    signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiPatch(path, body, { timeout } = {}) {
+export async function apiPatch(path, body, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'PATCH',
     headers: {
@@ -62,17 +69,19 @@ export async function apiPatch(path, body, { timeout } = {}) {
       Authorization: authHeader(),
     },
     body: JSON.stringify(body ?? {}),
+    signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()
 }
 
-export async function apiDelete(path, { timeout } = {}) {
+export async function apiDelete(path, { timeout, signal } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'DELETE',
     headers: {
       Authorization: authHeader(),
     },
+    signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)
   return res.json()

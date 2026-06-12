@@ -20,6 +20,7 @@ import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
 import TopBar from '../../components/ui/TopBar.jsx'
 import { getMuscleName } from '../../utils/muscleMapping.js'
+import { useToast } from '../../components/ui/Toast.jsx'
 import { computeMuscleVolume, computeSubMuscleVolume, estimateDayMin, clonePlan } from './program/programHelpers.js'
 import { Stepper } from './program/Stepper.jsx'
 
@@ -30,6 +31,8 @@ export default function ProgramEditPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { refresh } = useHomeData()
+
+  const toast = useToast()
 
   // Data
   const [program, setProgram] = useState(null)
@@ -163,6 +166,7 @@ export default function ProgramEditPage() {
       refresh()
     } catch (err) {
       console.error('Failed to save program:', err)
+      toast.show(t('errors.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -200,6 +204,7 @@ export default function ProgramEditPage() {
       refresh()
     } catch (err) {
       console.error('Failed to activate program:', err)
+      toast.show(t('errors.network'))
     } finally {
       setActivating(false)
     }

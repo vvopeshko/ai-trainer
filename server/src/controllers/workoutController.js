@@ -16,46 +16,47 @@ export async function create(req, res) {
     })
     .parse(req.body)
 
-  // Проверяем: может, уже есть незавершённая?
-  const existing = await prisma.workout.findFirst({
-    where: { userId: req.user.id, finishedAt: null },
-    include: {
-      sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
-    },
-  })
-
-  if (existing) {
-    // Пустая активная тренировка (0 подходов) — удаляем и создаём свежую
-    if (existing.sets.length === 0) {
-      await prisma.workout.delete({ where: { id: existing.id } })
-    } else {
-      return res.json({ workout: existing, resumed: true })
-    }
-  }
-
-  if (data.programId) {
-    const program = await prisma.program.findFirst({
-      where: { id: data.programId, userId: req.user.id },
-      select: { id: true },
+  // Всё в транзакции — защита от race condition при двойном клике
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.workout.findFirst({
+      where: { userId: req.user.id, finishedAt: null },
+      include: {
+        sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+      },
     })
-    if (!program) {
-      return res.status(403).json({ error: 'Program not found' })
-    }
-  }
 
-  const workout = await prisma.workout.create({
-    data: {
-      userId: req.user.id,
-      programId: data.programId ?? null,
-      programDayIndex: data.programDayIndex ?? null,
-    },
-    include: {
-      sets: true,
-    },
+    if (existing) {
+      if (existing.sets.length === 0) {
+        await tx.workout.delete({ where: { id: existing.id } })
+      } else {
+        return { workout: existing, resumed: true }
+      }
+    }
+
+    if (data.programId) {
+      const program = await tx.program.findFirst({
+        where: { id: data.programId, userId: req.user.id },
+        select: { id: true },
+      })
+      if (!program) return { status: 403, error: 'Program not found' }
+    }
+
+    const workout = await tx.workout.create({
+      data: {
+        userId: req.user.id,
+        programId: data.programId ?? null,
+        programDayIndex: data.programDayIndex ?? null,
+      },
+      include: { sets: true },
+    })
+    return { workout, resumed: false, created: true }
   })
 
-  track(req.user.id, 'workout_started', { workoutId: workout.id })
-  res.status(201).json({ workout, resumed: false })
+  if (result.error) return res.status(result.status).json({ error: result.error })
+  if (result.resumed) return res.json({ workout: result.workout, resumed: true })
+
+  track(req.user.id, 'workout_started', { workoutId: result.workout.id })
+  res.status(201).json({ workout: result.workout, resumed: false })
 }
 
 /**

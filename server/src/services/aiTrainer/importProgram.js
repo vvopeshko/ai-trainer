@@ -133,6 +133,17 @@ export async function importProgram(userId, markdownText) {
         slug: ex.slug,
         nameRu: ex.nameRu,
       })
+      // Резолвим alternatives slug → exerciseId
+      const resolvedAlts = []
+      if (ex.alternatives?.length > 0) {
+        for (const altSlug of ex.alternatives) {
+          try {
+            const alt = await resolveExercise({ slug: altSlug })
+            resolvedAlts.push(alt.exerciseId)
+          } catch { /* skip unresolved */ }
+        }
+      }
+
       resolvedExercises.push({
         exerciseId: resolved.exerciseId,
         slug: ex.slug,
@@ -143,7 +154,7 @@ export async function importProgram(userId, markdownText) {
         restSec: ex.restSec,
         ...(ex.rir && { rir: ex.rir }),
         notes: ex.notes,
-        alternatives: ex.alternatives,
+        alternatives: resolvedAlts,
       })
     }
     resolvedDays.push({

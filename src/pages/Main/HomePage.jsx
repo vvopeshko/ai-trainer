@@ -15,6 +15,7 @@ import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
 import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
+import { useToast } from '../../components/ui/Toast.jsx'
 
 import { HeroBlock, HeroBlockSkeleton } from './home/HeroBlock.jsx'
 import { MyPlanSection } from './home/MyPlanSection.jsx'
@@ -29,6 +30,7 @@ export default function HomePage() {
   const { yearStats, monthStats, activeWorkout, program, nextWorkout, loaded, refresh, setData } = useHomeData()
   const { planAdherence, muscleVolume, records, loaded: progressLoaded, refresh: refreshProgress } = useProgressData()
 
+  const toast = useToast()
   const [starting, setStarting] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showDayPicker, setShowDayPicker] = useState(false)
@@ -49,6 +51,7 @@ export default function HomePage() {
       navigate('/workout')
     } catch (err) {
       console.error('Failed to start workout:', err)
+      toast.show(t('errors.workoutStart'))
       setStarting(false)
     }
   }

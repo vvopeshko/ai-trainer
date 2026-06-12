@@ -16,6 +16,7 @@ const INITIAL = {
   muscleVolume: null,
   records: null,
   loaded: false,
+  error: false,
 }
 
 export function ProgressDataProvider({ children }) {
@@ -30,9 +31,10 @@ export function ProgressDataProvider({ children }) {
         muscleVolume: result.muscleVolume,
         records: result.records,
         loaded: true,
+        error: false,
       })
     } else {
-      setData(prev => ({ ...prev, loaded: true }))
+      setData(prev => ({ ...prev, loaded: true, error: true }))
     }
   }, [])
 

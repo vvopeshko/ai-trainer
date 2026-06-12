@@ -10,6 +10,10 @@ import { track } from '../utils/analytics.js'
 
 const DEV_BYPASS_VALUE = 'dev_bypass'
 
+// Debounce: обновляем lastSeenAt и шлём track('user_seen') не чаще раза в 5 мин на юзера
+const userLastSeen = new Map() // userId → timestamp
+const SEEN_INTERVAL = 5 * 60 * 1000
+
 export async function telegramAuth(req, res, next) {
   try {
     const auth = req.header('authorization') || req.header('Authorization')
@@ -39,7 +43,7 @@ export async function telegramAuth(req, res, next) {
       tgUser = parsed.user
     }
 
-    // Upsert User по telegramId.
+    // Upsert User по telegramId — update: {} пустой, чтобы не писать в БД на каждый запрос
     const user = await prisma.user.upsert({
       where: { telegramId: BigInt(tgUser.id) },
       create: {
@@ -50,19 +54,23 @@ export async function telegramAuth(req, res, next) {
         languageCode: tgUser.language_code ?? null,
         photoUrl: tgUser.photo_url ?? null,
       },
-      update: {
-        firstName: tgUser.first_name,
-        lastName: tgUser.last_name ?? null,
-        username: tgUser.username ?? null,
-        languageCode: tgUser.language_code ?? null,
-        photoUrl: tgUser.photo_url ?? null,
-        lastSeenAt: new Date(),
-        sessionsCount: { increment: 1 },
-      },
+      update: {},
     })
 
     req.user = user
-    track(user.id, 'user_seen', { path: req.path })
+
+    // Fire-and-forget lastSeenAt + analytics раз в 5 мин
+    const now = Date.now()
+    const lastSeen = userLastSeen.get(user.id)
+    if (!lastSeen || now - lastSeen > SEEN_INTERVAL) {
+      userLastSeen.set(user.id, now)
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastSeenAt: new Date() },
+      }).catch(() => {})
+      track(user.id, 'user_seen', { path: req.path })
+    }
+
     next()
   } catch (err) {
     next(err)

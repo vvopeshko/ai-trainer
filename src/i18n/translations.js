@@ -257,6 +257,12 @@ export const translations = {
     'exercise.front': 'спереди',
     'exercise.back': 'сзади',
 
+    // Errors
+    'errors.network': 'Ошибка сети. Проверь подключение',
+    'errors.workoutStart': 'Не удалось начать тренировку',
+    'errors.workoutFinish': 'Не удалось завершить тренировку',
+    'errors.saveFailed': 'Не удалось сохранить',
+
     // Summary screen (BRD §12.3)
     'summary.title': 'Готово!',
     'summary.subtitle': 'Тренировка записана.',

@@ -25,6 +25,7 @@ import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx
 import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useHomeData } from '../../contexts/HomeDataContext.jsx'
+import { useToast } from '../../components/ui/Toast.jsx'
 import { WorkoutTopBar } from './workout/WorkoutTopBar.jsx'
 import { CollapsedExercise } from './workout/CollapsedExercise.jsx'
 import { DoneSetRow } from './workout/DoneSetRow.jsx'
@@ -41,6 +42,7 @@ export default function WorkoutPage() {
   const navigate = useNavigate()
   const { activeWorkout: cachedWorkout, activePlanExercises: cachedPlan, activePlanDayTitle: cachedPlanTitle } = useHomeData()
 
+  const toast = useToast()
   const [workoutId, setWorkoutId] = useState(null)
   const [currentExercise, setCurrentExercise] = useState(null)
   const [doneSets, setDoneSets] = useState([])
@@ -379,6 +381,7 @@ export default function WorkoutPage() {
       })
     } catch (err) {
       console.error('Failed to log set:', err)
+      toast.show(t('errors.network'))
     }
   }
 
@@ -591,6 +594,7 @@ export default function WorkoutPage() {
       })
     } catch (err) {
       console.error('Failed to finish workout:', err)
+      toast.show(t('errors.workoutFinish'))
       setFinishing(false)
     }
   }
