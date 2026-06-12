@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Стек
 
-- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + Lucide + Recharts + body-muscles (анатомическая SVG-карта)
+- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + TanStack Query (кэш-слой данных, дедупликация, staleTime, инвалидация по мутациям) + Lucide + Recharts + body-muscles (анатомическая SVG-карта)
 - **Backend:** Express 5 + Prisma 6 + PostgreSQL (Neon) + Zod + Telegraf + node-cron + yt-search
 - **AI:** Claude API (`@anthropic-ai/sdk`, модель `claude-sonnet-4-6`) — и для чата, и для vision
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR) + Cloudflare R2 (фото)
@@ -108,7 +108,9 @@ cd server && npx prisma generate       # регенерация клиента (
 │   ├── components/ui/       # Glass, Button, Icon, TopBar, BigStepper и др.
 │   ├── components/layout/   # TabLayout, GlassNav
 │   ├── components/TelegramProvider.jsx
-│   ├── contexts/            # HomeDataContext, ProgressDataContext, ActiveWorkoutContext
+│   ├── lib/                 # queryClient.js, queryKeys.js (TanStack Query)
+│   ├── hooks/               # queries.js, mutations.js (TanStack Query hooks)
+│   ├── contexts/            # ActiveWorkoutContext (ephemeral workout state)
 │   ├── i18n/                # TranslationProvider, useTranslation, translations.js
 │   ├── utils/api.js         # apiGet/apiPost/apiPatch — fetch + auth header
 │   └── styles/tokens.css    # CSS custom properties (дизайн-токены)
@@ -138,12 +140,11 @@ cd server && npx prisma generate       # регенерация клиента (
 
 ### Фронтенд: провайдеры
 
-Цепочка в `main.jsx`: `BrowserRouter` → `TranslationProvider` → `TelegramProvider` → `HomeDataProvider` → `ProgressDataProvider` → `ActiveWorkoutProvider` → `App`.
+Цепочка в `main.jsx`: `BrowserRouter` → `ErrorBoundary` → `TranslationProvider` → `TelegramProvider` → `ToastProvider` → `QueryClientProvider` → `ActiveWorkoutProvider` → `App`.
 
 - **TelegramProvider** — `useTelegram()` → `{ user, webApp, isDev }`. В dev-режиме отдаёт мок-юзера. Устанавливает CSS-переменные `--safe-top` / `--safe-bottom` для safe area insets Telegram и слушает `safeAreaChanged`/`contentSafeAreaChanged`.
 - **TranslationProvider** — `useTranslation()` → `{ t, language, setLanguage }`.
-- **HomeDataProvider** (`src/contexts/HomeDataContext.jsx`) — `useHomeData()` → `{ yearStats, monthStats, recent, activeWorkout, program, nextWorkout, loaded, refresh, setData }`. Кэш Home-данных выше Routes, stale-while-revalidate, optimistic updates через `setData`.
-- **ProgressDataProvider** (`src/contexts/ProgressDataContext.jsx`) — `useProgressData()`. Кэш прогресс-данных, stale-while-revalidate, аналогично HomeDataProvider.
+- **QueryClientProvider** (`@tanstack/react-query`) — кэш-слой данных. Заменяет HomeDataContext и ProgressDataContext. Каждый endpoint = отдельный queryKey, дедупликация, staleTime, точечная инвалидация по мутациям. Hooks в `src/hooks/queries.js` + `src/hooks/mutations.js`, ключи в `src/lib/queryKeys.js`, клиент в `src/lib/queryClient.js`.
 - **ActiveWorkoutProvider** (`src/contexts/ActiveWorkoutContext.jsx`) — `useActiveWorkout()` → `{ save, restore, clear }`. Ref-based буфер ephemeral workout state (currentExercise, doneSets, partialSets, planExercises, planIndex). Переживает навигацию Home ↔ Workout без ре-рендеров.
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)

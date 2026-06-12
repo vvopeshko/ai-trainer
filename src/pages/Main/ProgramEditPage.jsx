@@ -9,8 +9,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiGet, apiPatch, apiPost } from '../../utils/api.js'
-import { useHomeData } from '../../contexts/HomeDataContext.jsx'
+import { apiPatch, apiPost } from '../../utils/api.js'
+import { useQueryClient } from '@tanstack/react-query'
+import { useProgramDetail, useProgramList } from '../../hooks/queries.js'
+import { queryKeys } from '../../lib/queryKeys.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
@@ -30,11 +32,15 @@ export default function ProgramEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { refresh } = useHomeData()
+  const queryClient = useQueryClient()
 
   const toast = useToast()
 
-  // Data
+  // Data from TanStack Query
+  const { data: fetchedProgram, isLoading: programLoading, isError: programError } = useProgramDetail(id)
+  const { data: allPrograms = [] } = useProgramList()
+
+  // Local state for editable program (initialized from fetched data)
   const [program, setProgram] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -47,8 +53,8 @@ export default function ProgramEditPage() {
   // Activate
   const [activating, setActivating] = useState(false)
 
-  // Other programs
-  const [otherPrograms, setOtherPrograms] = useState(null)
+  // Other programs — derived from TanStack Query
+  const otherPrograms = allPrograms.filter(p => p.id !== id)
 
   // UI
   const [expandedDays, setExpandedDays] = useState(new Set([0]))
@@ -67,23 +73,18 @@ export default function ProgramEditPage() {
   const isDirty = editedPlan !== null || editedName !== null
   const plan = editedPlan ?? program?.planJson
 
-  // ─── Load ──────────────────────────────────────────────────────────
+  // ─── Sync fetched program into local state ──────────────────────────
 
   useEffect(() => {
-    Promise.all([
-      apiGet('/api/v1/programs/' + id),
-      apiGet('/api/v1/programs'),
-    ])
-      .then(([progData, listData]) => {
-        setProgram(progData.program)
-        setOtherPrograms((listData.programs || []).filter(p => p.id !== id))
-        setLoading(false)
-      })
-      .catch(() => {
-        setError(true)
-        setLoading(false)
-      })
-  }, [id])
+    if (fetchedProgram && !program) {
+      setProgram(fetchedProgram)
+      setLoading(false)
+    }
+    if (programError) {
+      setError(true)
+      setLoading(false)
+    }
+  }, [fetchedProgram, programError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Ensure plan copy for edits ────────────────────────────────────
 
@@ -163,7 +164,8 @@ export default function ProgramEditPage() {
       setProgram(prev => ({ ...prev, ...body, updatedAt: new Date().toISOString() }))
       setEditedPlan(null)
       setEditedName(null)
-      refresh()
+      queryClient.invalidateQueries({ queryKey: ['programs'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.progress })
     } catch (err) {
       console.error('Failed to save program:', err)
       toast.show(t('errors.saveFailed'))
@@ -200,8 +202,9 @@ export default function ProgramEditPage() {
     try {
       await apiPost('/api/v1/programs/' + id + '/activate')
       setProgram(prev => ({ ...prev, isActive: true }))
-      setOtherPrograms(prev => prev?.map(p => ({ ...p, isActive: false })))
-      refresh()
+      queryClient.invalidateQueries({ queryKey: ['programs'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.progress })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.recent })
     } catch (err) {
       console.error('Failed to activate program:', err)
       toast.show(t('errors.network'))

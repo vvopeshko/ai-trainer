@@ -4,8 +4,9 @@
  * Секции: Заголовок → Month stats (4 плитки) → Recent workouts (с swipe-to-delete).
  * Данные: monthStats + recent из HomeDataContext.
  */
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
@@ -16,9 +17,10 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
-import { useHomeData } from '../../contexts/HomeDataContext.jsx'
-import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
-import { apiGet, apiDelete } from '../../utils/api.js'
+import { useMonthStats, useRecentWorkouts, useProgress } from '../../hooks/queries.js'
+import { useDeleteWorkout } from '../../hooks/mutations.js'
+import { queryKeys } from '../../lib/queryKeys.js'
+import { apiGet } from '../../utils/api.js'
 import { formatDuration, formatDateLine, WEEKDAYS_RU } from '../../utils/formatters.js'
 
 // ─── Month Stats Skeleton ─────────────────────────────────────────────
@@ -339,44 +341,50 @@ function ProgressSkeleton() {
 
 export default function ProgressPage() {
   const { t } = useTranslation()
-  const { monthStats, recent, loaded, refresh, setData } = useHomeData()
-  const progressData = useProgressData()
+  const queryClient = useQueryClient()
+
+  const { data: monthStats, isLoading: statsLoading } = useMonthStats()
+  const { data: recent = [] } = useRecentWorkouts()
+  const { data: progressData, isLoading: progressLoading } = useProgress()
+  const deleteWorkoutMutation = useDeleteWorkout()
+
+  const loaded = !statsLoading
 
   const [deletingWorkoutId, setDeletingWorkoutId] = useState(null)
   const [selectedWorkout, setSelectedWorkout] = useState(null)
   const [workoutDetail, setWorkoutDetail] = useState(null)
   const [selectedMuscle, setSelectedMuscle] = useState(null)
 
-  useEffect(() => { refresh() }, [refresh])
-  useEffect(() => { progressData.refresh() }, [progressData.refresh])
-
   // Flatten all subMuscles from muscleVolume for BodyMap
   const flatMuscles = useMemo(() => {
-    if (!progressData.muscleVolume) return []
+    if (!progressData?.muscleVolume) return []
     return progressData.muscleVolume.flatMap(g => g.subMuscles || [])
-  }, [progressData.muscleVolume])
+  }, [progressData?.muscleVolume])
 
   // Find group + exercises for a clicked muscle
   const handleMuscleClick = useCallback((muscleId) => {
-    if (!progressData.muscleVolume) return
+    if (!progressData?.muscleVolume) return
     const group = progressData.muscleVolume.find(g =>
       g.subMuscles?.some(s => s.muscle === muscleId)
     )
     if (group) setSelectedMuscle(group)
-  }, [progressData.muscleVolume])
+  }, [progressData?.muscleVolume])
 
   const handleDeleteRecent = async () => {
     const id = deletingWorkoutId
     setDeletingWorkoutId(null)
-    setData(prev => ({ ...prev, recent: prev.recent.filter(w => w.id !== id) }))
-    try { await apiDelete(`/api/v1/workouts/${id}`) } catch { /* ignore */ }
+    deleteWorkoutMutation.mutate(id)
   }
 
   const handleTapWorkout = async (w) => {
     setSelectedWorkout(w)
     setWorkoutDetail(null)
     try {
-      const data = await apiGet(`/api/v1/workouts/${w.id}`)
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.workouts.detail(w.id),
+        queryFn: () => apiGet(`/api/v1/workouts/${w.id}`),
+        staleTime: Infinity,
+      })
       setWorkoutDetail(data.workout)
     } catch { /* ignore */ }
   }

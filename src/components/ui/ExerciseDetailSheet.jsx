@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiGet } from '../../utils/api.js'
+import { useExerciseDetail } from '../../hooks/queries.js'
 import { getExerciseSettings, setExerciseSettings, saveSettingsToServer, PRESETS, getDefaultPreset, getPresetsForEquipment } from '../../utils/weightUnit.js'
 import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
 import { BodyMap } from './BodyMap.jsx'
@@ -912,42 +912,48 @@ function DetailSkeleton() {
 
 export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange }) {
   const { t } = useTranslation()
-  const [exercise, setExercise] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('instructions')
   const [settings, setSettings] = useState(null)
   const [tabKey, setTabKey] = useState(0)
+  const [prevExerciseId, setPrevExerciseId] = useState(null)
 
+  // Use TanStack Query — cached, placeholderData from catalog
+  const { data: exercise = null, isLoading: loading } = useExerciseDetail(open ? exerciseId : null)
+
+  // Reset tab when opening a different exercise
   useEffect(() => {
-    if (!open || !exerciseId) {
-      setExercise(null)
+    if (!open) {
+      setPrevExerciseId(null)
       setActiveTab('instructions')
+      setSettings(null)
       return
     }
-    setLoading(true)
-    setExercise(null)
-    apiGet(`/api/v1/exercises/${exerciseId}`)
-      .then(data => {
-        setExercise(data.exercise)
-        const saved = getExerciseSettings(data.exercise.slug)
-        // Auto-detect preset from equipment if no preset saved
-        if (!saved.preset) {
-          const presetId = getDefaultPreset(data.exercise.equipment)
-          const p = PRESETS[presetId]
-          if (p) {
-            const withPreset = { ...saved, preset: presetId, ...p }
-            setSettings(withPreset)
-            setExerciseSettings(data.exercise.slug, withPreset)
-          } else {
-            setSettings(saved)
-          }
-        } else {
-          setSettings(saved)
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [open, exerciseId])
+    if (exerciseId !== prevExerciseId) {
+      setPrevExerciseId(exerciseId)
+      setActiveTab('instructions')
+      setSettings(null)
+    }
+  }, [open, exerciseId, prevExerciseId])
+
+  // Init settings when exercise data arrives
+  useEffect(() => {
+    if (!exercise?.slug || settings) return
+    const saved = getExerciseSettings(exercise.slug)
+    // Auto-detect preset from equipment if no preset saved
+    if (!saved.preset) {
+      const presetId = getDefaultPreset(exercise.equipment)
+      const p = PRESETS[presetId]
+      if (p) {
+        const withPreset = { ...saved, preset: presetId, ...p }
+        setSettings(withPreset)
+        setExerciseSettings(exercise.slug, withPreset)
+      } else {
+        setSettings(saved)
+      }
+    } else {
+      setSettings(saved)
+    }
+  }, [exercise?.slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSettingsChange = useCallback((newSettings) => {
     setSettings(newSettings)

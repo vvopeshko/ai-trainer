@@ -4,16 +4,18 @@
  * Секции: HeroBlock → QuickActions → MyPlanSection → MonthStatsTiles.
  * Данные: HomeDataContext + ProgressDataContext.
  */
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiPost, apiPatch, apiDelete } from '../../utils/api.js'
+import { apiPost } from '../../utils/api.js'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
-import { useHomeData } from '../../contexts/HomeDataContext.jsx'
-import { useProgressData } from '../../contexts/ProgressDataContext.jsx'
+import { useMonthStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress } from '../../hooks/queries.js'
+import { useCancelWorkout, useResumeWorkout } from '../../hooks/mutations.js'
+import { queryKeys } from '../../lib/queryKeys.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 
@@ -26,18 +28,30 @@ import { MuscleGroupCard, MUSCLE_ICONS } from './home/MuscleGroupCard.jsx'
 export default function HomePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useTelegram()
-  const { yearStats, monthStats, activeWorkout, program, nextWorkout, loaded, refresh, setData } = useHomeData()
-  const { planAdherence, muscleVolume, records, loaded: progressLoaded, refresh: refreshProgress } = useProgressData()
+
+  const { data: monthStats } = useMonthStats()
+  const { data: activeWorkoutData } = useActiveWorkoutQuery()
+  const activeWorkout = activeWorkoutData?.workout ?? null
+  const { data: program } = useActiveProgram()
+  const { data: nextWorkoutData } = useNextWorkout()
+  const nextWorkout = nextWorkoutData?.day ? nextWorkoutData : null
+  const { data: progressData } = useProgress()
+  const planAdherence = progressData?.planAdherence ?? null
+  const muscleVolume = progressData?.muscleVolume ?? null
+
+  const cancelWorkoutMutation = useCancelWorkout()
+  const resumeWorkoutMutation = useResumeWorkout()
+
+  const loaded = monthStats !== undefined
+  const progressLoaded = progressData !== undefined
 
   const toast = useToast()
   const [starting, setStarting] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showDayPicker, setShowDayPicker] = useState(false)
   const [selectedMuscle, setSelectedMuscle] = useState(null)
-
-  useEffect(() => { refresh() }, [refresh])
-  useEffect(() => { refreshProgress() }, [refreshProgress])
 
   const handleStart = async (programId, dayIndex) => {
     setStarting(true)
@@ -61,38 +75,24 @@ export default function HomePage() {
   const handleResume = async () => {
     if (!activeWorkout?.pausedAt) return
     const pauseDuration = Date.now() - new Date(activeWorkout.pausedAt).getTime()
-    setData(prev => ({
-      ...prev,
-      activeWorkout: {
-        ...prev.activeWorkout,
-        pausedAt: null,
-        totalPausedMs: (prev.activeWorkout.totalPausedMs || 0) + pauseDuration,
-      },
-    }))
-    try {
-      await apiPatch(`/api/v1/workouts/${activeWorkout.id}`, { action: 'resume' })
-    } catch { /* optimistic update already applied */ }
+    resumeWorkoutMutation.mutate({ id: activeWorkout.id, pauseDuration })
     navigate('/workout')
   }
 
   const handleCancel = async () => {
     if (!activeWorkout) return
     setConfirmCancel(false)
-    setData(prev => ({ ...prev, activeWorkout: null }))
-    try { await apiDelete(`/api/v1/workouts/${activeWorkout.id}`) } catch { /* ignore */ }
+    cancelWorkoutMutation.mutate(activeWorkout.id)
   }
 
   const handlePickDay = (dayIndex) => {
     const day = program.planJson.days[dayIndex]
-    setData(prev => ({
-      ...prev,
-      nextWorkout: {
-        programId: program.id,
-        day,
-        dayIndex,
-        totalDays: program.planJson.days.length,
-      },
-    }))
+    queryClient.setQueryData(queryKeys.programs.next, {
+      programId: program.id,
+      day,
+      dayIndex,
+      totalDays: program.planJson.days.length,
+    })
     setShowDayPicker(false)
   }
 

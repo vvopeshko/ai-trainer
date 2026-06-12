@@ -24,7 +24,8 @@ import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
 import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
-import { useHomeData } from '../../contexts/HomeDataContext.jsx'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../../lib/queryKeys.js'
 import { useActiveWorkout } from '../../contexts/ActiveWorkoutContext.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { WorkoutTopBar } from './workout/WorkoutTopBar.jsx'
@@ -41,7 +42,11 @@ import { ExercisePicker } from './workout/ExercisePicker.jsx'
 export default function WorkoutPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { activeWorkout: cachedWorkout, activePlanExercises: cachedPlan, activePlanDayTitle: cachedPlanTitle } = useHomeData()
+  const queryClient = useQueryClient()
+  const cachedData = queryClient.getQueryData(queryKeys.workouts.active)
+  const cachedWorkout = cachedData?.workout ?? null
+  const cachedPlan = cachedData?.planExercises ?? null
+  const cachedPlanTitle = cachedData?.planDayTitle ?? null
 
   const toast = useToast()
   const { save: saveWorkoutState, restore: restoreWorkoutState, clear: clearWorkoutState } = useActiveWorkout()

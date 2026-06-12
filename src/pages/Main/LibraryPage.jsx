@@ -7,7 +7,7 @@
  */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiGet } from '../../utils/api.js'
+import { useExerciseCatalog } from '../../hooks/queries.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
@@ -204,9 +204,8 @@ function ListSkeleton() {
 export default function LibraryPage() {
   const { t } = useTranslation()
 
-  // Data
-  const [allExercises, setAllExercises] = useState([])
-  const [loaded, setLoaded] = useState(false)
+  // Data from TanStack Query — cached across tab switches
+  const { data: allExercises = [], isLoading: loading } = useExerciseCatalog()
 
   // Filters
   const [query, setQuery] = useState('')
@@ -217,16 +216,6 @@ export default function LibraryPage() {
   // Detail sheet
   const [detailExerciseId, setDetailExerciseId] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
-
-  // Load all exercises once
-  useEffect(() => {
-    apiGet('/api/v1/exercises?limit=1500')
-      .then(data => {
-        setAllExercises(data.exercises)
-        setLoaded(true)
-      })
-      .catch(() => setLoaded(true))
-  }, [])
 
   // Client-side filtering
   const filtered = useMemo(() => {
@@ -286,7 +275,7 @@ export default function LibraryPage() {
         {t('library.title')}
       </h1>
 
-      {!loaded ? (
+      {loading ? (
         <ListSkeleton />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

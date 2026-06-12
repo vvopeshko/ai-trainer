@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-06-12 — Миграция на TanStack Query (кэш-слой данных)
+
+### Что сделано
+
+- Установлен `@tanstack/react-query` (~13 KB gzip), создана инфраструктура: `queryClient.js`, `queryKeys.js`, `queries.js`, `mutations.js`
+- **Удалены** `HomeDataContext` и `ProgressDataContext` — заменены на отдельные useQuery hooks по каждому endpoint
+- Каждый экран подписывается только на нужные ключи (Home: 5 queries вместо 8-в-1, Progress: 3 queries вместо 7+1)
+- `staleTime` по endpoint: stats 5 мин, programs 10 мин, catalog 24ч, active workout 30 сек
+- Дедупликация: Home и Progress оба подписаны на `stats.month` — один запрос
+- Optimistic updates через mutation hooks: cancel/resume/finish workout, delete recent workout
+- `ExerciseDetailSheet` использует `useExerciseDetail` с `placeholderData` из catalog cache — открывается мгновенно
+- Library (`useExerciseCatalog`) кэширует каталог на 24ч — повторный заход мгновенный
+- ProgramEditPage: `useProgramDetail` + `useProgramList` + targeted invalidation вместо `refresh()`
+- WorkoutPage: `queryClient.getQueryData` для одноразового чтения cached active workout
+- Prefetch ProgressPage и LibraryPage данных через `requestIdleCallback` в App.jsx
+- Suspense fallback: `<PageSkeleton />` вместо `null` для lazy-loaded tabs
+- Provider chain: `BrowserRouter > ErrorBoundary > TranslationProvider > TelegramProvider > ToastProvider > QueryClientProvider > ActiveWorkoutProvider > App`
+
+---
+
 ## 2026-06-12 — Фаза 2: UX polish (timezone, workout persistence, summary)
 
 ### Timezone-aware date boundaries
