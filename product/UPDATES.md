@@ -4,6 +4,49 @@
 
 ---
 
+## 2026-06-13 — Fix: Railway deploy (cross-platform npm lock file)
+
+### Проблема
+
+После миграции на TanStack Query Railway deploy начал падать на `npm ci` с ошибкой `Missing: @emnapi/core@1.11.1 from lock file`. Корневая причина: lock file, сгенерированный npm на macOS, не содержит Linux platform-specific optional dependencies (`@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads`). Эти пакеты — transitive deps от lightningcss/rolldown (через vitest → vite). `npm ci` строго валидирует lock file и падает при несовпадении.
+
+### Что НЕ сработало
+
+| Попытка | Почему не помогла |
+|---------|-------------------|
+| Регенерация lock file на macOS | macOS npm не резолвит Linux optional deps |
+| `@emnapi/*` как explicit dependencies | Не решает проблему — npm ci всё равно валидирует transitive deps |
+| `.node-version` в корне репо | Railway rootDirectory = `/server`, файл в корне не виден |
+| `.node-version` в `server/` | Railpack игнорирует `.node-version`, использует свой default |
+| `railpack.json` с `installCmd` | Невалидный ключ конфига, Railpack игнорирует |
+| `.npmrc` с `os[]=linux` | Неполное решение: резолвит часть deps, но версии расходятся (`@emnapi/wasi-threads@1.2.1` vs `1.2.2`), не все transitive deps включаются |
+
+### Что сработало
+
+`server/railpack.json` с правильным форматом по [документации Railpack](https://railpack.com/config/file/):
+
+```json
+{
+  "$schema": "https://schema.railpack.com",
+  "packages": { "node": "24" },
+  "steps": {
+    "install": { "commands": ["npm install"] }
+  }
+}
+```
+
+- `packages.node: "24"` — пиннинг Node-версии (совпадает с локальной dev-машиной)
+- `steps.install.commands: ["npm install"]` — вместо `npm ci`. `npm install` на Linux резолвит platform-specific deps нативно, не полагаясь на lock file
+
+### Выводы
+
+1. **Railpack конфиг:** формат — `steps.install.commands`, НЕ `installCmd`. Схема: `https://schema.railpack.com`
+2. **Cross-platform lock files:** npm lock file привязан к платформе. macOS ≠ Linux для optional deps с native bindings
+3. **`.npmrc os[]=linux`** — ненадёжный workaround. Неполное/некорректное разрешение transitive deps
+4. **Railway rootDirectory:** все конфиги (`.node-version`, `railpack.json`, `.npmrc`) должны лежать в директории, указанной как rootDirectory, а не в корне репо
+
+---
+
 ## 2026-06-12 — Миграция на TanStack Query (кэш-слой данных)
 
 ### Что сделано

@@ -1069,6 +1069,10 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
 ### Backend (Railway)
 
 - Автодеплой на `git push origin main`, root directory = `/server`.
+- **Railpack** — builder. Конфиг: `server/railpack.json`:
+  - `packages.node: "24"` — пиннинг Node-версии (должна совпадать с локальной dev-машиной).
+  - `steps.install.commands: ["npm install"]` — вместо дефолтного `npm ci`. Причина: lock file, сгенерированный на macOS, не содержит Linux platform-specific optional deps (`@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads` — transitive deps от lightningcss/rolldown через vitest). `npm ci` строго валидирует lock file и падает на Linux. `npm install` резолвит недостающие deps на месте.
+- `.node-version` файл в `server/` — дублирует пиннинг для совместимости (некоторые инструменты читают его вместо railpack.json).
 - Переменные окружения:
   ```
   DATABASE_URL=postgresql://...        # Neon URL
@@ -1176,6 +1180,7 @@ curl https://<railway-url>/api/health
 | 8 | База упражнений | Free Exercise DB (Public Domain, основа) + ExerciseDB OSS (AGPL-3.0, GIF-ки) + ручная русификация | Комбинация двух баз: Free DB для метаданных, OSS для анимаций. 57 упражнений обогащены и готовы к seed |
 | 9 | Видео | Ссылки на YouTube | Бесплатно, большой выбор |
 | 10 | Аналитика | Самописная `AnalyticsEvent` + fire-and-forget `track()` | Ноль внешних зависимостей, паттерн из daily balancer |
+| 11 | Railway install | `npm install` вместо `npm ci` через `railpack.json` | macOS lock file не содержит Linux optional deps (`@emnapi/*` от lightningcss). `npm ci` падает, `npm install` резолвит на месте. `.npmrc os[]=linux` — неполное решение (неполные/некорректные версии transitive deps) |
 
 ---
 

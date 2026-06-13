@@ -241,6 +241,10 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 **Dev-first:** сначала проверяем на `localhost`, потом пушим. `git push origin main` → Vercel и Railway подхватывают автоматически. Ручной деплой не нужен. Детали — в [ARCHITECTURE.md](product/ARCHITECTURE.md#деплой).
 
+**Railway (бэкенд):** root directory = `/server`. Конфиг билда — `server/railpack.json` (Node 24 pinned, `npm install` вместо `npm ci`). Причина: `npm ci` на Linux падает если lock file сгенерирован на macOS — отсутствуют platform-specific optional deps (`@emnapi/*` от lightningcss/rolldown через vitest). `npm install` резолвит их на месте.
+
+**⚠️ Cross-platform lock file:** после `npm install` в `server/` локально — **всегда проверять** что Railway деплой прошёл. macOS lock file может не содержать Linux optional deps. `server/railpack.json` с `npm install` обходит эту проблему, но при переключении обратно на `npm ci` — проблема вернётся.
+
 ### Env-переменные
 
 Примеры — в `.env.example` (фронт) и `server/.env.example` (бэк).
@@ -260,3 +264,5 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 3. **Vitest + Husky pre-push.** Тесты покрывают чистые функции и middleware (utils, errorHandler, telegramAuth). Pre-push хук запускает `build + test` перед каждым push — блокирует деплой сломанного кода.
 
 4. **DesignSystemDemo (`/demo`)** — dev-утилита, lazy-loaded, не попадает в основной бандл. Оставлена намеренно для визуальной проверки UI-компонентов.
+
+5. **`npm install` вместо `npm ci` на Railway.** Lock file, сгенерированный npm на macOS, не содержит Linux-specific optional dependencies (например, `@emnapi/core`, `@emnapi/runtime` — transitive deps от lightningcss через vitest/vite). `npm ci` строго валидирует lock file и падает. `npm install` резолвит недостающие deps на месте. Конфигурация — в `server/railpack.json`. `.npmrc` с `os[]=linux` — неполное решение (резолвит не все transitive deps, версии могут расходиться).
