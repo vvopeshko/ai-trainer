@@ -101,7 +101,7 @@ cd server && npx prisma generate       # регенерация клиента (
 /                    # React mini-app (Vercel)
 ├── product/                 # Продуктовые доки (BRD, ARCHITECTURE, UPDATES, NEXT_PLANS, design/, marketing/, competitors/)
 ├── src/
-│   ├── main.jsx             # entry: BrowserRouter > TranslationProvider > TelegramProvider > App
+│   ├── main.jsx             # entry: BrowserRouter > ... > QueryClientProvider > ActiveWorkoutProvider > App
 │   ├── App.jsx              # маршруты
 │   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage, ProgressPage, LibraryPage, ProgramEditPage
 │   ├── pages/Demo/          # DesignSystemDemo
@@ -186,7 +186,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 **BodyMap** — React-обёртка над `body-muscles` (70+ SVG-зон, front+back вид). Принимает `muscles={[{ muscle, setsActual, setsTarget }]}`, автоматически рассчитывает интенсивность. Маппинг 20 внутренних muscle ID → зоны библиотеки в `MUSCLE_ZONE_MAP`. Используется на 5 экранах (Progress, Home, ProgramEdit, Workout, ProgrammeHero).
 
-**ExerciseDetailSheet** — fullscreen overlay с 3 вкладками (Инструкции, Мышцы, Настройки). Используется на WorkoutPage, LibraryPage, ProgramEditPage. Props: `{ exerciseId, open, onClose, onSettingsChange }`. Настройки упражнения (unit, step, weight range) хранятся в localStorage (кэш) + синхронизируются на сервер (`UserExerciseSettings`) через fire-and-forget `saveSettingsToServer()`. При старте приложения `HomeDataContext` подтягивает настройки с сервера через `syncSettingsFromServer()`.
+**ExerciseDetailSheet** — fullscreen overlay с 3 вкладками (Инструкции, Мышцы, Настройки). Используется на WorkoutPage, LibraryPage, ProgramEditPage. Props: `{ exerciseId, open, onClose, onSettingsChange }`. Использует `useExerciseDetail()` с `placeholderData` из catalog cache — открывается мгновенно. Настройки упражнения (unit, step, weight range) хранятся в localStorage (кэш) + синхронизируются на сервер (`UserExerciseSettings`) через fire-and-forget `saveSettingsToServer()`. При старте приложения `useExerciseSettings()` в App.jsx подтягивает настройки с сервера через `syncSettingsFromServer()`.
 
 ### Правила
 

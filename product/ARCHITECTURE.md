@@ -18,6 +18,7 @@
 - **React 19** + **Vite 7**
 - **Tailwind CSS 4** как Vite-плагин (не PostCSS; ~50% быстрее билд)
 - **React Router 7** — SPA
+- **TanStack Query** (`@tanstack/react-query`) — кэш-слой данных: дедупликация запросов, staleTime, точечная инвалидация по мутациям, optimistic updates с rollback
 - **Lucide React** — outline-иконки
 - **Recharts** — графики прогресса (тоннаж, 1RM, частота)
 - **body-muscles** — анатомическая SVG-карта (70+ зон, front+back вид, интенсивность 0-10)
@@ -218,7 +219,9 @@ node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо 
 │   ├── components/
 │   │   ├── ui/        # Glass, Button, Icon, BigStepper, TopBar, RestCard, BodyMap, ...
 │   │   └── layout/    # TabLayout, GlassNav
-│   ├── hooks/
+│   ├── lib/           # queryClient.js, queryKeys.js (TanStack Query)
+│   ├── hooks/         # queries.js, mutations.js (TanStack Query hooks)
+│   ├── contexts/      # ActiveWorkoutContext (ephemeral workout state)
 │   ├── i18n/          # TranslationProvider, useTranslation, translations.js
 │   └── utils/         # api.js (fetch + auth header)
 │
@@ -878,8 +881,9 @@ model AnalyticsEvent {
   - Акцент: `#7C5CFC` (или свой зелёный под "энергия/здоровье")
   - Success: `#34D399`
   - Glass pills: `linear-gradient(135deg, rgba(30,30,45,0.75), rgba(20,20,32,0.85))` + `blur(28px)`.
-- **Skeletons вместо spinners** — placeholder-элементы, повторяющие layout.
-- **Optimistic updates с rollback** — `setState` сразу, API в фоне, откат при ошибке. Критично для логирования подходов в зале (пользователь не ждёт сервер).
+- **TanStack Query как кэш-слой.** Все GET-запросы через `useQuery` hooks (`src/hooks/queries.js`), мутации через `useMutation` (`src/hooks/mutations.js`). Ключи — в `src/lib/queryKeys.js`. QueryClient — в `src/lib/queryClient.js`. Дедупликация одинаковых запросов, staleTime по endpoint (stats 5 мин, programs 10 мин, catalog 24ч), точечная инвалидация после мутаций. Заменяет самописные HomeDataContext и ProgressDataContext. ActiveWorkoutContext (ephemeral ref-state) остаётся без изменений.
+- **Skeletons вместо spinners** — placeholder-элементы, повторяющие layout. `<Suspense fallback={<PageSkeleton />}>` для lazy-loaded табов.
+- **Optimistic updates с rollback** — через `useMutation.onMutate` (cancel/resume/finish/delete workout), откат через `onError`. Критично для логирования подходов в зале (пользователь не ждёт сервер).
 - **Haptic feedback** через Telegram WebApp API:
   - `impactOccurred('light')` — обычные действия.
   - `notificationOccurred('success')` — завершение подхода / тренировки.

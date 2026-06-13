@@ -54,6 +54,17 @@
 
 ## ✅ Выполнено
 
+### TanStack Query — кэш-слой данных (2026-06-12) ✅
+
+- [x] `@tanstack/react-query` — замена HomeDataContext и ProgressDataContext
+- [x] Per-endpoint query hooks (`src/hooks/queries.js`): 12 hooks, staleTime по типу данных
+- [x] Mutation hooks (`src/hooks/mutations.js`): optimistic updates для cancel/resume/finish/delete workout
+- [x] Мгновенные переключения табов (данные из кэша, фоновый refetch при stale)
+- [x] Library каталог (924 упр.) кэшируется на 24ч — повторный заход мгновенный
+- [x] ExerciseDetailSheet: `placeholderData` из catalog cache — открывается мгновенно
+- [x] Prefetch ProgressPage + LibraryPage данных через `requestIdleCallback`
+- [x] `<PageSkeleton />` вместо `fallback={null}` для lazy-loaded табов
+
 ### Фаза 2: UX polish (2026-06-12) ✅
 
 - [x] Timezone: X-Timezone header + `getUserTimezone()` + PostgreSQL `AT TIME ZONE` в statsController/progressController
@@ -67,8 +78,8 @@
 - [x] Auth debounce: in-memory Map, lastSeenAt обновляется раз в 5 мин (не на каждый запрос)
 - [x] Alternatives: slug → UUID через `resolveExercise()` в generateProgram + importProgram
 - [x] `api.js`: AbortSignal support через `AbortSignal.any()`
-- [x] `HomeDataContext`: AbortController ref + error state + race fix
-- [x] `ProgressDataContext`: error state
+- [x] ~~`HomeDataContext`: AbortController ref + error state + race fix~~ → заменён на TanStack Query
+- [x] ~~`ProgressDataContext`: error state~~ → заменён на TanStack Query
 - [x] Toast-уведомления: `useToast()` в HomePage, WorkoutPage, ProgramEditPage
 - [x] 4 i18n-ключа для ошибок (errors.network, workoutStart, workoutFinish, saveFailed)
 - [x] Реальные тесты: api.test.js (9 тестов), exerciseResolver.test.js (5 тестов)
@@ -99,7 +110,7 @@
 - [x] `GET /api/v1/exercises/settings` + `PUT /api/v1/exercises/settings/:slug`
 - [x] `apiPut()` в frontend API-клиенте
 - [x] `syncSettingsFromServer()` / `saveSettingsToServer()` в weightUnit.js
-- [x] Fetch настроек в `HomeDataContext` при инициализации
+- [x] Fetch настроек при инициализации (`useExerciseSettings()` в App.jsx, ранее в HomeDataContext)
 - [x] Fire-and-forget save в `ExerciseDetailSheet` при изменении
 
 ### ExerciseDetailSheet — visual polish (2026-06-01) ✅

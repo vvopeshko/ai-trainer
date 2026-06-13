@@ -78,11 +78,11 @@
 - 📋 **Пропуск упражнения** — отметка "пропущено" с причиной
 - 📋 **Quick actions** — "Спросить тренера" и "Фото тренажёра" прямо из тренировки
 - ✅ **Toast-уведомления для ошибок** — useToast() в HomePage, WorkoutPage, ProgramEditPage с i18n-ключами
-- ✅ **Error states** — HomeDataContext и ProgressDataContext с полем `error`, race condition fix через AbortController
+- ✅ **Error states** — TanStack Query `isError`/`error`, race condition prevention из коробки
 - ✅ **Workout race condition fix** — `prisma.$transaction()` в create, предотвращает двойные тренировки
 - 📋 **Offline-очередь подходов** — localStorage-очередь при потере связи, синхронизация
 - 📋 **RPE (воспринимаемая нагрузка)** — ввод RPE для intermediate/advanced (скрыт для новичков)
-- 📋 **ActiveWorkoutProvider** — React Context, тренировка переживает навигацию без потери состояния
+- ✅ **ActiveWorkoutProvider** — React Context, тренировка переживает навигацию без потери состояния
 
 ---
 
@@ -140,7 +140,7 @@
 - ✅ **Stat-tiles на Home** — тренировок, тоннаж, streak, рекорды
 - ✅ **Year stats** — X/Y тренировок за год с прогресс-полоской
 - ✅ **Empty / mostly-empty состояния** — CTA при 0 или 1-2 тренировках
-- ✅ **ProgressDataContext** — кэш с stale-while-revalidate
+- ✅ **TanStack Query кэш-слой** — заменяет HomeDataContext и ProgressDataContext: per-endpoint staleTime, дедупликация, optimistic mutations
 - 🔜 **Прогрессивная перегрузка** — детекция плато, чипы "в плато / растёт / просел"
 - 🔜 **Дисбалансы** — детекция перекосов (грудь >> спина, передние >> задние дельты)
 - 📋 **Графики за период** — тоннаж, 1RM, частота по неделям/месяцам (Recharts)
