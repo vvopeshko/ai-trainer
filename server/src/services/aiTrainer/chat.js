@@ -22,9 +22,11 @@ import llm from '../../utils/llm.js'
 import prisma from '../../utils/prisma.js'
 import { track } from '../../utils/analytics.js'
 import { buildUserContext } from './buildUserContext.js'
+import { CHAT_TOOLS, buildToolExecutor } from './chatTools.js'
 
 const HISTORY_LIMIT = 20
 const MAX_TOKENS = 1024
+const DEFAULT_TZ = 'Europe/Moscow'
 
 // ─── Загрузка промптов (роль + тон) ─────────────────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -79,7 +81,12 @@ export async function handleChatMessage(user, text) {
   let usage = null
 
   try {
-    const res = await llm.chat(messages, { system, maxTokens: MAX_TOKENS })
+    const res = await llm.chat(messages, {
+      system,
+      maxTokens: MAX_TOKENS,
+      tools: CHAT_TOOLS,
+      executeTool: buildToolExecutor(userId, user.timezone || DEFAULT_TZ),
+    })
     const out = res.text?.trim()
     if (out) {
       reply = out

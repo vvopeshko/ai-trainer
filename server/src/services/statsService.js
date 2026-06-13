@@ -496,6 +496,90 @@ export async function getRecords(userId, tz, period = 'month') {
   }))
 }
 
+// ─── История по одному упражнению (для чата tool-use, фаза 2.3; плато — фаза 4) ──
+
+/**
+ * История по конкретному упражнению: топ-сет (рабочий) каждой тренировки,
+ * где оно встречалось. Read-only, числа считает код.
+ *
+ * @param {string} userId
+ * @param {string} exerciseId
+ * @param {{ limit?: number }} [opts]
+ * @returns {Promise<{ exerciseNameRu: string|null, points: Array<{date, topWeightKg, reps, sets, maxReps}>, trend: object }>}
+ */
+export async function getExerciseHistory(userId, exerciseId, opts = {}) {
+  const limit = opts.limit ?? 10
+
+  const exercise = await prisma.exercise.findUnique({
+    where: { id: exerciseId },
+    select: { nameRu: true },
+  })
+
+  // По каждой завершённой тренировке с этим упражнением: топ рабочий вес,
+  // повторы на топ-весе, число рабочих сетов. Берём последние N точек.
+  const rows = await prisma.$queryRaw`
+    WITH per_workout AS (
+      SELECT
+        w.id AS workout_id,
+        w."finishedAt" AS finished_at,
+        MAX(ws."weightKg") FILTER (WHERE ws."isWarmup" = false) AS top_weight,
+        COUNT(*) FILTER (WHERE ws."isWarmup" = false)::int AS working_sets,
+        MAX(ws.reps) FILTER (WHERE ws."isWarmup" = false) AS max_reps
+      FROM "WorkoutSet" ws
+      JOIN "Workout" w ON ws."workoutId" = w.id
+      WHERE w."userId" = ${userId}
+        AND w."finishedAt" IS NOT NULL
+        AND ws."exerciseId" = ${exerciseId}
+      GROUP BY w.id, w."finishedAt"
+    )
+    SELECT
+      pw.finished_at AS date,
+      pw.top_weight::float AS "topWeightKg",
+      pw.working_sets AS sets,
+      pw.max_reps AS "maxReps",
+      (
+        SELECT ws2.reps
+        FROM "WorkoutSet" ws2
+        WHERE ws2."workoutId" = pw.workout_id
+          AND ws2."exerciseId" = ${exerciseId}
+          AND ws2."isWarmup" = false
+          AND ws2."weightKg" = pw.top_weight
+        ORDER BY ws2.reps DESC
+        LIMIT 1
+      ) AS "repsAtTop"
+    FROM per_workout pw
+    ORDER BY pw.finished_at DESC
+    LIMIT ${limit}
+  `
+
+  // В хронологический порядок (старые → новые).
+  const points = rows.reverse().map((r) => ({
+    date: r.date ? formatLocalDate(new Date(r.date)) : null,
+    topWeightKg: r.topWeightKg != null ? Math.round(r.topWeightKg * 10) / 10 : null,
+    reps: r.repsAtTop ?? null,
+    sets: r.sets,
+    maxReps: r.maxReps ?? null,
+  }))
+
+  let trend = null
+  if (points.length >= 2) {
+    const first = points[0]
+    const last = points[points.length - 1]
+    const deltaWeightKg =
+      first.topWeightKg != null && last.topWeightKg != null
+        ? Math.round((last.topWeightKg - first.topWeightKg) * 10) / 10
+        : null
+    trend = {
+      sessions: points.length,
+      from: { date: first.date, topWeightKg: first.topWeightKg, reps: first.reps },
+      to: { date: last.date, topWeightKg: last.topWeightKg, reps: last.reps },
+      deltaWeightKg,
+    }
+  }
+
+  return { exerciseNameRu: exercise?.nameRu ?? null, points, trend }
+}
+
 // ─── Сводка по одной тренировке (для пост-тренировочной сводки, фаза 1) ──
 
 /**

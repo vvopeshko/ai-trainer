@@ -21,12 +21,6 @@ function client() {
 }
 
 /**
- * Текстовый чат.
- * @param {Array<{role: 'user'|'assistant', content: string}>} messages
- * @param {{ system?: string, model?: string, maxTokens?: number }} [options]
- * @returns {Promise<{ text: string, model: string, usage: object }>}
- */
-/**
  * Оборачивает промис в таймаут. При превышении — AbortError.
  */
 function withTimeout(promise, ms) {
@@ -36,39 +30,112 @@ function withTimeout(promise, ms) {
   })
 }
 
-export async function chat(messages, options = {}) {
-  const model = options.model ?? DEFAULT_MODEL
-  const maxRetries = options.retries ?? 2
-  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
-  let lastError
+/** Первый текстовый блок из ответа (с tools текст может быть не в [0]). */
+function extractText(res) {
+  return res.content?.find((b) => b.type === 'text')?.text ?? ''
+}
 
+/** Один вызов messages.create с таймаутом и retry на сетевых ошибках. */
+async function createWithRetry(params, { timeout, maxRetries }) {
+  let lastError
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await withTimeout(
-        client().messages.create({
-          model,
-          max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-          system: options.system,
-          messages,
-        }),
-        timeout,
-      )
-      return {
-        text: res.content?.[0]?.text ?? '',
-        model: res.model,
-        usage: res.usage,
-      }
+      return await withTimeout(client().messages.create(params), timeout)
     } catch (err) {
       lastError = err
-      const isRetryable = err.message?.includes('Connection error') || err.message?.includes('ECONNRESET')
+      const isRetryable =
+        err.message?.includes('Connection error') || err.message?.includes('ECONNRESET')
       if (!isRetryable || attempt === maxRetries) throw err
       const delay = 1000 * (attempt + 1)
       console.warn(`[llm] retry ${attempt + 1}/${maxRetries} after ${delay}ms: ${err.message}`)
-      await new Promise(r => setTimeout(r, delay))
+      await new Promise((r) => setTimeout(r, delay))
     }
   }
-
   throw lastError
+}
+
+/**
+ * Текстовый чат. Опционально — с tool-use (agentic-петля): модель запрашивает
+ * инструмент → executeTool выполняет → tool_result возвращается → продолжаем,
+ * лимит maxToolRounds раундов. На последнем раунде tools убираются, чтобы
+ * заставить модель ответить текстом.
+ *
+ * @param {Array<{role: 'user'|'assistant', content: any}>} messages
+ * @param {object} [options]
+ * @param {string}   [options.system]
+ * @param {string}   [options.model]
+ * @param {number}   [options.maxTokens]
+ * @param {number}   [options.retries=2]
+ * @param {number}   [options.timeout]
+ * @param {Array}    [options.tools]       — Anthropic tool-схемы
+ * @param {(name: string, input: object) => Promise<any>} [options.executeTool]
+ * @param {number}   [options.maxToolRounds=3]
+ * @returns {Promise<{ text: string, model: string, usage: { input_tokens: number, output_tokens: number } }>}
+ */
+export async function chat(messages, options = {}) {
+  const model = options.model ?? DEFAULT_MODEL
+  const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS
+  const retryOpts = { timeout: options.timeout ?? DEFAULT_TIMEOUT_MS, maxRetries: options.retries ?? 2 }
+
+  // ─── Простой путь: без инструментов (прежнее поведение) ───
+  if (!options.tools?.length || typeof options.executeTool !== 'function') {
+    const res = await createWithRetry(
+      { model, max_tokens: maxTokens, system: options.system, messages },
+      retryOpts,
+    )
+    return { text: extractText(res), model: res.model, usage: res.usage }
+  }
+
+  // ─── Tool-use: agentic-петля ───
+  const maxRounds = options.maxToolRounds ?? 3
+  const convo = [...messages] // не мутируем входной массив
+  let totalIn = 0
+  let totalOut = 0
+  let lastModel = model
+  let lastText = ''
+
+  for (let round = 0; round <= maxRounds; round++) {
+    const useTools = round < maxRounds // последний раунд — без tools, форсируем текст
+    const res = await createWithRetry(
+      {
+        model,
+        max_tokens: maxTokens,
+        system: options.system,
+        messages: convo,
+        ...(useTools ? { tools: options.tools } : {}),
+      },
+      retryOpts,
+    )
+
+    totalIn += res.usage?.input_tokens ?? 0
+    totalOut += res.usage?.output_tokens ?? 0
+    lastModel = res.model
+    lastText = extractText(res)
+
+    if (res.stop_reason !== 'tool_use') {
+      return { text: lastText, model: lastModel, usage: { input_tokens: totalIn, output_tokens: totalOut } }
+    }
+
+    // Выполняем все запрошенные инструменты, собираем tool_result.
+    const toolUses = res.content.filter((b) => b.type === 'tool_use')
+    convo.push({ role: 'assistant', content: res.content })
+    const toolResults = []
+    for (const tu of toolUses) {
+      let resultStr
+      try {
+        const out = await options.executeTool(tu.name, tu.input)
+        resultStr = typeof out === 'string' ? out : JSON.stringify(out)
+      } catch (err) {
+        console.error(`[llm] tool "${tu.name}" failed:`, err.message)
+        resultStr = `Ошибка получения данных: ${err.message}`
+      }
+      toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: resultStr })
+    }
+    convo.push({ role: 'user', content: toolResults })
+  }
+
+  // Петля исчерпана — отдаём последний текст (мог быть пустым).
+  return { text: lastText, model: lastModel, usage: { input_tokens: totalIn, output_tokens: totalOut } }
 }
 
 /**
