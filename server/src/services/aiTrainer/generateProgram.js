@@ -139,6 +139,7 @@ export async function generateProgram(userId, profile) {
     {
       system: SYSTEM_PROMPT,
       maxTokens: 4096,
+      meta: { userId, feature: 'program_generate' },
     },
   )
 

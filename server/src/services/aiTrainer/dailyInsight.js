@@ -61,6 +61,7 @@ export async function buildDailyInsight(userId, tz = DEFAULT_TZ) {
     const res = await llm.chat([{ role: 'user', content: buildFact(top) }], {
       system,
       maxTokens: 400,
+      meta: { userId, feature: 'daily_insight' },
     })
     const text = res.text?.trim()
     if (text) return { text, factType: top.type }

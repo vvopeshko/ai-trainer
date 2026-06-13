@@ -212,6 +212,7 @@ export async function sendPostWorkoutSummary(user, workout) {
       const res = await llm.chat([{ role: 'user', content: buildFacts(ctx) }], {
         system,
         maxTokens: 512,
+        meta: { userId, feature: 'post_workout' },
       })
       observation = res.text?.trim() || null
     } catch (err) {

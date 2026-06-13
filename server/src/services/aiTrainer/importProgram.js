@@ -89,8 +89,16 @@ export async function importProgram(userId, markdownText) {
 
   // 1. Два параллельных вызова LLM: структура + guidelines
   const [programResult, guidelinesResult] = await Promise.all([
-    llm.chat(userMessage, { system: PROGRAM_PROMPT, maxTokens: 8192 }),
-    llm.chat(userMessage, { system: GUIDELINES_PROMPT, maxTokens: 2048 }),
+    llm.chat(userMessage, {
+      system: PROGRAM_PROMPT,
+      maxTokens: 8192,
+      meta: { userId, feature: 'program_import' },
+    }),
+    llm.chat(userMessage, {
+      system: GUIDELINES_PROMPT,
+      maxTokens: 2048,
+      meta: { userId, feature: 'program_import' },
+    }),
   ])
 
   // 2. Парсинг структуры программы

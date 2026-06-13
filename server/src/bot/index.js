@@ -1,6 +1,7 @@
 import { Telegraf, Scenes, session } from 'telegraf'
 import { identifyMachine } from '../services/aiTrainer/identifyMachine.js'
 import { handleChatMessage } from '../services/aiTrainer/chat.js'
+import { buildUsageReportHtml } from '../services/aiTrainer/usageReport.js'
 import { generateProgramScene } from './scenes/generateProgram.js'
 import prisma from '../utils/prisma.js'
 
@@ -130,6 +131,18 @@ export function createBot(token) {
   })
 
   bot.command('program', (ctx) => ctx.scene.enter('generate-program'))
+
+  // ─── /cost: расход токенов LLM в деньгах (только админ) ───────────
+  bot.command('cost', async (ctx) => {
+    if (adminId && ctx.from.id !== adminId) return
+    try {
+      const html = await buildUsageReportHtml()
+      await ctx.reply(html, { parse_mode: 'HTML', disable_web_page_preview: true })
+    } catch (err) {
+      console.error('[bot] /cost error:', err)
+      await ctx.reply('😕 Не удалось собрать отчёт по расходу.')
+    }
+  })
 
   // ─── Распознавание тренажёра по фото ──────────────────────────
   // Telegram присылает массив PhotoSize[] — от маленького превью до полного размера.

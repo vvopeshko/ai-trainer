@@ -90,6 +90,7 @@ export async function handleChatMessage(user, text) {
       maxTokens: MAX_TOKENS,
       tools: CHAT_TOOLS,
       executeTool: buildToolExecutor(userId, tz),
+      meta: { userId, feature: 'chat' },
     })
     const out = res.text?.trim()
     if (out) {

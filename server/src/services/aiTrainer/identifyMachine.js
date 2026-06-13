@@ -73,6 +73,7 @@ export async function identifyMachine(userId, imageBase64, options = {}) {
   const result = await llm.vision(imageBase64, PROMPT, {
     mediaType,
     maxTokens: 2048,
+    meta: { userId, feature: 'vision_machine' },
   })
 
   // ─── 4b. Парсинг JSON из текстового ответа LLM ─────────────────

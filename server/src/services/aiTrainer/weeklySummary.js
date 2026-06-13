@@ -147,6 +147,7 @@ export async function sendWeeklySummary(user) {
     const res = await llm.chat([{ role: 'user', content: buildFacts(ctx) }], {
       system,
       maxTokens: 512,
+      meta: { userId, feature: 'weekly_summary' },
     })
     observation = res.text?.trim() || null
   } catch (err) {

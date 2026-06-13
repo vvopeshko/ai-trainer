@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { recordLlmUsage } from './llmUsage.js'
 
 // Тонкая абстракция над Anthropic SDK. Все вызовы LLM/Vision — через chat() и vision().
 // НЕ импортируем @anthropic-ai/sdk напрямую в контроллерах/сервисах.
@@ -33,6 +34,12 @@ function withTimeout(promise, ms) {
 /** Первый текстовый блок из ответа (с tools текст может быть не в [0]). */
 function extractText(res) {
   return res.content?.find((b) => b.type === 'text')?.text ?? ''
+}
+
+/** Записать расход токенов, если передан meta { userId, feature }. No-op без meta. */
+function maybeRecordUsage(meta, model, usage) {
+  if (!meta?.feature) return
+  recordLlmUsage({ userId: meta.userId ?? null, feature: meta.feature, model, usage })
 }
 
 /** Один вызов messages.create с таймаутом и retry на сетевых ошибках. */
@@ -70,6 +77,7 @@ async function createWithRetry(params, { timeout, maxRetries }) {
  * @param {Array}    [options.tools]       — Anthropic tool-схемы
  * @param {(name: string, input: object) => Promise<any>} [options.executeTool]
  * @param {number}   [options.maxToolRounds=3]
+ * @param {{ userId?: string|null, feature?: string }} [options.meta] — учёт расхода (utils/llmUsage)
  * @returns {Promise<{ text: string, model: string, usage: { input_tokens: number, output_tokens: number } }>}
  */
 export async function chat(messages, options = {}) {
@@ -83,6 +91,7 @@ export async function chat(messages, options = {}) {
       { model, max_tokens: maxTokens, system: options.system, messages },
       retryOpts,
     )
+    maybeRecordUsage(options.meta, res.model, res.usage)
     return { text: extractText(res), model: res.model, usage: res.usage }
   }
 
@@ -113,7 +122,9 @@ export async function chat(messages, options = {}) {
     lastText = extractText(res)
 
     if (res.stop_reason !== 'tool_use') {
-      return { text: lastText, model: lastModel, usage: { input_tokens: totalIn, output_tokens: totalOut } }
+      const usage = { input_tokens: totalIn, output_tokens: totalOut }
+      maybeRecordUsage(options.meta, lastModel, usage)
+      return { text: lastText, model: lastModel, usage }
     }
 
     // Выполняем все запрошенные инструменты, собираем tool_result.
@@ -135,7 +146,9 @@ export async function chat(messages, options = {}) {
   }
 
   // Петля исчерпана — отдаём последний текст (мог быть пустым).
-  return { text: lastText, model: lastModel, usage: { input_tokens: totalIn, output_tokens: totalOut } }
+  const usage = { input_tokens: totalIn, output_tokens: totalOut }
+  maybeRecordUsage(options.meta, lastModel, usage)
+  return { text: lastText, model: lastModel, usage }
 }
 
 /**
@@ -144,7 +157,7 @@ export async function chat(messages, options = {}) {
  *
  * @param {string} imageBase64       — без data:URL префикса
  * @param {string} prompt
- * @param {{ mediaType?: string, model?: string, maxTokens?: number }} [options]
+ * @param {{ mediaType?: string, model?: string, maxTokens?: number, meta?: { userId?: string|null, feature?: string } }} [options]
  */
 export async function vision(imageBase64, prompt, options = {}) {
   const model = options.model ?? DEFAULT_MODEL
@@ -172,6 +185,7 @@ export async function vision(imageBase64, prompt, options = {}) {
     }),
     timeout,
   )
+  maybeRecordUsage(options.meta, res.model, res.usage)
   return {
     text: res.content?.[0]?.text ?? '',
     model: res.model,

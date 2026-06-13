@@ -47,6 +47,7 @@ model User {
   pendingChatContexts    PendingChatContext[]
   insights               Insight[]
   planOverrides          WorkoutPlanOverride[]
+  llmUsage               LlmUsage[]
 }
 
 // ═══════════════════════════════════════════════
@@ -421,4 +422,29 @@ model WorkoutPlanOverride {
 
   @@unique([userId, programId, dayIndex])
   @@index([userId])
+}
+
+// ═══════════════════════════════════════════════
+// LlmUsage — лог расхода токенов LLM с денежной оценкой (utils/llmUsage.js).
+//
+// Пишется fire-and-forget из llm.js при каждом вызове chat()/vision() с meta.
+// costUsd — снимок по прайсу на момент вызова (см. utils/llmCost.js), ≈.
+// onDelete: SetNull — суммы расхода переживают удаление юзера (как AnalyticsEvent).
+// Читается командой /cost (services/aiTrainer/usageReport.js).
+// ═══════════════════════════════════════════════
+model LlmUsage {
+  id           String   @id @default(uuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  feature      String // 'chat' | 'program_generate' | 'program_import' | 'vision_machine' | 'post_workout' | 'weekly_summary' | 'daily_insight'
+  model        String
+  tokensInput  Int      @default(0)
+  tokensOutput Int      @default(0)
+  costUsd      Float    @default(0) // снимок по прайсу на момент вызова, ≈
+
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([feature, createdAt])
 }
