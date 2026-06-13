@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { track } from '../utils/analytics.js'
+import { sendPostWorkoutSummary } from '../services/aiTrainer/postWorkoutSummary.js'
 
 /**
  * POST /api/v1/workouts
@@ -365,6 +366,12 @@ export async function update(req, res) {
     setsCount: updated.sets.length,
     durationMin: Math.round(netDurationMs / 60000),
   })
+
+  // Пост-тренировочная сводка тренера (AI_TRAINER_PLAN фаза 1) — fire-and-forget:
+  // не блокирует ответ, ошибки не пробрасываются (как track()).
+  sendPostWorkoutSummary(req.user, updated).catch((err) =>
+    console.error('[workout] post-summary failed:', err.message),
+  )
 
   res.json({ workout: updated })
 }
