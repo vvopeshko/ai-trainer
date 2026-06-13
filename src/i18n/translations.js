@@ -158,6 +158,13 @@ export const translations = {
     'progress.goTrain': 'Начать тренировку',
     'progress.mostlyEmpty': 'Ещё пара тренировок — и здесь появится полная аналитика',
 
+    // Insights (фаза 4)
+    'insights.sectionTitle': 'Замечания тренера',
+    'insights.details': 'Подробнее',
+    'insights.chip.growth': 'растёт',
+    'insights.chip.plateau': 'в плато',
+    'insights.chip.regression': 'просели',
+
     // Program screen
     'program.title': 'Программа',
     'program.save': 'Сохранить',

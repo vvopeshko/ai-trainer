@@ -45,6 +45,7 @@ model User {
   exerciseSettings       UserExerciseSettings[]
   notificationLogs       NotificationLog[]
   pendingChatContexts    PendingChatContext[]
+  insights               Insight[]
 }
 
 // ═══════════════════════════════════════════════
@@ -373,4 +374,25 @@ model PendingChatContext {
   createdAt  DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ═══════════════════════════════════════════════
+// Insight — кэш ежедневного «замечания тренера» на Home (фаза 4.2).
+//
+// Генерируется лениво при первом запросе дня (не cron — юзер может не зайти).
+// payload: { text: string|null, factType?: string } — null = за день инсайтов нет
+// (кэшируем пустой, чтобы не пересчитывать). Один на юзера в день.
+// ═══════════════════════════════════════════════
+model Insight {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date      String // 'YYYY-MM-DD' в TZ юзера
+  payload   Json
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
 }

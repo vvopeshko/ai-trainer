@@ -17,7 +17,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
-import { useMonthStats, useRecentWorkouts, useProgress } from '../../hooks/queries.js'
+import { useMonthStats, useRecentWorkouts, useProgress, useProgressInsights } from '../../hooks/queries.js'
 import { useDeleteWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { apiGet } from '../../utils/api.js'
@@ -337,6 +337,92 @@ function ProgressSkeleton() {
   )
 }
 
+// ─── Insights (фаза 4) ───────────────────────────────────────────────
+
+const INSIGHT_STYLE = {
+  growth:     { icon: 'trendingUp', color: 'hsl(140, 55%, 70%)' },
+  plateau:    { icon: 'minus',      color: 'hsl(38, 90%, 70%)' },
+  regression: { icon: 'chevronDown', color: 'hsl(4, 75%, 70%)' },
+  imbalance:  { icon: 'activity',   color: 'hsl(var(--accent-h,158),55%,72%)' },
+}
+
+function InsightsSection() {
+  const { t } = useTranslation()
+  const { data } = useProgressInsights()
+
+  const chips = data?.chips ?? []
+  const cards = data?.cards ?? []
+  if (chips.length === 0 && cards.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 'var(--space-2)' }}>
+      <div style={{
+        fontSize: 'var(--text-sm)',
+        fontWeight: 600,
+        color: 'var(--fg-secondary)',
+        marginBottom: 'var(--space-3)',
+      }}>
+        {t('insights.sectionTitle')}
+      </div>
+
+      {/* Chips */}
+      {chips.length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)',
+          marginBottom: cards.length > 0 ? 'var(--space-3)' : 0,
+        }}>
+          {chips.map(c => {
+            const s = INSIGHT_STYLE[c.type] || INSIGHT_STYLE.imbalance
+            return (
+              <span key={c.type} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 10px', borderRadius: 8,
+                background: 'rgba(255,255,255,0.06)',
+                fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)',
+              }}>
+                <Icon name={s.icon} size={13} style={{ color: s.color }} />
+                <span style={{ fontWeight: 600, color: 'var(--fg-primary)', fontVariantNumeric: 'tabular-nums' }}>{c.count}</span>
+                <span>{t(`insights.chip.${c.type}`)}</span>
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Cards */}
+      {cards.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {cards.map((c, i) => {
+            const s = INSIGHT_STYLE[c.type] || INSIGHT_STYLE.imbalance
+            return (
+              <Glass key={i} padding="11px 13px" radius={11}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                    background: 'rgba(255,255,255,0.04)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: s.color, marginTop: 1,
+                  }}>
+                    <Icon name={s.icon} size={12} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 2 }}>
+                      {c.title}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', lineHeight: 1.4, color: 'var(--fg-tertiary)' }}>
+                      {c.detail}
+                    </div>
+                  </div>
+                </div>
+              </Glass>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Component ──────────────────────────────────────────────────
 
 export default function ProgressPage() {
@@ -464,6 +550,9 @@ export default function ProgressPage() {
           <BodyMap muscles={flatMuscles} height={260} onMuscleClick={handleMuscleClick} />
         </Glass>
       )}
+
+      {/* Coach insights (фаза 4) */}
+      <InsightsSection />
 
       {/* Muscle detail sheet */}
       <BottomSheet open={!!selectedMuscle} onClose={() => setSelectedMuscle(null)}>

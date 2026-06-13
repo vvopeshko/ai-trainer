@@ -140,7 +140,7 @@ export async function sendWeeklySummary(user) {
   // Наблюдение тренера (LLM) — с деградацией.
   let observation = null
   try {
-    const userContext = await buildUserContext(userId, { recentLimit: 7 })
+    const userContext = await buildUserContext(userId, { recentLimit: 7, insights: true })
     const system = userContext
       ? `${SYSTEM_BASE}\n\n---\n\n# Контекст пользователя\n${userContext}`
       : SYSTEM_BASE

@@ -103,6 +103,24 @@ export function useProgress() {
   })
 }
 
+// ─── Insights (фаза 4) ───────────────────────────────────────────────
+
+export function useDailyInsight() {
+  return useQuery({
+    queryKey: queryKeys.insights.today,
+    queryFn: () => apiGet('/api/v1/insights/today'),
+    staleTime: 30 * 60_000, // 30 min — генерится раз в день, кэш на бэке
+  })
+}
+
+export function useProgressInsights() {
+  return useQuery({
+    queryKey: queryKeys.insights.progress,
+    queryFn: () => apiGet('/api/v1/progress/insights'),
+    staleTime: 5 * 60_000,
+  })
+}
+
 // ─── Exercises ───────────────────────────────────────────────────────
 
 export function useExerciseSettings() {

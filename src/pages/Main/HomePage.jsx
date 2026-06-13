@@ -13,7 +13,8 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
-import { useMonthStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress } from '../../hooks/queries.js'
+import { GlassAINote } from '../../components/ui/GlassAINote.jsx'
+import { useMonthStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight } from '../../hooks/queries.js'
 import { useCancelWorkout, useResumeWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -40,6 +41,7 @@ export default function HomePage() {
   const { data: progressData } = useProgress()
   const planAdherence = progressData?.planAdherence ?? null
   const muscleVolume = progressData?.muscleVolume ?? null
+  const { data: dailyInsight } = useDailyInsight()
 
   const cancelWorkoutMutation = useCancelWorkout()
   const resumeWorkoutMutation = useResumeWorkout()
@@ -136,6 +138,19 @@ export default function HomePage() {
           onPickDay={() => setShowDayPicker(true)}
           loading={starting}
         />
+      )}
+
+      {/* Coach note (daily insight) */}
+      {dailyInsight?.text && (
+        <div style={{ padding: '0 18px', marginTop: 18 }}>
+          <GlassAINote
+            kind={dailyInsight.factType === 'regression' ? 'warning' : 'insight'}
+            cta={t('insights.details')}
+            onCta={() => navigate('/progress')}
+          >
+            {dailyInsight.text}
+          </GlassAINote>
+        </div>
       )}
 
       {/* My plan section */}

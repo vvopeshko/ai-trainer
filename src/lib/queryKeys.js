@@ -15,6 +15,10 @@ export const queryKeys = {
     detail: (id) => ['programs', 'detail', id],
   },
   progress:  ['progress'],
+  insights: {
+    today:    ['insights', 'today'],
+    progress: ['insights', 'progress'],
+  },
   exercises: {
     catalog:  ['exercises', 'catalog'],
     detail:   (id) => ['exercises', 'detail', id],

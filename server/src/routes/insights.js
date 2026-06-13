@@ -1,12 +1,11 @@
 import { Router } from 'express'
 import { telegramAuth } from '../middleware/telegramAuth.js'
-import { getProgress, getProgressInsights } from '../controllers/progressController.js'
+import { getDailyInsight } from '../controllers/insightsController.js'
 
 const router = Router()
 
 router.use(telegramAuth)
 
-router.get('/', getProgress)
-router.get('/insights', getProgressInsights)
+router.get('/today', getDailyInsight)
 
 export default router

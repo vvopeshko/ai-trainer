@@ -14,6 +14,7 @@ import {
   getWeekStats,
   getRecords,
 } from '../statsService.js'
+import { getInsights } from '../insightsService.js'
 
 const DEFAULT_TZ = 'Europe/Moscow'
 
@@ -40,6 +41,7 @@ const LEVEL_RU = {
  * @param {boolean} [opts.recentWorkouts=true]
  * @param {boolean} [opts.stats=true]
  * @param {boolean} [opts.records=true]
+ * @param {boolean} [opts.insights=false] — блок детекции плато/регрессии/дисбалансов
  * @param {number}  [opts.recentLimit=7]
  * @returns {Promise<string>} markdown-блок для system-промпта (пустая строка если данных нет)
  */
@@ -50,6 +52,7 @@ export async function buildUserContext(userId, opts = {}) {
     recentWorkouts = true,
     stats = true,
     records = true,
+    insights = false,
     recentLimit = 7,
   } = opts
 
@@ -167,6 +170,15 @@ export async function buildUserContext(userId, opts = {}) {
         .slice(0, 5)
         .map((r) => `  🏆 ${r.exerciseNameRu}: ${r.value} кг × ${r.reps} (было ${r.previousBest} кг)`)
       sections.push(`## Рекорды за месяц\n${lines.join('\n')}`)
+    }
+  }
+
+  // ─── Замечания тренера (детекция кодом) ───
+  if (insights) {
+    const { facts } = await getInsights(userId, tz)
+    if (facts.length > 0) {
+      const lines = facts.slice(0, 5).map((f) => `  • ${f.title} — ${f.detail}`)
+      sections.push(`## Замечания (детекция)\n${lines.join('\n')}`)
     }
   }
 
