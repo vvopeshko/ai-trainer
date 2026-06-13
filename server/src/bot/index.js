@@ -1,5 +1,6 @@
 import { Telegraf, Scenes, session } from 'telegraf'
 import { identifyMachine } from '../services/aiTrainer/identifyMachine.js'
+import { handleChatMessage } from '../services/aiTrainer/chat.js'
 import { generateProgramScene } from './scenes/generateProgram.js'
 import prisma from '../utils/prisma.js'
 
@@ -229,6 +230,42 @@ export function createBot(token) {
     } catch (err) {
       console.error('[bot] photo handler error:', err)
       await ctx.reply('😕 Произошла ошибка при обработке фото. Попробуй ещё раз.')
+    }
+  })
+
+  // ─── AI-чат: свободный текст (AI_TRAINER_PLAN фаза 2.1) ───────────
+  // Fallback-хендлер: ловит любой текст, который не перехватили команды/сцены.
+  // Команды (bot.command) и активные сцены (stage.middleware) не вызывают next(),
+  // поэтому сюда долетает только обычный текст. Доп. гарды на всякий случай.
+  bot.on('text', async (ctx) => {
+    // В активной сцене (например /program) — не вмешиваемся.
+    if (ctx.scene?.current) return
+    // Неизвестные команды (/foo) не отдаём тренеру — это не вопрос.
+    if (ctx.message.text.startsWith('/')) return
+
+    try {
+      await ctx.sendChatAction('typing')
+
+      // У бота нет telegramAuth middleware — ищем/создаём юзера по telegramId.
+      const telegramId = BigInt(ctx.from.id)
+      let user = await prisma.user.findUnique({ where: { telegramId } })
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            telegramId,
+            firstName: ctx.from.first_name,
+            lastName: ctx.from.last_name ?? null,
+            username: ctx.from.username ?? null,
+            languageCode: ctx.from.language_code ?? null,
+          },
+        })
+      }
+
+      const { reply } = await handleChatMessage(user, ctx.message.text)
+      await ctx.reply(reply, { parse_mode: 'HTML', disable_web_page_preview: true })
+    } catch (err) {
+      console.error('[bot] chat handler error:', err)
+      await ctx.reply('😕 Что-то пошло не так. Попробуй ещё раз.')
     }
   })
 
