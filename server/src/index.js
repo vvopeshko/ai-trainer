@@ -3,6 +3,7 @@ import cors from 'cors'
 import { createBot } from './bot/index.js'
 import { setBot, setBotUsername } from './bot/notifier.js'
 import { startScheduler, stopScheduler } from './scheduler/index.js'
+import { registerJobs } from './scheduler/jobs.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { globalLimiter } from './middleware/rateLimiter.js'
@@ -61,6 +62,7 @@ if (process.env.BOT_TOKEN) {
 
   // Шедулер проактивных сообщений запускается только при наличии бота
   // (без него notify() некуда слать).
+  registerJobs() // weekly-сводка + напоминания (фаза 3)
   startScheduler()
 } else {
   console.warn('[bot] BOT_TOKEN not set — bot is disabled')
