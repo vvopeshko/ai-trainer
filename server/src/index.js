@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { createBot } from './bot/index.js'
-import { setBot } from './bot/notifier.js'
+import { setBot, setBotUsername } from './bot/notifier.js'
 import { startScheduler, stopScheduler } from './scheduler/index.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -52,7 +52,10 @@ if (process.env.BOT_TOKEN) {
   setBot(bot) // даём notifier ссылку на бота для проактивных сообщений
   bot.telegram
     .getMe()
-    .then((me) => console.log(`[bot] launched as @${me.username}`))
+    .then((me) => {
+      setBotUsername(me.username) // для t.me-ссылок (handoff из мини-аппа, фаза 2.2)
+      console.log(`[bot] launched as @${me.username}`)
+    })
     .catch((err) => console.error('[bot] failed to connect:', err.message))
   bot.launch().catch((err) => console.error('[bot] crashed:', err))
 

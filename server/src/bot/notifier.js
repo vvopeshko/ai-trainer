@@ -13,10 +13,24 @@
  */
 
 let _bot = null
+let _botUsername = null
 
 /** Вызывается из index.js после createBot(). */
 export function setBot(bot) {
   _bot = bot
+}
+
+/** Вызывается из index.js после getMe() — для построения t.me-ссылок. */
+export function setBotUsername(username) {
+  _botUsername = username
+}
+
+/**
+ * Deep-link на бота вида https://t.me/<username>.
+ * @returns {string|null} null если username ещё не известен (бот не подключён).
+ */
+export function getBotLink() {
+  return _botUsername ? `https://t.me/${_botUsername}` : null
 }
 
 /**

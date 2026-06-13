@@ -44,6 +44,7 @@ model User {
   analyticsEvents        AnalyticsEvent[]
   exerciseSettings       UserExerciseSettings[]
   notificationLogs       NotificationLog[]
+  pendingChatContexts    PendingChatContext[]
 }
 
 // ═══════════════════════════════════════════════
@@ -349,4 +350,27 @@ model NotificationLog {
 
   @@unique([userId, kind, periodKey])
   @@index([userId, kind])
+}
+
+// ═══════════════════════════════════════════════
+// PendingChatContext — handoff контекста из мини-аппа в чат-бота (фаза 2.2)
+//
+// Юзер жмёт «Спросить про упражнение/программу» в мини-аппе → POST /chat/context
+// создаёт запись → openTelegramLink открывает бота. Бот при следующем сообщении
+// подхватывает свежий (TTL ~10 мин) неиспользованный контекст и кладёт в system.
+// consumedAt != null = уже подхвачен; createdAt — для TTL и выбора самого свежего.
+// ═══════════════════════════════════════════════
+model PendingChatContext {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type       String // 'exercise' | 'program' | 'workout'
+  refId      String? // exerciseId | programId | workoutId
+  payload    Json? // снапшот-подсказка (напр. { name } для проактивного сообщения)
+
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }

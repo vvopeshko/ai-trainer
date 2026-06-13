@@ -32,6 +32,7 @@ export const translations = {
     'workout.completed': 'Выполнено',
     'workout.cancel': 'Отменить',
     'workout.addOther': '+ Добавить другое',
+    'workout.askTrainer': 'Спросить тренера',
     'workout.setsScheme': '{{sets}}×{{reps}}',
     'workout.now': 'сейчас',
     'workout.exerciseOf': 'упр {{n}}/{{total}}',
@@ -180,6 +181,7 @@ export const translations = {
     'program.addExercise': '+ Добавить упражнение',
     'program.loadError': 'Не удалось загрузить программу',
     'program.activate': 'Сделать активной',
+    'program.discussProgram': 'Обсудить программу',
     'program.activating': 'Активация...',
     'program.active': 'Активная',
     'program.otherPrograms': 'Все программы',
@@ -227,6 +229,7 @@ export const translations = {
     'library.cat.isolation': 'Изолирующее',
 
     // Exercise detail tabs
+    'exercise.askTrainer': 'Спросить про упражнение',
     'exercise.tab.muscles': 'Мышцы',
     'exercise.tab.instructions': 'Инструкции',
     'exercise.tab.settings': 'Настройки',

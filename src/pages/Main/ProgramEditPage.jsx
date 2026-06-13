@@ -9,6 +9,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
+import { useTelegram } from '../../components/TelegramProvider.jsx'
+import { openTrainerChat } from '../../utils/askTrainer.js'
 import { apiPatch, apiPost } from '../../utils/api.js'
 import { useQueryClient } from '@tanstack/react-query'
 import { useProgramDetail, useProgramList } from '../../hooks/queries.js'
@@ -33,8 +35,10 @@ export default function ProgramEditPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const { webApp } = useTelegram()
 
   const toast = useToast()
+  const [askingTrainer, setAskingTrainer] = useState(false)
 
   // Data from TanStack Query
   const { data: fetchedProgram, isLoading: programLoading, isError: programError } = useProgramDetail(id)
@@ -210,6 +214,18 @@ export default function ProgramEditPage() {
       toast.show(t('errors.network'))
     } finally {
       setActivating(false)
+    }
+  }
+
+  // ─── Ask trainer ──────────────────────────────────────────────────
+
+  const handleAskTrainer = async () => {
+    if (askingTrainer) return
+    setAskingTrainer(true)
+    try {
+      await openTrainerChat(webApp, { type: 'program', refId: id })
+    } finally {
+      setAskingTrainer(false)
     }
   }
 
@@ -570,6 +586,23 @@ export default function ProgramEditPage() {
             {t('program.active')}
           </div>
         )}
+
+        {/* ── Discuss program button ── */}
+        <button
+          onClick={handleAskTrainer}
+          disabled={askingTrainer}
+          style={{
+            width: '100%', padding: '12px', marginBottom: 'var(--space-4)',
+            background: 'rgba(255,255,255,0.05)',
+            border: 'none', borderRadius: 'var(--radius-lg, 14px)',
+            color: 'var(--fg-secondary)', fontSize: 'var(--text-sm)', fontWeight: 600,
+            cursor: askingTrainer ? 'default' : 'pointer', opacity: askingTrainer ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <Icon name="messageCircle" size={15} />
+          {t('program.discussProgram')}
+        </button>
 
         {/* ── Day Cards ── */}
         {days.map((day, dayIdx) => {

@@ -12,6 +12,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
+import { useTelegram } from '../../components/TelegramProvider.jsx'
+import { openTrainerChat } from '../../utils/askTrainer.js'
 import { apiGet, apiPost, apiPatch, apiDelete } from '../../utils/api.js'
 import TopBar from '../../components/ui/TopBar.jsx'
 import { Glass } from '../../components/ui/Glass.jsx'
@@ -49,8 +51,10 @@ export default function WorkoutPage() {
   const cachedPlanTitle = cachedData?.planDayTitle ?? null
 
   const toast = useToast()
+  const { webApp } = useTelegram()
   const { save: saveWorkoutState, restore: restoreWorkoutState, clear: clearWorkoutState } = useActiveWorkout()
   const [workoutId, setWorkoutId] = useState(null)
+  const [askingTrainer, setAskingTrainer] = useState(false)
   const [currentExercise, setCurrentExercise] = useState(null)
   const [doneSets, setDoneSets] = useState([])
   const [allExercises, setAllExercises] = useState([])
@@ -707,6 +711,16 @@ export default function WorkoutPage() {
     navigate('/')
   }
 
+  const handleAskTrainer = async () => {
+    if (!workoutId || askingTrainer) return
+    setAskingTrainer(true)
+    try {
+      await openTrainerChat(webApp, { type: 'workout', refId: workoutId })
+    } finally {
+      setAskingTrainer(false)
+    }
+  }
+
   // ── Swap alternative ──
 
   const handleSwapAlternative = (alt) => {
@@ -1243,6 +1257,20 @@ export default function WorkoutPage() {
             color: 'rgba(236,234,239,0.5)', fontSize: 11.5, cursor: 'pointer',
           }}>
             {t('workout.addOther')}
+          </button>
+        )}
+
+        {/* ── Ask trainer button ── */}
+        {workoutId && (
+          <button onClick={handleAskTrainer} disabled={askingTrainer} style={{
+            marginTop: 10, width: '100%', height: 40, borderRadius: 10, border: 'none',
+            background: 'rgba(255,255,255,0.05)',
+            color: 'rgba(236,234,239,0.7)', fontSize: 12, fontWeight: 600,
+            cursor: askingTrainer ? 'default' : 'pointer', opacity: askingTrainer ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <Icon name="messageCircle" size={14} />
+            {t('workout.askTrainer')}
           </button>
         )}
       </div>

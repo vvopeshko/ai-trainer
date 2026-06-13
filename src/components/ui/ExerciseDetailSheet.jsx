@@ -8,6 +8,8 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
+import { useTelegram } from '../TelegramProvider.jsx'
+import { openTrainerChat } from '../../utils/askTrainer.js'
 import { useExerciseDetail } from '../../hooks/queries.js'
 import { getExerciseSettings, setExerciseSettings, saveSettingsToServer, PRESETS, getDefaultPreset, getPresetsForEquipment } from '../../utils/weightUnit.js'
 import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
@@ -912,10 +914,12 @@ function DetailSkeleton() {
 
 export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange }) {
   const { t } = useTranslation()
+  const { webApp } = useTelegram()
   const [activeTab, setActiveTab] = useState('instructions')
   const [settings, setSettings] = useState(null)
   const [tabKey, setTabKey] = useState(0)
   const [prevExerciseId, setPrevExerciseId] = useState(null)
+  const [asking, setAsking] = useState(false)
 
   // Use TanStack Query — cached, placeholderData from catalog
   const { data: exercise = null, isLoading: loading } = useExerciseDetail(open ? exerciseId : null)
@@ -977,6 +981,16 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
     setTabKey(k => k + 1)
   }, [])
 
+  const handleAskTrainer = useCallback(async () => {
+    if (!exercise?.id || asking) return
+    setAsking(true)
+    try {
+      await openTrainerChat(webApp, { type: 'exercise', refId: exercise.id })
+    } finally {
+      setAsking(false)
+    }
+  }, [exercise?.id, asking, webApp])
+
   // Prevent body scroll when overlay is open
   useEffect(() => {
     if (open) {
@@ -1025,6 +1039,30 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
           </div>
         ) : null}
       </div>
+
+      {/* Ask-trainer footer */}
+      {exercise && (
+        <div style={{
+          flexShrink: 0, padding: '10px 16px',
+          paddingBottom: 'calc(var(--safe-bottom, 0px) + 12px)',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <button
+            onClick={handleAskTrainer}
+            disabled={asking}
+            style={{
+              width: '100%', height: 48, borderRadius: 14, border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--fg-primary)', fontSize: 14.5, fontWeight: 600,
+              cursor: asking ? 'default' : 'pointer', opacity: asking ? 0.6 : 1,
+            }}
+          >
+            <Icon name="messageCircle" size={17} />
+            {t('exercise.askTrainer')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

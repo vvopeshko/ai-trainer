@@ -23,6 +23,7 @@ import prisma from '../../utils/prisma.js'
 import { track } from '../../utils/analytics.js'
 import { buildUserContext } from './buildUserContext.js'
 import { CHAT_TOOLS, buildToolExecutor } from './chatTools.js'
+import { consumePendingContext } from './chatContext.js'
 
 const HISTORY_LIMIT = 20
 const MAX_TOKENS = 1024
@@ -46,14 +47,15 @@ const FALLBACK_REPLY =
  */
 export async function handleChatMessage(user, text) {
   const userId = user.id
+  const tz = user.timezone || DEFAULT_TZ
 
   // Сохраняем входящее сразу — даже если LLM упадёт, история не теряется.
   await prisma.chatMessage.create({
     data: { userId, role: 'user', content: text },
   })
 
-  // История (последние N), buildUserContext и активная тренировка — параллельно.
-  const [historyDesc, userContext, activeCtx] = await Promise.all([
+  // История, контекст юзера, активная тренировка и pending-контекст из мини-аппа — параллельно.
+  const [historyDesc, userContext, activeCtx, pendingCtx] = await Promise.all([
     prisma.chatMessage.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -62,6 +64,7 @@ export async function handleChatMessage(user, text) {
     }),
     buildUserContext(userId, { recentLimit: 5 }),
     buildActiveWorkoutContext(userId),
+    consumePendingContext(userId, tz),
   ])
 
   // findMany desc → разворачиваем в хронологический порядок.
@@ -74,6 +77,7 @@ export async function handleChatMessage(user, text) {
   let system = SYSTEM_BASE
   if (userContext) system += `\n\n---\n\n# Контекст пользователя\n${userContext}`
   if (activeCtx) system += `\n\n---\n\n# Активная тренировка (идёт прямо сейчас)\n${activeCtx}`
+  if (pendingCtx) system += `\n\n---\n\n# Контекст запроса (юзер пришёл из мини-аппа)\n${pendingCtx.block}`
 
   let reply = FALLBACK_REPLY
   let degraded = true
@@ -85,7 +89,7 @@ export async function handleChatMessage(user, text) {
       system,
       maxTokens: MAX_TOKENS,
       tools: CHAT_TOOLS,
-      executeTool: buildToolExecutor(userId, user.timezone || DEFAULT_TZ),
+      executeTool: buildToolExecutor(userId, tz),
     })
     const out = res.text?.trim()
     if (out) {
