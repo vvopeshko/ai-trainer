@@ -46,6 +46,7 @@ model User {
   notificationLogs       NotificationLog[]
   pendingChatContexts    PendingChatContext[]
   insights               Insight[]
+  planOverrides          WorkoutPlanOverride[]
 }
 
 // ═══════════════════════════════════════════════
@@ -394,5 +395,30 @@ model Insight {
   createdAt DateTime @default(now())
 
   @@unique([userId, date])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════
+// WorkoutPlanOverride — разовый оверрайд дня программы «только следующая
+// тренировка» (рефайн через чат, фаза 5b).
+//
+// Чат-тренер по запросу «только на следующую тренировку ...» апсертит сюда
+// переопределённый список упражнений дня. getNextWorkout/getActive подмешивают
+// его поверх planJson; при финише тренировки оверрайд удаляется (consume),
+// чтобы не «прилипать» к следующим циклам. Шаблон программы (Program.planJson)
+// при этом не трогается.
+// ═══════════════════════════════════════════════
+model WorkoutPlanOverride {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  programId String
+  dayIndex  Int
+  exercises Json // переопределённый список упражнений дня
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, programId, dayIndex])
   @@index([userId])
 }

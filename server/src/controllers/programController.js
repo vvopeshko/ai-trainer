@@ -80,11 +80,29 @@ export async function getNextWorkout(req, res) {
     ? (lastWorkout.programDayIndex + 1) % days.length
     : 0
 
+  // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b):
+  // если есть — подмешиваем переопределённые упражнения поверх шаблона дня.
+  const override = await prisma.workoutPlanOverride.findUnique({
+    where: {
+      userId_programId_dayIndex: {
+        userId: req.user.id,
+        programId: program.id,
+        dayIndex: nextDayIndex,
+      },
+    },
+    select: { exercises: true },
+  })
+
+  const day = override
+    ? { ...days[nextDayIndex], exercises: override.exercises }
+    : days[nextDayIndex]
+
   res.json({
     programId: program.id,
-    day: days[nextDayIndex],
+    day,
     dayIndex: nextDayIndex,
     totalDays: days.length,
+    overridden: Boolean(override),
   })
 }
 
@@ -162,7 +180,9 @@ export async function getProgram(req, res) {
  *
  * Обновление программы (название, planJson).
  */
-const planExerciseSchema = z.object({
+// Экспортируется для переиспользования в programEditor (рефайн через чат, фаза 5):
+// один и тот же Zod-путь валидации элемента упражнения и тут, и в редакторе плана.
+export const planExerciseSchema = z.object({
   exerciseId: z.string().uuid(),
   slug: z.string(),
   nameRu: z.string(),

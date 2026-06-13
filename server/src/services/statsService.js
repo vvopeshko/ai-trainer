@@ -580,6 +580,61 @@ export async function getExerciseHistory(userId, exerciseId, opts = {}) {
   return { exerciseNameRu: exercise?.nameRu ?? null, points, trend }
 }
 
+// ─── Словарь логированных упражнений (для чата tool-use, фаза 5) ────
+
+/**
+ * Все упражнения, которые юзер хоть раз логировал в завершённых тренировках.
+ * Даёт LLM полный «словарь» движений: что можно запросить в get_exercise_history
+ * или заменить/скорректировать в программе. Read-only, числа считает код.
+ *
+ * @param {string} userId
+ * @returns {Promise<Array<{ nameRu: string, slug: string, sessions: number, lastDate: string|null, lastTopWeightKg: number|null }>>}
+ */
+export async function getLoggedExercisesSummary(userId) {
+  const rows = await prisma.$queryRaw`
+    WITH ex_workouts AS (
+      SELECT
+        ws."exerciseId" AS exercise_id,
+        w.id AS workout_id,
+        w."finishedAt" AS finished_at,
+        MAX(ws."weightKg") FILTER (WHERE ws."isWarmup" = false) AS top_weight
+      FROM "WorkoutSet" ws
+      JOIN "Workout" w ON ws."workoutId" = w.id
+      WHERE w."userId" = ${userId}
+        AND w."finishedAt" IS NOT NULL
+      GROUP BY ws."exerciseId", w.id, w."finishedAt"
+    ),
+    ranked AS (
+      SELECT
+        exercise_id,
+        finished_at,
+        top_weight,
+        ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY finished_at DESC) AS rn,
+        COUNT(*) OVER (PARTITION BY exercise_id)::int AS sessions
+      FROM ex_workouts
+    )
+    SELECT
+      e."nameRu" AS "nameRu",
+      e.slug AS slug,
+      r.sessions AS sessions,
+      r.finished_at AS "lastDate",
+      r.top_weight::float AS "lastTopWeightKg"
+    FROM ranked r
+    JOIN "Exercise" e ON r.exercise_id = e.id
+    WHERE r.rn = 1
+    ORDER BY r.sessions DESC, r.finished_at DESC
+  `
+
+  return rows.map((r) => ({
+    nameRu: r.nameRu,
+    slug: r.slug,
+    sessions: r.sessions,
+    lastDate: r.lastDate ? formatLocalDate(new Date(r.lastDate)) : null,
+    lastTopWeightKg:
+      r.lastTopWeightKg != null ? Math.round(r.lastTopWeightKg * 10) / 10 : null,
+  }))
+}
+
 // ─── Сводка по одной тренировке (для пост-тренировочной сводки, фаза 1) ──
 
 /**

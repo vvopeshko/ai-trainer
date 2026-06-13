@@ -120,43 +120,11 @@ export async function buildUserContext(userId, opts = {}) {
 
   // ─── Недавние тренировки ───
   if (recentWorkouts) {
-    const workouts = await prisma.workout.findMany({
-      where: { userId, finishedAt: { not: null } },
-      orderBy: { finishedAt: 'desc' },
-      take: recentLimit,
-      select: {
-        finishedAt: true,
-        programDayIndex: true,
-        feltRating: true,
-        program: { select: { planJson: true } },
-        sets: {
-          where: { isWarmup: false },
-          select: {
-            weightKg: true,
-            reps: true,
-            exercise: { select: { nameRu: true } },
-          },
-        },
-      },
-    })
-
+    const workouts = await getRecentWorkouts(userId, tz, recentLimit)
     if (workouts.length > 0) {
       const lines = workouts.map((w) => {
-        const date = formatDate(w.finishedAt, tz)
-        const dayTitle = w.program?.planJson?.days?.[w.programDayIndex]?.title
-        // топ-вес по упражнениям (компактно: упр Nкг×R)
-        const top = new Map()
-        for (const s of w.sets) {
-          const cur = top.get(s.exercise.nameRu)
-          const w0 = s.weightKg || 0
-          if (!cur || w0 > cur.weightKg) top.set(s.exercise.nameRu, { weightKg: w0, reps: s.reps })
-        }
-        const keyLifts = [...top.entries()]
-          .slice(0, 4)
-          .map(([name, v]) => (v.weightKg ? `${name} ${v.weightKg}×${v.reps}` : `${name} ${v.reps}`))
-          .join('; ')
         const felt = w.feltRating ? ` (ощущения ${w.feltRating}/5)` : ''
-        return `  • ${date}${dayTitle ? ` — ${dayTitle}` : ''}: ${keyLifts}${felt}`
+        return `  • ${w.date}${w.dayTitle ? ` — ${w.dayTitle}` : ''}: ${w.keyLifts.join('; ')}${felt}`
       })
       sections.push(`## Недавние тренировки (${workouts.length})\n${lines.join('\n')}`)
     }
@@ -183,6 +151,54 @@ export async function buildUserContext(userId, opts = {}) {
   }
 
   return sections.join('\n\n')
+}
+
+/**
+ * Последние N завершённых тренировок с ключевыми подъёмами. Переиспользуется
+ * в buildUserContext (блок «Недавние тренировки») и в чат-инструменте
+ * get_recent_workouts (числа — кодом, единый формат).
+ *
+ * @param {string} userId
+ * @param {string} tz
+ * @param {number} [limit=10]
+ * @returns {Promise<Array<{ date: string, dayTitle: string|null, keyLifts: string[], feltRating: number|null }>>}
+ */
+export async function getRecentWorkouts(userId, tz, limit = 10) {
+  const workouts = await prisma.workout.findMany({
+    where: { userId, finishedAt: { not: null } },
+    orderBy: { finishedAt: 'desc' },
+    take: limit,
+    select: {
+      finishedAt: true,
+      programDayIndex: true,
+      feltRating: true,
+      program: { select: { planJson: true } },
+      sets: {
+        where: { isWarmup: false },
+        select: {
+          weightKg: true,
+          reps: true,
+          exercise: { select: { nameRu: true } },
+        },
+      },
+    },
+  })
+
+  return workouts.map((w) => {
+    const date = formatDate(w.finishedAt, tz)
+    const dayTitle = w.program?.planJson?.days?.[w.programDayIndex]?.title ?? null
+    // топ-вес по упражнениям (компактно: упр Nкг×R)
+    const top = new Map()
+    for (const s of w.sets) {
+      const cur = top.get(s.exercise.nameRu)
+      const w0 = s.weightKg || 0
+      if (!cur || w0 > cur.weightKg) top.set(s.exercise.nameRu, { weightKg: w0, reps: s.reps })
+    }
+    const keyLifts = [...top.entries()]
+      .slice(0, 4)
+      .map(([name, v]) => (v.weightKg ? `${name} ${v.weightKg}×${v.reps}` : `${name} ${v.reps}`))
+    return { date, dayTitle, keyLifts, feltRating: w.feltRating ?? null }
+  })
 }
 
 function formatDate(d, tz) {

@@ -85,7 +85,20 @@ export async function getActive(req, res) {
     })
     const day = program?.planJson?.days?.[workout.programDayIndex]
     if (day) {
-      planExercises = day.exercises
+      // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b):
+      // если для этого дня есть оверрайд — берём его упражнения вместо шаблона.
+      const override = await prisma.workoutPlanOverride.findUnique({
+        where: {
+          userId_programId_dayIndex: {
+            userId: req.user.id,
+            programId: workout.programId,
+            dayIndex: workout.programDayIndex,
+          },
+        },
+        select: { exercises: true },
+      })
+
+      planExercises = override ? override.exercises : day.exercises
       planDayTitle = day.title
 
       // Обогатить alternatives: UUID[] → { exerciseId, nameRu, slug }[]
@@ -359,6 +372,22 @@ export async function update(req, res) {
       sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
     },
   })
+
+  // Consume разового оверрайда дня (рефайн через чат, фаза 5b): после успешного
+  // финиша удаляем оверрайд, чтобы он не «прилипал» к следующим циклам программы.
+  if (updated.programId != null && updated.programDayIndex != null) {
+    await prisma.workoutPlanOverride
+      .delete({
+        where: {
+          userId_programId_dayIndex: {
+            userId: req.user.id,
+            programId: updated.programId,
+            dayIndex: updated.programDayIndex,
+          },
+        },
+      })
+      .catch(() => {}) // нет оверрайда — ок, ничего не делаем
+  }
 
   const netDurationMs = updated.finishedAt - updated.startedAt - totalPausedMs
   track(req.user.id, 'workout_completed', {
