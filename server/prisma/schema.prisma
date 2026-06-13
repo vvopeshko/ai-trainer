@@ -43,6 +43,7 @@ model User {
   machineIdentifications MachineIdentification[]
   analyticsEvents        AnalyticsEvent[]
   exerciseSettings       UserExerciseSettings[]
+  notificationLogs       NotificationLog[]
 }
 
 // ═══════════════════════════════════════════════
@@ -67,6 +68,10 @@ model UserProfile {
   // Теги: ['lower_back', 'knee', ...] / ['barbell', 'machine', ...]
   constraints     String[]        @default([])
   equipment       String[]        @default([])
+
+  // Настройки уведомлений тренера: { postWorkout, weekly, monthly, reminders, records }.
+  // null = дефолт «всё включено» (см. src/scheduler).
+  notificationsJson Json?
 
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -324,4 +329,24 @@ model AnalyticsEvent {
 
   @@index([event, createdAt])
   @@index([userId, createdAt])
+}
+
+// ═══════════════════════════════════════════════
+// NotificationLog — идемпотентность проактивных сообщений тренера.
+// Шедулер (src/scheduler) перед отправкой делает create; дубль (@@unique)
+// = сообщение уже отправлено в этом периоде → пропуск. Защищает от повторов
+// при рестарте процесса (Railway).
+// ═══════════════════════════════════════════════
+model NotificationLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind      String // 'post_workout' | 'weekly' | 'monthly' | 'reminder' | 'checkin' | ...
+  periodKey String // '2026-W24' | '2026-06' | '2026-06-13' | workoutId — гранулярность зависит от kind
+
+  sentAt    DateTime @default(now())
+
+  @@unique([userId, kind, periodKey])
+  @@index([userId, kind])
 }

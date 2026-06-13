@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import { createBot } from './bot/index.js'
+import { setBot } from './bot/notifier.js'
+import { startScheduler, stopScheduler } from './scheduler/index.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { globalLimiter } from './middleware/rateLimiter.js'
@@ -47,11 +49,16 @@ const server = app.listen(PORT, () => {
 let bot = null
 if (process.env.BOT_TOKEN) {
   bot = createBot(process.env.BOT_TOKEN)
+  setBot(bot) // даём notifier ссылку на бота для проактивных сообщений
   bot.telegram
     .getMe()
     .then((me) => console.log(`[bot] launched as @${me.username}`))
     .catch((err) => console.error('[bot] failed to connect:', err.message))
   bot.launch().catch((err) => console.error('[bot] crashed:', err))
+
+  // Шедулер проактивных сообщений запускается только при наличии бота
+  // (без него notify() некуда слать).
+  startScheduler()
 } else {
   console.warn('[bot] BOT_TOKEN not set — bot is disabled')
 }
@@ -59,6 +66,7 @@ if (process.env.BOT_TOKEN) {
 // Graceful shutdown.
 function shutdown(signal) {
   console.log(`[app] ${signal} — shutting down`)
+  stopScheduler()
   if (bot) bot.stop(signal)
   server.close(() => process.exit(0))
 }
