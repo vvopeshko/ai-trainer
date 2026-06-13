@@ -1,5 +1,5 @@
 {
-  "node": {
-    "version": "24"
+  "packages": {
+    "node": "24"
   }
 }
