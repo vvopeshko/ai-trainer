@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-06-12
+**Последнее обновление:** 2026-06-13
 
 ---
 
@@ -53,6 +53,16 @@
 ---
 
 ## ✅ Выполнено
+
+### AI-тренер phase 5 — расширенный контекст + рефайн программы через чат (2026-06-13) ✅
+
+- [x] Read-инструменты: `list_logged_exercises`, `get_recent_workouts`, `search_exercises` (каталог-only, без дублей)
+- [x] Write-инструменты: `replace/adjust/add/remove_exercise` со `scope: 'program' | 'next'`
+- [x] Сервис `programEditor.js` — мутации `planJson` + резолв (read-only, без auto-create) + валидация
+- [x] Модель `WorkoutPlanOverride` — разовый оверрайд дня, мёрж в `getNextWorkout`/`getActive`, consume при финише
+- [x] Propose → confirm через дисциплину промпта `chatTrainer.md` (без отдельного стейта)
+- [x] `getRecentWorkouts` вынесен в переиспользуемый хелпер из `buildUserContext`
+- [x] Тесты `programEditor.test.js` (9)
 
 ### TanStack Query — кэш-слой данных (2026-06-12) ✅
 

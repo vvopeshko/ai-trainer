@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-06-13 — AI-тренер phase 5: расширенный контекст + рефайн программы через чат
+
+### Что сделано
+
+Чат-тренер в боте научился видеть всю историю упражнений (через инструменты, а не выдумывая) и **менять программу прямо из диалога** с дисциплиной propose → confirm.
+
+**Read-инструменты (расширенный контекст по запросу):**
+- `list_logged_exercises` — полный «словарь» движений юзера (упражнение, число тренировок, последняя дата, последний топ-вес). Один windowed SQL-проход.
+- `get_recent_workouts` (`{ limit }`, 1–30) — последние N тренировок (логика вынесена в переиспользуемый хелпер `getRecentWorkouts` из `buildUserContext`).
+- `search_exercises` (`{ query?, muscle?, equipment? }`) — поиск **только в каталоге** (924 упр.), возвращает `id` для замен. Auto-create нет → дубли невозможны.
+
+**Write-инструменты (рефайн программы):**
+- `replace_exercise`, `adjust_exercise`, `add_exercise`, `remove_exercise` с параметром `scope`:
+  - `scope: 'program'` — правка шаблона `Program.planJson` (все будущие тренировки этого дня);
+  - `scope: 'next'` — разовый `WorkoutPlanOverride` только на ближайшую тренировку.
+- Новый сервис `programEditor.js` — чистые мутации `planJson` (replace/adjust/add/remove) + резолв упражнения по `id` или имени (read-only `resolveExerciseReadonly`, без auto-create) + валидация через переиспользованную `planExerciseSchema`.
+- Новая модель `WorkoutPlanOverride` (`@@unique([userId, programId, dayIndex])`): мёржится в `getNextWorkout` и `getActive`, сбрасывается при финише тренировки (consume).
+
+**Propose → confirm** реализован дисциплиной промпта `chatTrainer.md` (без отдельного pending-стейта): модель сначала описывает предложение текстом, вызывает write-инструмент только после явного «да».
+
+### Решения
+
+- **Контекст — инструментами по запросу**, базовый `buildUserContext` остаётся дешёвым (recentLimit: 5). Экономит токены.
+- **`scope: 'next'` через отдельную таблицу-оверрайд**, а не флаг в planJson — шаблон не мутируется, разовая правка сбрасывается после тренировки.
+- **Циркулярный импорт** `chatTools ↔ programEditor` безопасен: `resolveExerciseReadonly` — function declaration (hoisted).
+- Тесты: `programEditor.test.js` (9) — replace/adjust/add/remove + пути «не найдено» / «нет auto-create».
+
+---
+
 ## 2026-06-13 — Fix: Railway deploy (cross-platform npm lock file)
 
 ### Проблема

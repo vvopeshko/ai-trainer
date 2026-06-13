@@ -121,7 +121,7 @@ cd server && npx prisma generate       # регенерация клиента (
     │   ├── controllers/     # auth, exercise, workout, program, stats, progress
     │   ├── middleware/       # telegramAuth.js, rateLimiter.js, errorHandler.js
     │   ├── bot/             # Telegraf bot (long polling) + scenes (WizardScene для /program)
-    │   ├── services/aiTrainer/  # LLM-логика: identifyMachine, generateProgram, importProgram
+    │   ├── services/aiTrainer/  # LLM-логика: chat (tool-use), chatTools, programEditor, identifyMachine, generateProgram, importProgram, weekly/dailyInsight
     │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js, dateUtils.js
     ├── prisma/schema.prisma
     ├── scripts/             # seedExercises.js, seedDevData.js, enrichProgramMedia.js и др.
@@ -198,7 +198,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Prisma / БД
 
-10 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`). Полная схема — `server/prisma/schema.prisma`.
+11 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише). Полная схема — `server/prisma/schema.prisma`.
 
 **Миграций НЕТ, только `prisma db push`.** В референсном проекте `db push` однажды дропнул все таблицы (2026-03-08) при добавлении NOT NULL колонки. Спасла Neon PITR.
 

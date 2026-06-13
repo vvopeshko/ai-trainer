@@ -126,17 +126,23 @@ flowchart TB
   → UI: optimistic update + хаптик success
 ```
 
-**(B) AI-чат между подходами**
+**(B) AI-чат с тренером (контекст + tool use + рефайн программы)**
 
 ```
-Юзер пишет боту "чем заменить жим?"
+Юзер пишет боту "замени жим на что-то для спины"
   → Telegraf on('text') handler
-  → services/aiTrainer/chatWithContext.js
-      - фетчит последние N ChatMessage + последние 3 Workout юзера
-      - собирает system prompt + контекст
-      - llm.chat(messages, { tools })
+  → services/aiTrainer/chat.js → handleChatMessage(user, text)
+      - buildUserContext: профиль, активная программа, статы, рекорды, recent 5
+      - история последних ~20 ChatMessage
+      - llm.chat(messages, { tools: CHAT_TOOLS })  ← агентный tool-use loop
+          read:  get_exercise_history, get_period_stats, get_records, get_muscle_volume,
+                 get_program_details, list_logged_exercises, get_recent_workouts, search_exercises
+          write: replace/adjust/add/remove_exercise (scope: 'program' | 'next')
+      - buildToolExecutor(userId, tz) исполняет вызовы (SQL / programEditor)
+      - propose → confirm: write-инструмент вызывается только после явного «да» (дисциплина промпта)
+  → write со scope:'next' → upsert WorkoutPlanOverride; scope:'program' → update Program.planJson
   → сохраняет ChatMessage (user + assistant)
-  → track('ai_chat_message', ...)
+  → track('ai_chat_message' | 'program_edit', ...)
   → bot.sendMessage(ответ)
 ```
 
@@ -277,6 +283,7 @@ erDiagram
     User ||--o{ MachineIdentification : "photos"
     User ||--o{ AnalyticsEvent : "events"
     User ||--o{ UserExerciseSettings : "exercise prefs"
+    User ||--o{ WorkoutPlanOverride : "разовые правки дня"
 
     Program ||--o{ Workout : "по программе"
     Workout ||--o{ WorkoutSet : "подходы"
@@ -408,6 +415,15 @@ erDiagram
         string type
         datetime updatedAt
     }
+
+    WorkoutPlanOverride {
+        string id PK
+        string userId FK
+        string programId
+        int dayIndex
+        json exercises
+        datetime createdAt
+    }
 ```
 
 ### 4.2 Prisma-схема (черновик v1)
@@ -451,6 +467,7 @@ model User {
   machineIdentifications MachineIdentification[]
   analyticsEvents        AnalyticsEvent[]
   exerciseSettings       UserExerciseSettings[]
+  planOverrides          WorkoutPlanOverride[]
 }
 
 // ═══════════════════════════════════════════════
@@ -717,6 +734,25 @@ model AnalyticsEvent {
   @@index([event, createdAt])
   @@index([userId, createdAt])
 }
+
+// ═══════════════════════════════════════════════
+// WorkoutPlanOverride — разовая правка дня программы (scope: 'next').
+// Создаётся чат-тренером, мёржится в getNextWorkout/getActive,
+// удаляется при финише тренировки (consume). Шаблон planJson не трогается.
+// ═══════════════════════════════════════════════
+model WorkoutPlanOverride {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programId  String
+  dayIndex   Int                                          // 0-based индекс дня в planJson
+  exercises  Json                                         // переопределённый список упражнений дня
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, programId, dayIndex])
+  @@index([userId])
+}
 ```
 
 ### 4.3 Решения и trade-offs
@@ -726,6 +762,7 @@ model AnalyticsEvent {
 - **MachineIdentification — отдельная таблица**, не подтип `ChatMessage`. Она критична для метрик ключевой фичи (точность распознавания) и возможного будущего датасета для дообучения.
 - **Глобальный `Exercise`, не per-user.** База упражнений одинаковая для всех. Если появится потребность в кастомных упражнениях юзера — добавим `userId: String?` (nullable = глобальное).
 - **`guidelines` как nullable Json на Program.** Структура: `{ volumeTargets, progression, deload, constraints, nutrition, schedule }`. Nullable = старые программы не затронуты. Хранится рядом с planJson, не в отдельной таблице.
+- **`WorkoutPlanOverride` — отдельная таблица, а не флаг в planJson.** Разовая правка «только следующая тренировка» (`scope: 'next'` от чат-тренера) хранится оверрайдом и сбрасывается при финише, поэтому шаблон `Program.planJson` не мутируется. Правка «все следующие» (`scope: 'program'`) пишется прямо в planJson. Уникальность `[userId, programId, dayIndex]` — один активный оверрайд на день.
 - **`isActive` на Program** вместо отдельного `currentProgramId` у юзера. Проще поддерживать историю программ.
 - **`telegramId` как BigInt**, а не Int — Telegram ID уже выходит за пределы int32 и продолжает расти.
 - **`aliases[]` на Exercise** — массив синонимов ("жим лёжа", "bench press", "жим штанги лёжа") для подбора упражнения после распознавания тренажёра и текстового поиска.
@@ -948,13 +985,26 @@ server/src/services/aiTrainer/
 ├── generateProgram.js     # профиль (цель, пол, возраст, уровень, ...) → персональная программа
 ├── importProgram.js       # markdown → два LLM-вызова (структура + guidelines) → программа в БД
 ├── identifyMachine.js     # фото → название тренажёра + упражнения
-├── chatWithContext.js     # user message + history → ответ тренера (planned)
-├── analyzeProgress.js     # метрики за неделю → рекомендации (planned)
+├── chat.js                # handleChatMessage: контекст + история + tool-use loop → ответ тренера
+├── chatContext.js         # сборка system-контекста для чата
+├── chatTools.js           # CHAT_TOOLS (схемы) + buildToolExecutor: read + write инструменты
+├── programEditor.js       # чистые мутации planJson (replace/adjust/add/remove) + резолв + валидация
+├── buildUserContext.js    # дешёвый свод (профиль, программа, статы, рекорды, recent N) + getRecentWorkouts
+├── postWorkoutSummary.js  # пост-тренировочная сводка от тренера
+├── weeklySummary.js       # еженедельная сводка (node-cron)
+├── dailyInsight.js        # инсайты: плато / дисбалансы / замечание тренера
+├── reminder.js            # напоминания о тренировке
+├── notificationPrefs.js   # настройки проактивных уведомлений
 └── prompts/               # промпты отдельными файлами, версионируются в git
+    ├── _tone.md           # общий тон тренера (подключается в промпты)
+    ├── chatTrainer.md     # роль чат-тренера: инструменты, рефайн, propose→confirm, дисклеймер
     ├── generateProgram.md # учитывает пол, возраст, цель, уровень, оборудование, ограничения
     ├── importProgram.md   # парсинг структуры программы из markdown
     ├── importGuidelines.md # парсинг методических указаний
-    └── identifyMachine.md
+    ├── identifyMachine.md
+    ├── postWorkoutSummary.md
+    ├── weeklySummary.md
+    └── dailyInsight.md
 ```
 
 Промпты — в git как обычные `.md`-файлы, импортируются как строки через `fs.readFileSync` или Vite-подобный import.
