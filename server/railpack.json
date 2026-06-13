@@ -1,6 +1,11 @@
 {
+  "$schema": "https://schema.railpack.com",
   "packages": {
     "node": "24"
   },
-  "installCmd": "npm install"
+  "steps": {
+    "install": {
+      "commands": ["npm install"]
+    }
+  }
 }
