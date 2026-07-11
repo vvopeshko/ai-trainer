@@ -70,10 +70,24 @@ export async function sendPushToUser(userId, payload) {
         } else {
           failed += 1
           lastError = err
+          // Диагностика: без statusCode/body от push-сервиса ошибки не разобрать
+          // (например, 403 VapidPkHashMismatch = подписка под другим ключом)
+          console.error(
+            `[webpush] send failed status=${err?.statusCode ?? '?'} host=${safeHost(sub.endpoint)}:`,
+            String(err?.body || err?.message || '').slice(0, 200),
+          )
         }
       }
     }),
   )
 
   return { sent, gone, failed, lastError }
+}
+
+function safeHost(endpoint) {
+  try {
+    return new URL(endpoint).host
+  } catch {
+    return 'invalid'
+  }
 }
