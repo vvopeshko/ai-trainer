@@ -141,6 +141,7 @@ model Exercise {
   workoutSets      WorkoutSet[]
 
   @@index([category])
+  @@index([aliases], type: Gin) // поиск по массиву алиасов (unnest/@> в exerciseResolver)
 }
 
 enum ExerciseDifficulty {
@@ -186,6 +187,7 @@ model Program {
   updatedAt        DateTime  @updatedAt
 
   workouts         Workout[]
+  planOverrides    WorkoutPlanOverride[]
 
   @@index([userId, isActive])
 }
@@ -213,6 +215,8 @@ model Workout {
   sets            WorkoutSet[]
 
   @@index([userId, startedAt])
+  @@index([userId, finishedAt]) // горячий путь: recent/stats/reminder фильтруют по finishedAt
+  @@index([programId])          // джойны/фильтры тренировок по программе
 }
 
 // ═══════════════════════════════════════════════
@@ -302,6 +306,11 @@ model UserExerciseSettings {
   id           String   @id @default(uuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ⚠️ exerciseSlug — денормализованная ссылка на Exercise.slug БЕЗ FK.
+  // Осознанно: dedupeExercises.js переименовывает/сливает slug'и, а FK при
+  // rename осиротил бы настройки (или заблокировал бы дедуп). Инвариант
+  // поддерживается на уровне приложения; настройки с «мёртвым» slug безвредны
+  // (просто не найдут упражнение и будут пересозданы по факту использования).
   exerciseSlug String
 
   preset       String?
@@ -415,6 +424,7 @@ model WorkoutPlanOverride {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   programId String
+  program   Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
   dayIndex  Int
   exercises Json // переопределённый список упражнений дня
 

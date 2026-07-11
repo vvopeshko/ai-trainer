@@ -11,7 +11,7 @@
 
 Многозонное ревью → [CODE_REVIEW_PLAN.md](CODE_REVIEW_PLAN.md). **Фазы 0, 1, 1.5 + топ-3 перфа фронтенда — сделаны** (см. [UPDATES.md](UPDATES.md) 2026-07-11). Осталось из плана:
 
-- **Фаза 2 (БД/инфра):** индексы `Workout(userId, finishedAt)`, `Workout(programId)`, GIN на `aliases` — ручной SQL на проде (не `db push`); FK `WorkoutPlanOverride.programId`; retention-джоб для `AnalyticsEvent`/`LlmUsage`/`ChatMessage`; `yt-search` → devDependencies; `engines.node`.
+- **Фаза 2 (БД/инфра):** ~~retention-джоб~~ ✅, ~~`yt-search`→dev~~ ✅, ~~`engines.node`~~ ✅. **Индексы + FK: схема обновлена, SQL-скрипт готов → нужно применить вручную на проде** ([server/prisma/manual/2026-07-11-indexes-fk.sql](../server/prisma/manual/2026-07-11-indexes-fk.sql)): `Workout(userId, finishedAt)`, `Workout(programId)`, GIN на `aliases`, FK `WorkoutPlanOverride.programId`. После запуска — `db push` увидит «in sync».
 - **Фаза 2.5 (тесты):** `workoutController` (пауза/финиш/consume оверрайда), chat tool-use цикл, чистые функции шедулера.
 - **Оптимизация фронтенда (остаток):** персист каталога в localStorage, lazy `ExerciseDetailSheet` + динамический `BodyMap` (−46 KB из main), drag-reorder через ref, вынос Google Fonts из блокирующего пути.
 - **Фаза 3 (косметика):** i18n-хардкоды мимо `t()`, цвета мимо токенов (hero-палитра HeroBlock), доступность (aria-label, focus trap), доки vs код (CLAUDE.md: шедулер реализован, 15 моделей, R2 «планируется»).

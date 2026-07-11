@@ -5,7 +5,7 @@
 >
 > **Прогресс 2026-07-11:** Фазы 0, 1 и 1.5 реализованы полностью (отмечены ниже) + graceful shutdown из Фазы 2. **Секция «Оптимизация фронтенда» закрыта целиком** (таймер WorkoutPage, content-visibility Library, статичный Mesh, персист каталога в localStorage, lazy ExerciseDetailSheet + BodyMap, ExercisePicker на кэш, drag через ref, удаление recharts/lucide, кэш TZ, неблокирующие шрифты) — main-чанк 132→118 KB gzip, body-muscles и ExerciseDetailSheet вынесены в async-чанки. Race двух активных тренировок закрыт Serializable-транзакцией (partial unique index остаётся опцией при ручном SQL на проде).
 >
-> **Прогресс 2026-07-11 (продолжение):** Фаза 2.5 (тесты) закрыта — +49 (workoutController, llm/chat tool-цикл, scheduler), бэкенд 69→118. Фаза 3 (косметика) закрыта в основном: i18n-хардкоды → `t()`, безопасные цвета → токены (hero-палитра оставлена до дизайн-ревью), доступность (aria-label, `role=dialog`/Escape/focus в BottomSheet/ConfirmDialog, SwipeRow → button), мелкие баги (BottomSheet cleanup, scroll-lock, BodyMap click, dead ternary), доки. Безопасная часть Фазы 2: retention-джоб (+тест), `yt-search`→dev, `engines.node`, `vercel.json`. **Остаток (прод-действия / вне косметики):** индексы+FK БД (ручной SQL на проде), Zod-парс planJson, окно вместо точного часа в сводках, at-most-once claim, in-memory-утечки, GIF/backdrop-filter перф, сироты WorkoutPlanOverride, `chatTrainer.md` scope:next edge case, кириллический .md (referenced скриптом — оставлен).
+> **Прогресс 2026-07-11 (продолжение):** Фаза 2.5 (тесты) закрыта — +49 (workoutController, llm/chat tool-цикл, scheduler), бэкенд 69→118. Фаза 3 (косметика) закрыта в основном: i18n-хардкоды → `t()`, безопасные цвета → токены (hero-палитра оставлена до дизайн-ревью), доступность (aria-label, `role=dialog`/Escape/focus в BottomSheet/ConfirmDialog, SwipeRow → button), мелкие баги (BottomSheet cleanup, scroll-lock, BodyMap click, dead ternary), доки. Безопасная часть Фазы 2: retention-джоб (+тест), `yt-search`→dev, `engines.node`, `vercel.json`. **Остаток (прод-действия / вне косметики):** индексы+FK БД — схема обновлена, SQL-скрипт готов (`server/prisma/manual/2026-07-11-indexes-fk.sql`), **ждёт ручного применения на проде** (CONCURRENTLY + чистка сирот перед FK); Zod-парс planJson, окно вместо точного часа в сводках, at-most-once claim, in-memory-утечки, GIF/backdrop-filter перф, сироты WorkoutPlanOverride, `chatTrainer.md` scope:next edge case, кириллический .md (referenced скриптом — оставлен).
 >
 > **Статус прошлого ревью:** фазы 0–1 (безопасность, потеря данных, TanStack Query) закрыты ранее и зафиксированы в NEXT_PLANS. Из фаз 2–3 сделано: `progressController` → services, `timingSafeEqual` для HMAC, программное закрытие BottomSheet, фикс fetch-гонки в ExerciseDetailSheet, «фейковые тесты» переписаны на импорт реального кода. Остальное перенесено сюда и перепроверено по коду.
 
@@ -135,9 +135,9 @@
 
 ### Схема и данные
 
-- [ ] **Индекс `Workout(userId, finishedAt)`** — сейчас только `[userId, startedAt]`, а горячие запросы (recent, stats, buildUserContext, reminder) фильтруют/сортируют по finishedAt.
-- [ ] **FK для `WorkoutPlanOverride.programId`** (`onDelete: Cascade`) — сейчас голая строка, сироты при будущем удалении программ.
-- [ ] **`UserExerciseSettings.exerciseSlug` без FK** — при дедупликации slug'ов (скрипт dedupeExercises есть) настройки осиротеют молча. FK или явный комментарий «осознанно денормализовано».
+- [x] **Индекс `Workout(userId, finishedAt)`** — сейчас только `[userId, startedAt]`, а горячие запросы (recent, stats, buildUserContext, reminder) фильтруют/сортируют по finishedAt.
+- [x] **FK для `WorkoutPlanOverride.programId`** (`onDelete: Cascade`) — сейчас голая строка, сироты при будущем удалении программ.
+- [x] **`UserExerciseSettings.exerciseSlug` без FK** — при дедупликации slug'ов (скрипт dedupeExercises есть) настройки осиротеют молча. FK или явный комментарий «осознанно денормализовано».
 - [x] **Retention:** `AnalyticsEvent`, `LlmUsage`, `ChatMessage`, `NotificationLog`, consumed `PendingChatContext` копятся вечно. Cron-джоб чистки (шедулер уже есть).
 - [ ] **Zod-парс `planJson` при чтении** в местах мёржа (`enrichPlanExercises`, оверрайды) — сейчас структуре доверяют слепо.
 

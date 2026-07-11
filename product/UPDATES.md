@@ -31,7 +31,12 @@
 - Доки: ARCHITECTURE cron-расписание, CLAUDE R2 «планируется» + pre-push порядок.
 - Репо: `prototype/bodymap/*.tar.gz` убран из git (+ `.gitignore`).
 
-**Осталось:** индексы/FK БД (ручной SQL на проде — согласовать), Zod-парс planJson при чтении, окно вместо точного часа в сводках, in-memory-утечки, GIF/backdrop-filter перф, сироты WorkoutPlanOverride.
+### Индексы + FK БД — схема готова, ждёт ручного применения
+
+- `schema.prisma`: `Workout` +`@@index([userId, finishedAt])` +`@@index([programId])`; `Exercise` +GIN `@@index([aliases])`; `WorkoutPlanOverride.programId` → FK на `Program` (`onDelete: Cascade`); `UserExerciseSettings.exerciseSlug` — задокументирован инвариант «без FK» (dedupe-скрипт переименовывает slug'и).
+- **SQL-скрипт** `server/prisma/manual/2026-07-11-indexes-fk.sql` (сгенерирован через `prisma migrate diff`, имена индексов/констрейнтов = как у Prisma → `db push` после будет «in sync»): индексы через `CREATE INDEX CONCURRENTLY` (без блокировки записи), FK через чистку сирот + `NOT VALID`/`VALIDATE`. Идемпотентен. **Запускать на проде вручную**, зафиксировав timestamp для PITR.
+
+**Осталось:** ручное применение SQL-скрипта индексов/FK на проде; Zod-парс planJson при чтении, окно вместо точного часа в сводках, in-memory-утечки, GIF/backdrop-filter перф, сироты WorkoutPlanOverride.
 
 ---
 
