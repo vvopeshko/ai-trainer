@@ -11,7 +11,7 @@ import { useExerciseCatalog } from '../../hooks/queries.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
-import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
+import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheetLazy.jsx'
 
 // ─── Constants ────────────────────────────────────────────────────────
 

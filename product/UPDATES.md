@@ -27,11 +27,16 @@
 - **AI-слой:** optimistic lock (`updatedAt`) на `planJson` против lost update; `nextDayIndex` в `get_program_details` для `scope: 'next'`; защита от дублей в `add_exercise`; peek/commit pending-контекста (не сгорает при фейле LLM); след выполненных write-правок в истории при degraded-ответе; экранирование `%_\` в ILIKE; `identifyMachine` возвращает `success: false` при confidence < 0.3.
 - **Фронтенд:** `muscleMapping` синхронизирован с серверными ID (+ тест-инвариант на 24 muscle ID); SummaryPage работает при прямом открытии (`useWorkoutDetail`); partial progress переживает перезапуск приложения; ключи сетов по `tempId` (swipe-корзина не переезжает на соседний сет); мышцы Summary добираются из `planExercises`; debounce PUT настроек упражнения; ключи `library.cat.*` для реальных категорий.
 
-### Оптимизация фронтенда (топ-3)
+### Оптимизация фронтенда (секция закрыта целиком)
 
 - Секундный live-таймер перенесён из корня WorkoutPage (~1400 строк) внутрь `WorkoutTopBar` — страница больше не ре-рендерится каждую секунду тренировки.
 - `content-visibility: auto` на строки LibraryPage (924 упражнения без виртуализации).
 - Mesh статичен — убраны три вечно анимированных GPU-слоя с `blur(70px)`.
+- **Персист каталога упражнений в localStorage** (`initialData` + `initialDataUpdatedAt`) — холодный старт показывает каталог мгновенно, без 66 KB gzip по сети.
+- **Lazy `ExerciseDetailSheet` + `BodyMap`** (обёртки + баррел) — body-muscles (~26 KB) и sheet (~18 KB) вынесены из main в async-чанки: **main 132→118 KB gzip**.
+- **ExercisePicker на кэш каталога** — клиентская фильтрация вместо `GET /search` на каждый ввод.
+- **Drag-reorder через ref** — `translateY` пишется прямо в DOM во время touchmove вместо `setState` (не ре-рендерит страницу с частотой тача).
+- Удалены неиспользуемые `recharts`/`lucide-react`; timezone кэшируется в `api.js`; Google Fonts грузятся неблокирующе (`media=print` + `onload`).
 
 ### Инфра / гигиена
 

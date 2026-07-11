@@ -22,8 +22,8 @@ import { Icon } from '../../components/ui/Icon.jsx'
 import { RestCard } from '../../components/ui/RestCard.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
-import { BodyMap } from '../../components/ui/BodyMap.jsx'
-import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheet.jsx'
+import { BodyMap } from '../../components/ui/BodyMapLazy.jsx'
+import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheetLazy.jsx'
 import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useQueryClient } from '@tanstack/react-query'
@@ -96,9 +96,12 @@ export default function WorkoutPage() {
   const hasPlan = planExercises && planExercises.length > 0
 
   // ── Drag reorder state ──
+  // Визуальное следование за пальцем пишется прямо в DOM (dragElRef), без
+  // setState на каждый touchmove — иначе вся страница ре-рендерилась бы с
+  // частотой тача. В state — только draggingId (старт/конец, редко) и свапы.
   const [draggingId, setDraggingId] = useState(null)
-  const [dragDelta, setDragDelta] = useState(0)
   const dragInfo = useRef({ startY: 0, lastSwapDelta: 0, itemHeight: 62 })
+  const dragElRef = useRef(null) // DOM-узел перетаскиваемого элемента (wrapper)
   const planExRef = useRef(planExercises)
   planExRef.current = planExercises
   const currentExRef = useRef(currentExercise)
@@ -125,8 +128,15 @@ export default function WorkoutPage() {
     const itemEl = e.currentTarget.closest('[data-drag-item]')
     const h = itemEl?.getBoundingClientRect().height ?? 55
     dragInfo.current = { startY: touch.clientY, lastSwapDelta: 0, itemHeight: h + 6 }
+    dragElRef.current = itemEl
+    // Поднимаем узел над соседями императивно (wrapper без style-пропа —
+    // React эти стили не сбрасывает при ре-рендере после свапа).
+    if (itemEl) {
+      itemEl.style.position = 'relative'
+      itemEl.style.zIndex = '50'
+      itemEl.style.willChange = 'transform'
+    }
     setDraggingId(exerciseId)
-    setDragDelta(0)
     setExpandedExerciseId(null)
     try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium') } catch {}
   }
@@ -134,11 +144,17 @@ export default function WorkoutPage() {
   useEffect(() => {
     if (!draggingId) return
 
+    const applyTransform = (delta) => {
+      const el = dragElRef.current
+      if (el) el.style.transform = `translateY(${delta - dragInfo.current.lastSwapDelta}px)`
+    }
+
     const onMove = (e) => {
       e.preventDefault()
       const touch = e.touches[0]
       const delta = touch.clientY - dragInfo.current.startY
-      setDragDelta(delta)
+      // Прямо в DOM, без setState — плавно даже на слабом WebView.
+      applyTransform(delta)
 
       const { itemHeight, lastSwapDelta } = dragInfo.current
       const netDelta = delta - lastSwapDelta
@@ -160,14 +176,24 @@ export default function WorkoutPage() {
           setPlanExercises(next)
           planExRef.current = next
           dragInfo.current.lastSwapDelta += direction === 'down' ? itemHeight : -itemHeight
+          // После свапа сразу подгоняем offset под новый lastSwapDelta —
+          // элемент остаётся под пальцем без прыжка (узел тот же, key стабилен).
+          applyTransform(delta)
           try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light') } catch {}
         }
       }
     }
 
     const onEnd = () => {
+      const el = dragElRef.current
+      if (el) {
+        el.style.transform = ''
+        el.style.zIndex = ''
+        el.style.position = ''
+        el.style.willChange = ''
+      }
+      dragElRef.current = null
       setDraggingId(null)
-      setDragDelta(0)
     }
 
     document.addEventListener('touchmove', onMove, { passive: false })
@@ -1338,7 +1364,6 @@ export default function WorkoutPage() {
                         onClick={() => setExpandedExerciseId(pe.exerciseId)}
                         onDragStart={canDrag ? (e) => handleDragStart(e, pe.exerciseId) : null}
                         isDragging={isDragging}
-                        dragOffset={isDragging ? dragDelta - dragInfo.current.lastSwapDelta : 0}
                       />
                     )}
                   </div>

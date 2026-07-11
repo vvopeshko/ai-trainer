@@ -1,34 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
-import { apiGet } from '../../../utils/api.js'
+import { useExerciseCatalog } from '../../../hooks/queries.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
 
 // ─── ExercisePicker ─────────────────────────────────────────────────────
 
+const MAX_RESULTS = 60 // рендерим шапку списка, остальное — через уточнение поиска
+
 export function ExercisePicker({ onSelect }) {
   const { t } = useTranslation()
-  const [exercises, setExercises] = useState([])
+  // Каталог из общего кэша (persist в localStorage) — без сети на каждый ввод
+  // и без отдельного GET /exercises?limit=57. Фильтрация клиентская.
+  const { data: catalog = [], isLoading } = useExerciseCatalog()
   const [query, setQuery] = useState('')
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const data = query.length >= 2
-          ? await apiGet(`/api/v1/exercises/search?q=${encodeURIComponent(query)}`)
-          : await apiGet('/api/v1/exercises?limit=57')
-        if (!cancelled) setExercises(data.exercises)
-      } catch (err) {
-        console.error('Failed to load exercises:', err)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    setLoading(true)
-    const timer = setTimeout(load, query ? 300 : 0)
-    return () => { cancelled = true; clearTimeout(timer) }
-  }, [query])
+  const exercises = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return catalog.slice(0, MAX_RESULTS)
+    return catalog
+      .filter(ex => {
+        const hay = [ex.nameRu, ex.nameEn, ...(ex.primaryMuscles || []), ...(ex.equipment || [])]
+          .filter(Boolean).join(' ').toLowerCase()
+        return hay.includes(q)
+      })
+      .slice(0, MAX_RESULTS)
+  }, [catalog, query])
+
+  const loading = isLoading && catalog.length === 0
 
   return (
     <div style={{ padding: 'var(--space-4)' }}>

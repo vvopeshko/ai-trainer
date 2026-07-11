@@ -135,14 +135,41 @@ export function useExerciseSettings() {
   })
 }
 
+// Персист каталога (924 упр., ~320 KB) в localStorage: холодный старт мини-аппа
+// показывает каталог мгновенно, без скелетона и без 66 KB gzip по сети.
+// Версионированный ключ — при смене формы данных бампнуть суффикс.
+const CATALOG_LS_KEY = 'ai-trainer:catalog-v1'
+
+function readPersistedCatalog() {
+  try {
+    const raw = localStorage.getItem(CATALOG_LS_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed?.data) ? parsed : null // { ts, data }
+  } catch { return null }
+}
+
+function writePersistedCatalog(data) {
+  try {
+    localStorage.setItem(CATALOG_LS_KEY, JSON.stringify({ ts: Date.now(), data }))
+  } catch { /* quota / приватный режим — не критично, просто не кэшируем */ }
+}
+
 export function useExerciseCatalog() {
   return useQuery({
     queryKey: queryKeys.exercises.catalog,
     queryFn: async () => {
       const d = await apiGet('/api/v1/exercises?limit=1500')
-      return d.exercises || []
+      const list = d.exercises || []
+      writePersistedCatalog(list)
+      return list
     },
     staleTime: 24 * 60 * 60_000, // 24 hours
+    // Гидрация из localStorage: initialDataUpdatedAt = момент прошлого фетча,
+    // поэтому react-query сам решит, свежий ли кэш (нет рефетча) или пора
+    // ревалидировать фоном (>24ч) — без мигания скелетона.
+    initialData: () => readPersistedCatalog()?.data,
+    initialDataUpdatedAt: () => readPersistedCatalog()?.ts,
   })
 }
 

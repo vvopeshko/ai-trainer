@@ -11,15 +11,17 @@ function authHeader() {
   return 'tma dev_bypass'
 }
 
-function getTimezone() {
+// TZ считаем один раз при загрузке модуля: Intl.DateTimeFormat().resolvedOptions()
+// на Android WebView небесплатен, а зона в рамках сессии не меняется.
+const TIMEZONE = (() => {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone }
   catch { return 'UTC' }
-}
+})()
 
 function baseHeaders() {
   return {
     Authorization: authHeader(),
-    'X-Timezone': getTimezone(),
+    'X-Timezone': TIMEZONE,
   }
 }
 

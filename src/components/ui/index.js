@@ -27,15 +27,15 @@ export { GlassAINote } from './GlassAINote.jsx'
 export { ConfirmDialog } from './ConfirmDialog.jsx'
 export { BottomSheet } from './BottomSheet.jsx'
 
-// Visualization
-export { BodyMap } from './BodyMap.jsx'
+// Visualization (lazy: body-muscles ~26 KB — отдельный async-чанк, не в main)
+export { BodyMap } from './BodyMapLazy.jsx'
 
 // Layout
 export { TopBar } from './TopBar.jsx'
 export { BigStepper } from './BigStepper.jsx'
 
-// Exercise Detail
-export { ExerciseDetailSheet } from './ExerciseDetailSheet.jsx'
+// Exercise Detail (lazy: ~18 KB — тянется только при первом открытии шита)
+export { ExerciseDetailSheet } from './ExerciseDetailSheetLazy.jsx'
 
 // Toast
 export { ToastProvider, useToast } from './Toast.jsx'

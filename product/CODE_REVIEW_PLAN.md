@@ -3,7 +3,7 @@
 > Дата ревью: **2026-07-11** (заменяет ревью 2026-06-12). Только план — без правок кода.
 > Покрытие: бэкенд-ядро, AI-слой (чат, tool-use, скрипты), фронтенд (корректность + производительность), схема БД, инфраструктура, тесты, доки.
 >
-> **Прогресс 2026-07-11:** Фазы 0, 1 и 1.5 реализованы полностью (отмечены ниже), из оптимизации фронтенда сделан топ-3 (таймер WorkoutPage, content-visibility Library, статичный Mesh) + graceful shutdown из Фазы 2. Race двух активных тренировок закрыт Serializable-транзакцией (partial unique index остаётся опцией при ручном SQL на проде).
+> **Прогресс 2026-07-11:** Фазы 0, 1 и 1.5 реализованы полностью (отмечены ниже) + graceful shutdown из Фазы 2. **Секция «Оптимизация фронтенда» закрыта целиком** (таймер WorkoutPage, content-visibility Library, статичный Mesh, персист каталога в localStorage, lazy ExerciseDetailSheet + BodyMap, ExercisePicker на кэш, drag через ref, удаление recharts/lucide, кэш TZ, неблокирующие шрифты) — main-чанк 132→118 KB gzip, body-muscles и ExerciseDetailSheet вынесены в async-чанки. Race двух активных тренировок закрыт Serializable-транзакцией (partial unique index остаётся опцией при ручном SQL на проде).
 >
 > **Статус прошлого ревью:** фазы 0–1 (безопасность, потеря данных, TanStack Query) закрыты ранее и зафиксированы в NEXT_PLANS. Из фаз 2–3 сделано: `progressController` → services, `timingSafeEqual` для HMAC, программное закрытие BottomSheet, фикс fetch-гонки в ExerciseDetailSheet, «фейковые тесты» переписаны на импорт реального кода. Остальное перенесено сюда и перепроверено по коду.
 
@@ -95,25 +95,25 @@
 ### Ре-рендеры (в проекте ни одного `React.memo`)
 
 - [x] **Live-таймер ре-рендерит весь WorkoutPage (1371 строка) каждую секунду** — `WorkoutPage.jsx:171-177`. `elapsedSec` нужен только WorkoutTopBar (:855). Фикс: перенести interval внутрь WorkoutTopBar, передавая `startedAt/pausedAt/totalPausedMs` — паттерн уже есть в `HeroBlock.jsx:53-59`.
-- [ ] **Drag-reorder: `setDragDelta` на каждый touchmove** — `WorkoutPage.jsx:126-155`. Полный ре-рендер страницы с частотой тача (~60–120 Гц) → лаги перетаскивания. Фикс: `transform` напрямую в DOM через ref, state — только на touchend.
+- [x] **Drag-reorder: `setDragDelta` на каждый touchmove** — `WorkoutPage.jsx:126-155`. Полный ре-рендер страницы с частотой тача (~60–120 Гц) → лаги перетаскивания. Фикс: `transform` напрямую в DOM через ref, state — только на touchend.
 - [ ] Точечно обернуть в `memo` тяжёлые поддеревья WorkoutPage (списки done/upcoming) после выноса таймера.
 
 ### Списки
 
 - [x] **LibraryPage рендерит все 924 упражнения без виртуализации** — `LibraryPage.jsx:328-337`. ~5000+ DOM-нод внутри Glass с backdrop-filter; каждый фильтр-чип — полная пересборка. Фикс-минимум: `content-visibility: auto; contain-intrinsic-size: 0 57px` на строке; лучше — виртуализация или «показать ещё» после ~100. (Поиск с debounce 300мс и useMemo-фильтрация уже сделаны правильно.)
-- [ ] **ExercisePicker игнорирует закэшированный каталог** — `ExercisePicker.jsx:14-31`. Грузит `?limit=57` + сеть на каждый ввод ≥2 символов — в зале с плохой сетью задержки на ровном месте. Фикс: `useExerciseCatalog()` + клиентская фильтрация (как LibraryPage), серверный search — фоллбек.
+- [x] **ExercisePicker игнорирует закэшированный каталог** — `ExercisePicker.jsx:14-31`. Грузит `?limit=57` + сеть на каждый ввод ≥2 символов — в зале с плохой сетью задержки на ровном месте. Фикс: `useExerciseCatalog()` + клиентская фильтрация (как LibraryPage), серверный search — фоллбек.
 
 ### Бандл и стартовый путь
 
-- [ ] **Lazy для ExerciseDetailSheet** (18.3 KB, 1068 строк, всегда за интеракцией) — сейчас статически в main через WorkoutPage. −20+ KB из критического пути.
-- [ ] **Динамический импорт BodyMap** (body-muscles 25.9 KB) — на HomePage рендерится только внутри BottomSheet после тапа. −26 KB из main.
-- [ ] **Google Fonts — render-блокирующий запрос** — `index.html:11-12`. Self-host JetBrains Mono или `media="print" onload`-трюк.
-- [ ] **Удалить `recharts` и `lucide-react` из package.json** — не импортируются нигде (в бандл не попадают, но тормозят install/CI и врут в CLAUDE.md).
-- [ ] **Кэшировать timezone в api.js** — `api.js:14-17`. `Intl.DateTimeFormat().resolvedOptions()` на каждый запрос — небесплатно на Android WebView. Module-level константа.
+- [x] **Lazy для ExerciseDetailSheet** (18.3 KB, 1068 строк, всегда за интеракцией) — сейчас статически в main через WorkoutPage. −20+ KB из критического пути.
+- [x] **Динамический импорт BodyMap** (body-muscles 25.9 KB) — на HomePage рендерится только внутри BottomSheet после тапа. −26 KB из main.
+- [x] **Google Fonts — render-блокирующий запрос** — `index.html:11-12`. Self-host JetBrains Mono или `media="print" onload`-трюк.
+- [x] **Удалить `recharts` и `lucide-react` из package.json** — не импортируются нигде (в бандл не попадают, но тормозят install/CI и врут в CLAUDE.md).
+- [x] **Кэшировать timezone в api.js** — `api.js:14-17`. `Intl.DateTimeFormat().resolvedOptions()` на каждый запрос — небесплатно на Android WebView. Module-level константа.
 
 ### Данные и кэш
 
-- [ ] **Персист каталога в localStorage не реализован** (заявлен в FRONTEND_CACHE_PLAN этап 2, в коде отсутствует) — каждый холодный старт заново качает ~66 KB gzip. Фикс: ручной персист ключа `catalog-v1` + гидрация через `initialData`. Заодно уберёт конкуренцию idle-префетча каталога с критическими запросами на 3G.
+- [x] **Персист каталога в localStorage не реализован** (заявлен в FRONTEND_CACHE_PLAN этап 2, в коде отсутствует) — каждый холодный старт заново качает ~66 KB gzip. Фикс: ручной персист ключа `catalog-v1` + гидрация через `initialData`. Заодно уберёт конкуренцию idle-префетча каталога с критическими запросами на 3G.
 - [ ] *Проверено и в порядке:* `refetchOnWindowFocus: false`, staleTime по типам данных, optimistic + точечная инвалидация, префетч lazy-чанков и данных в `requestIdleCallback` (этап 4 плана реально реализован), HTML-splash до гидрации.
 
 ### Медиа

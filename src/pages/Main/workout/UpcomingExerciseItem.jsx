@@ -3,17 +3,17 @@ import { Icon } from '../../../components/ui/Icon.jsx'
 
 // ─── UpcomingExerciseItem ───────────────────────────────────────────────
 
-export function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging, dragOffset }) {
+export function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging }) {
+  // translateY во время драга применяется императивно к wrapper'у в WorkoutPage
+  // (через ref, без ре-рендера). Здесь — только «поднятый» вид: scale/тень/opacity.
   return (
     <Glass padding="11px 12px" radius={11} style={{
       display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer',
       ...(isDragging && {
-        transform: `translateY(${dragOffset}px) scale(1.02)`,
-        zIndex: 50, position: 'relative',
+        transform: 'scale(1.02)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         opacity: 0.95,
       }),
-      ...(!isDragging && { transition: 'transform 0.15s ease' }),
     }} onClick={isDragging ? undefined : onClick}>
       {onDragStart && (
         <div
