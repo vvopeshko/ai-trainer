@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-07-11 — Web-версия, фаза 1: код web-входа (Better Auth)
+
+План — [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md). Код фазы 1 полностью; **для активации нужны ручные шаги** (SQL в Neon + `db push` + env, см. §Статус в доке). Без `BETTER_AUTH_SECRET` web-auth выключен целиком — Mini App работает как раньше.
+
+### Бэкенд
+
+- **Схема:** `telegramId` → nullable, `email String? @unique` + `emailVerified`, модели `Session`/`Account`/`Verification`/`RateLimit` (поля ровно по BA 1.6 `getAuthTables`). Ручной SQL — `server/prisma/manual/2026-07-11-web-auth.sql`.
+- **Фиксы non-null `telegramId`:** `initAuth` (`?.toString() ?? null` + email в ответ), scheduler `tick()` (фильтр `telegramId != null`), `chatController.postContext` (guard nudge), `sendPostWorkoutSummary` (ранний выход до LLM-вызова).
+- **`auth/index.js`** — конфиг BA: динамическая сборка по `AUTH_PROVIDERS` (email на старте; google/yandex — код готов, включаются credentials'ами), bearer + oneTimeToken плагины, DB-сессии (30 дн, sliding), rateLimit в БД, uuid вместо nanoid, аналитика через databaseHooks. Отличие от LPT: `requireEmailVerification: true` — вход по email всегда после верификации (заодно закрывает захват чужого адреса через set-password).
+- **`middleware/auth.js`** — единый: `tma` → telegramAuth (без изменений), `Bearer` → BA-сессия → prisma User. Session-tracking (lastSeen/timezone/user_seen) вынесен в `utils/sessionTracking.js`, зовётся из обеих веток. Все route-файлы переведены на `auth`.
+- **`utils/mailer.js`** — Resend через fetch (без SDK), шаблоны ru; в dev без `RESEND_API_KEY` (при `ALLOW_DEV_BYPASS=true`) ссылки логируются в консоль.
+- **`webAuthController`**: `GET /providers` (публичный), `POST /set-password` (мост из Mini App: credential-account через `auth.$context` + письмо верификации, анти-enumeration на занятый email), `GET /handoff` (OAuth → SPA через one-time token, для Google/Yandex). + `authLimiter` 10 req/мин.
+- index.js: монтаж BA на `/api/auth/{*any}` строго до `express.json()`; CORS `exposedHeaders: ['set-auth-token']`.
+
+### Фронтенд
+
+- **PlatformContext** — детект по непустоте `initData`; `main.jsx`: платформа выбирает TelegramProvider (Mini App) или lazy **WebProvider** (браузер). Оба поставляют `TelegramContext` — `useTelegram()` работает везде, компоненты не переписывались. Клиент BA не попадает в бандл мини-аппа (chunk-split).
+- **WebProvider** — гейт: токен → `getSession()`; нет токена: DEV → прежний dev-мок (dev_bypass), прод → `/login?returnTo=`. Публичные пути (`/login`, `/auth/*`, `/demo`) без гейта.
+- **api.js** — платформо-зависимый заголовок: `tma initData` | `Bearer <token>` | `tma dev_bypass` (теперь только в DEV-сборке — раньше утекал в прод-браузер).
+- Страницы `/login` (email-форма + OAuth-кнопки из `GET /providers` + подсказка TG-юзерам), `/auth/callback` (ott), `/auth/reset`, `/auth/verify` — lazy.
+- **`/me` перестал быть заглушкой:** профиль + блок «Вход через браузер» (set-password с бейджем верификации) + «Выйти» (web). i18n-ключи `auth.*`/`me.*`.
+
+### Тесты (+26, бэкенд 121 → 147)
+
+`middleware/auth.test.js` (единый middleware: tma/Bearer/мусор/выключенный web-auth), `enabledProviders.test.js` (флаги × credentials), `webAuthController.test.js` (set-password: нормализация, идемпотентность, занятый email, верификация), `authController.test.js` (null telegramId), `schemaParity.test.js` (ловит затирание `String?` кодгеном BA).
+
 ## 2026-07-11 — Фаза 2.5 (тесты) + Фаза 3 (косметика) + безопасная Фаза 2
 
 Продолжение того же захода по [CODE_REVIEW_PLAN.md](CODE_REVIEW_PLAN.md).

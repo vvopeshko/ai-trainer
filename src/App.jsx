@@ -13,18 +13,14 @@ const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
 const ProgramEditPage = lazy(() => import('./pages/Main/ProgramEditPage.jsx'))
 const LibraryPage = lazy(() => import('./pages/Main/LibraryPage.jsx'))
+const MePage = lazy(() => import('./pages/Main/MePage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
 
-function StubPage({ title }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', color: 'var(--fg-tertiary)', fontSize: 'var(--text-sm)',
-    }}>
-      {title} — скоро
-    </div>
-  )
-}
+// Web-auth страницы: lazy — в бандл мини-аппа не попадают
+const LoginPage = lazy(() => import('./pages/Auth/LoginPage.jsx'))
+const AuthCallback = lazy(() => import('./pages/Auth/AuthCallback.jsx'))
+const ResetPasswordPage = lazy(() => import('./pages/Auth/ResetPasswordPage.jsx'))
+const VerifyEmailPage = lazy(() => import('./pages/Auth/VerifyEmailPage.jsx'))
 
 function PageSkeleton() {
   return (
@@ -68,13 +64,19 @@ export default function App() {
         <Route path="/" element={<TabLayout><HomePage /></TabLayout>} />
         <Route path="/progress" element={<TabLayout><Suspense fallback={<PageSkeleton />}><ProgressPage /></Suspense></TabLayout>} />
         <Route path="/library" element={<TabLayout><Suspense fallback={<PageSkeleton />}><LibraryPage /></Suspense></TabLayout>} />
-        <Route path="/me" element={<TabLayout><StubPage title="Профиль" /></TabLayout>} />
+        <Route path="/me" element={<TabLayout><Suspense fallback={<PageSkeleton />}><MePage /></Suspense></TabLayout>} />
 
         {/* Full-screen flows */}
         <Route path="/workout" element={<WorkoutPage />} />
         <Route path="/program/:id" element={<Suspense fallback={<PageSkeleton />}><ProgramEditPage /></Suspense>} />
         <Route path="/summary/:id" element={<Suspense fallback={<PageSkeleton />}><SummaryPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={null}><DesignSystemDemo /></Suspense>} />
+
+        {/* Web-авторизация (браузер; в Mini App не используются) */}
+        <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
+        <Route path="/auth/callback" element={<Suspense fallback={null}><AuthCallback /></Suspense>} />
+        <Route path="/auth/reset" element={<Suspense fallback={null}><ResetPasswordPage /></Suspense>} />
+        <Route path="/auth/verify" element={<Suspense fallback={null}><VerifyEmailPage /></Suspense>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>

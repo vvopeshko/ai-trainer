@@ -1,18 +1,16 @@
 import crypto from 'node:crypto'
 import prisma from '../utils/prisma.js'
-import { track } from '../utils/analytics.js'
+import { trackSeen } from '../utils/sessionTracking.js'
 
 // Middleware: валидация Telegram initData и upsert User в req.user.
 // Документация: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
 //
 // Заголовок ожидается в формате: Authorization: tma <initData>
 // В dev-окружении принимается специальное значение: Authorization: tma dev_bypass
+//
+// Web-запросы (Authorization: Bearer <token>) обрабатывает middleware/auth.js.
 
 const DEV_BYPASS_VALUE = 'dev_bypass'
-
-// Debounce: обновляем lastSeenAt и шлём track('user_seen') не чаще раза в 5 мин на юзера
-const userLastSeen = new Map() // userId → timestamp
-const SEEN_INTERVAL = 5 * 60 * 1000
 
 export async function telegramAuth(req, res, next) {
   try {
@@ -61,19 +59,8 @@ export async function telegramAuth(req, res, next) {
 
     req.user = user
 
-    // Fire-and-forget lastSeenAt + timezone + analytics раз в 5 мин
-    const now = Date.now()
-    const lastSeen = userLastSeen.get(user.id)
-    if (!lastSeen || now - lastSeen > SEEN_INTERVAL) {
-      userLastSeen.set(user.id, now)
-      const updateData = { lastSeenAt: new Date() }
-      if (tz && tz !== user.timezone) updateData.timezone = tz
-      prisma.user.update({
-        where: { id: user.id },
-        data: updateData,
-      }).catch(() => {})
-      track(user.id, 'user_seen', { path: req.path })
-    }
+    // Fire-and-forget lastSeenAt + timezone + analytics (debounce внутри trackSeen)
+    trackSeen(user, { timezone: tz, path: req.path })
 
     next()
   } catch (err) {

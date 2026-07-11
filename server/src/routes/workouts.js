@@ -1,10 +1,10 @@
 import { Router } from 'express'
-import { telegramAuth } from '../middleware/telegramAuth.js'
+import { auth } from '../middleware/auth.js'
 import { create, getActive, getRecent, getById, logSet, deleteSet, update, destroy } from '../controllers/workoutController.js'
 
 const router = Router()
 
-router.use(telegramAuth)
+router.use(auth)
 
 router.post('/', create)
 router.get('/active', getActive)

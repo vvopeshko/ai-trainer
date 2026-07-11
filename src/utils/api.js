@@ -1,5 +1,8 @@
 // Тонкий wrapper над fetch с авто-аттачем Authorization-заголовка.
-// В Telegram WebApp: отдаём initData. В dev без Telegram: dev_bypass.
+// Telegram WebApp → initData; web → Bearer-токен Better Auth;
+// dev-браузер без того и другого → dev_bypass (только сборка DEV).
+
+import { tokenStorage } from './tokenStorage.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 const DEFAULT_TIMEOUT = 15_000
@@ -7,8 +10,11 @@ const DEFAULT_TIMEOUT = 15_000
 function authHeader() {
   const initData = window.Telegram?.WebApp?.initData
   if (initData) return `tma ${initData}`
-  // Dev-bypass работает только на бэке с NODE_ENV=development.
-  return 'tma dev_bypass'
+  const token = tokenStorage.get()
+  if (token) return `Bearer ${token}`
+  // Dev-bypass работает только на бэке с ALLOW_DEV_BYPASS=true.
+  if (import.meta.env.DEV) return 'tma dev_bypass'
+  return null
 }
 
 // TZ считаем один раз при загрузке модуля: Intl.DateTimeFormat().resolvedOptions()
@@ -19,10 +25,10 @@ const TIMEZONE = (() => {
 })()
 
 function baseHeaders() {
-  return {
-    Authorization: authHeader(),
-    'X-Timezone': TIMEZONE,
-  }
+  const headers = { 'X-Timezone': TIMEZONE }
+  const auth = authHeader()
+  if (auth) headers.Authorization = auth
+  return headers
 }
 
 function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {

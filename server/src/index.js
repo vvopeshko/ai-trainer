@@ -1,5 +1,8 @@
 import express from 'express'
 import cors from 'cors'
+import { toNodeHandler } from 'better-auth/node'
+import { auth as betterAuth } from './auth/index.js'
+import { FRONTEND_URLS } from './utils/origins.js'
 import { createBot } from './bot/index.js'
 import { setBot, setBotUsername } from './bot/notifier.js'
 import { startScheduler, stopScheduler } from './scheduler/index.js'
@@ -29,10 +32,20 @@ app.set('trust proxy', 1)
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: FRONTEND_URLS, // список: кастомный домен + vercel.app (см. utils/origins.js)
     credentials: true,
+    // Клиент Better Auth читает bearer-токен из заголовка ответа —
+    // без exposedHeaders браузер его молча спрячет (net::ERR_FAILED без ошибок)
+    exposedHeaders: ['set-auth-token'],
   }),
 )
+
+// Better Auth (web-авторизация): монтаж строго ДО express.json() —
+// BA сам читает body своих запросов. Без BETTER_AUTH_SECRET выключен.
+if (betterAuth) {
+  app.all('/api/auth/{*any}', toNodeHandler(betterAuth))
+}
+
 app.use(express.json({ limit: '1mb' }))
 
 app.get('/api/health', (req, res) => {

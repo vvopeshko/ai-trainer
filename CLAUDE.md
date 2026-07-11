@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/NEXT_PLANS.md](product/NEXT_PLANS.md)** | Живой бэклог: приоритеты, фичи, баги, техдолг |
 | **[product/UPDATES.md](product/UPDATES.md)** | Changelog по датам |
 | **[product/machine-scanning.md](product/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
+| **[product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)** | План web-версии: Better Auth, мульти-провайдерная авторизация, фазы 1–3 |
 | **[product/implementation-plan.md](product/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
 | **[product/CODESTYLE.md](product/CODESTYLE.md)** | Code style guide: именование, компоненты, стили, паттерны |
 | **[product/design/DESIGN_BRIEF.md](product/design/DESIGN_BRIEF.md)** | Дизайн-бриф (Glass UI) |

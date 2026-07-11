@@ -2,8 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 // Лёгкая обёртка над Telegram.WebApp. В dev без Telegram — подставляем мок.
 // API: const { user, webApp, isDev } = useTelegram()
+//
+// Контекст экспортируется: на web-платформе совместимое значение
+// ({ user, webApp: null }) поставляет WebProvider — компоненты, использующие
+// useTelegram(), работают на обеих платформах без изменений.
 
-const TelegramContext = createContext({
+export const TelegramContext = createContext({
   user: null,
   webApp: null,
   isDev: true,

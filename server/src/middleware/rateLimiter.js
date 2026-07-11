@@ -12,6 +12,17 @@ export const globalLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+// Лимит кастомных auth-эндпоинтов (/set-password и т.п.): 10 req/мин по IP.
+// Эндпоинты самого Better Auth (/api/auth/*) лимитирует его встроенный
+// rateLimit (storage=database) — этот лимитер только для нашей части.
+export const authLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+})
+
 // Строгий лимит для LLM-эндпоинтов: 5 req/мин на юзера.
 // Монтируется ПОСЛЕ telegramAuth — ключ = проверенный userId. Ключевать по
 // заголовку нельзя: initData обновляется при каждом открытии мини-аппа
