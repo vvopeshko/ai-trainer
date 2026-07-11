@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-07-11 — Web-версия, фаза 2: Login Widget, adoption, AccountSettings, десктоп
+
+Продолжение [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md). Для активации: `/setdomain` в BotFather (gymwithai.me) + `AUTH_PROVIDERS=email,telegram_widget` на Railway.
+
+### Бэкенд
+
+- **`utils/telegramWidget.js`** — HMAC-валидация Login Widget (ключ = SHA256(bot_token), не HMAC как у initData; auth_date < 1 дня).
+- **`POST /telegram-widget`** (публичный) — вход через виджет: существующий TG-юзер получает свои данные, новый создаётся по канону (telegramId на User, Account не создаётся) → BA-сессия через `internalAdapter.createSession`.
+- **`POST /telegram/link` / `DELETE /telegram`** — привязка/отвязка Telegram. Конфликт «занят другим» → 409 с флагом `adoptable` (текущий пуст). Отвязка — guard последнего метода (`accounts.count + (telegramId?1:0) > 1`).
+- **`POST /adopt`** (web) и **`POST /adopt-by-password`** (Mini App) — adoption в обе стороны: перенос входов пустого аккаунта (0 workouts && 0 programs) на аккаунт с данными в транзакции (email освобождается до записи — unique), пустой юзер удаляется, новая сессия. Доказательство владения: HMAC виджета + сессия / пароль + initData.
+- **`DELETE /sessions`** — «выйти на всех устройствах» (server-side, работает и из-под tma).
+- `GET /providers` отдаёт `botUsername` для виджета; `telegram_widget` в `enabledProviders` (требует BOT_TOKEN).
+- **`BOT_DISABLED=1`** — сервер без Telegraf-поллинга для локальных смоуков (конфликт getUpdates с прод-ботом).
+
+### Фронтенд
+
+- **`TelegramLoginWidget`** — обёртка официального виджета (динамический скрипт, глобальный колбэк).
+- **LoginPage:** кнопка «Log in with Telegram» (из `GET /providers`); подсказка TG-юзерам скрывается при живом виджете.
+- **/me — «Способы входа»:** Telegram (привязать виджетом / отвязать с предупреждением «отвалится бот»), email со статусом, «выйти на всех устройствах». Adoption-диалоги: 409 adoptable → «Нашли ваш аккаунт с данными» → `/adopt` → перезагрузка под старым аккаунтом; set-password при занятом email молча пробует `/adopt-by-password` с теми же кредами.
+- **Десктопный лэйаут** (`WebLayout`): сайдбар слева + колонка 560px, брейкпоинт 1024px, только `platform='web'` — мобильный браузер и Mini App остаются с нижним GlassNav.
+
+### Тесты (+28, бэкенд 175)
+
+`telegramWidget.test.js` (HMAC-фикстуры: подмена поля, чужой токен, старый auth_date), `webAuthPhase2.test.js` (вход/link/unlink/adopt×2/revoke: канон без Account, guard последнего метода, транзакция adoption, generic-ошибки), `enabledProviders` + telegram_widget. Полный e2e-смоук на реальной БД: вход виджетом → adoption → unlink → revoke.
+
 ## 2026-07-11 — Web-версия, фаза 1: код web-входа (Better Auth)
 
 План — [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md). Код фазы 1 полностью; **для активации нужны ручные шаги** (SQL в Neon + `db push` + env, см. §Статус в доке). Без `BETTER_AUTH_SECRET` web-auth выключен целиком — Mini App работает как раньше.

@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/index.js'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiGet } from '../../utils/api.js'
+import { apiGet, apiPost } from '../../utils/api.js'
 import { authClient } from '../../utils/authClient.js'
 import { tokenStorage } from '../../utils/tokenStorage.js'
 import { AuthShell, AuthInput, AuthError, AuthNote } from './AuthShell.jsx'
+import { TelegramLoginWidget } from '../../components/web/TelegramLoginWidget.jsx'
 
 // Вход в web-версию. Состав формы определяется GET /api/v1/auth/providers —
 // набор способов входа не хардкодится (см. product/ARCHITECTURE_WEB_AUTH.md §7.1).
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const returnTo = safeReturnTo(params.get('returnTo'))
 
   const [providers, setProviders] = useState(null) // null = загрузка
+  const [botUsername, setBotUsername] = useState(null)
   const [mode, setMode] = useState('login') // login | register | forgot
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,13 +36,17 @@ export default function LoginPage() {
       return
     }
     apiGet('/api/v1/auth/providers')
-      .then((d) => setProviders(d.providers || []))
+      .then((d) => {
+        setProviders(d.providers || [])
+        setBotUsername(d.botUsername || null)
+      })
       .catch(() => setProviders([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const hasEmail = providers?.includes('email')
-  const hasOAuth = providers?.includes('google') || providers?.includes('yandex')
+  const hasWidget = providers?.includes('telegram_widget') && Boolean(botUsername)
+  const hasOAuth = providers?.includes('google') || providers?.includes('yandex') || hasWidget
 
   async function submit(e) {
     e.preventDefault()
@@ -105,6 +111,17 @@ export default function LoginPage() {
       setError(t('errors.network'))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function widgetAuth(widgetUser) {
+    // Вход через Login Widget: существующий TG-юзер сразу получает свои данные
+    try {
+      const { token } = await apiPost('/api/v1/auth/telegram-widget', widgetUser)
+      tokenStorage.set(token)
+      window.location.replace(returnTo)
+    } catch {
+      setError(t('auth.loginError'))
     }
   }
 
@@ -224,6 +241,11 @@ export default function LoginPage() {
         </div>
       )}
 
+      {hasWidget && (
+        <div style={{ marginBottom: 'var(--space-2)' }}>
+          <TelegramLoginWidget botUsername={botUsername} onAuth={widgetAuth} />
+        </div>
+      )}
       {providers?.includes('google') && (
         <Button type="button" variant="secondary" size="lg" block onClick={() => oauth('google')} style={{ marginBottom: 'var(--space-2)' }}>
           {t('auth.signInGoogle')}
@@ -235,17 +257,19 @@ export default function LoginPage() {
         </Button>
       )}
 
-      <p
-        style={{
-          margin: 'var(--space-5) 0 0',
-          fontSize: 'var(--text-xs)',
-          color: 'var(--fg-tertiary)',
-          textAlign: 'center',
-          lineHeight: 1.5,
-        }}
-      >
-        {t('auth.tgUserHint')}
-      </p>
+      {!hasWidget && (
+        <p
+          style={{
+            margin: 'var(--space-5) 0 0',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--fg-tertiary)',
+            textAlign: 'center',
+            lineHeight: 1.5,
+          }}
+        >
+          {t('auth.tgUserHint')}
+        </p>
+      )}
     </AuthShell>
   )
 }

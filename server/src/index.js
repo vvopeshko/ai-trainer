@@ -66,8 +66,11 @@ const server = app.listen(PORT, () => {
 // В dev без токена сервер всё равно работает — можно тестировать API по dev-bypass.
 // Nota bene: в Telegraf v4 bot.launch() резолвится только при остановке бота,
 // поэтому факт запуска подтверждаем через getMe() до вызова launch().
+// BOT_DISABLED=1 — сервер без Telegraf-поллинга: локальные смоуки с реальным
+// BOT_TOKEN (нужен для HMAC виджета/initData) не конфликтуют с прод-ботом,
+// который держит getUpdates на том же токене.
 let bot = null
-if (process.env.BOT_TOKEN) {
+if (process.env.BOT_TOKEN && process.env.BOT_DISABLED !== '1') {
   bot = createBot(process.env.BOT_TOKEN)
   setBot(bot) // даём notifier ссылку на бота для проактивных сообщений
   bot.telegram

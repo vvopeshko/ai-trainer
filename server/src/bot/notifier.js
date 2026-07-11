@@ -26,6 +26,14 @@ export function setBotUsername(username) {
 }
 
 /**
+ * Username бота (без @). Нужен фронту для Telegram Login Widget.
+ * @returns {string|null} null если бот не подключён / getMe ещё не ответил
+ */
+export function getBotUsername() {
+  return _botUsername
+}
+
+/**
  * Deep-link на бота вида https://t.me/<username>.
  * @returns {string|null} null если username ещё не известен (бот не подключён).
  */

@@ -15,6 +15,7 @@ async function importFresh(env) {
   for (const key of [
     'BETTER_AUTH_SECRET', 'AUTH_PROVIDERS', 'RESEND_API_KEY', 'ALLOW_DEV_BYPASS',
     'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'YANDEX_CLIENT_ID', 'YANDEX_CLIENT_SECRET',
+    'BOT_TOKEN',
   ]) {
     vi.stubEnv(key, env[key] ?? '')
   }
@@ -60,13 +61,23 @@ describe('enabledProviders', () => {
     expect(mod.enabledProviders()).toEqual([])
   })
 
-  it('google/yandex без credentials и неизвестные провайдеры фильтруются', async () => {
+  it('google/yandex/widget без credentials и неизвестные провайдеры фильтруются', async () => {
     const mod = await importFresh({
       BETTER_AUTH_SECRET: 's'.repeat(64),
       AUTH_PROVIDERS: 'email,google,yandex,telegram_widget,whatever',
       RESEND_API_KEY: 're_123',
     })
     expect(mod.enabledProviders()).toEqual(['email'])
+  })
+
+  it('telegram_widget включается при BOT_TOKEN', async () => {
+    const mod = await importFresh({
+      BETTER_AUTH_SECRET: 's'.repeat(64),
+      AUTH_PROVIDERS: 'email,telegram_widget',
+      RESEND_API_KEY: 're_123',
+      BOT_TOKEN: '123:abc',
+    })
+    expect(mod.enabledProviders()).toEqual(['email', 'telegram_widget'])
   })
 
   it('google включается при полных credentials', async () => {

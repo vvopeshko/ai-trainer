@@ -22,12 +22,13 @@ import { FRONTEND_URL, FRONTEND_URLS } from '../utils/origins.js'
 
 const API_URL = process.env.API_URL || 'http://localhost:3001'
 
-// telegram_widget и apple — фаза 2/мобильная; появятся здесь при реализации
-const SUPPORTED_PROVIDERS = ['email', 'google', 'yandex']
+// apple — мобильная фаза; появится здесь при реализации
+const SUPPORTED_PROVIDERS = ['email', 'google', 'yandex', 'telegram_widget']
 
 /**
  * Активные web-провайдеры: AUTH_PROVIDERS ∩ наличие credentials.
  * Для 'email' в dev достаточно ALLOW_DEV_BYPASS=true (mailer логирует ссылки в консоль).
+ * telegram_widget — наш код (не BA), требует BOT_TOKEN + /setdomain в BotFather.
  */
 export function enabledProviders() {
   if (!process.env.BETTER_AUTH_SECRET) return []
@@ -44,7 +45,8 @@ export function enabledProviders() {
     const missing =
       (p === 'email' && !process.env.RESEND_API_KEY && process.env.ALLOW_DEV_BYPASS !== 'true') ||
       (p === 'google' && !(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)) ||
-      (p === 'yandex' && !(process.env.YANDEX_CLIENT_ID && process.env.YANDEX_CLIENT_SECRET))
+      (p === 'yandex' && !(process.env.YANDEX_CLIENT_ID && process.env.YANDEX_CLIENT_SECRET)) ||
+      (p === 'telegram_widget' && !process.env.BOT_TOKEN)
     if (missing) {
       console.warn(`[auth] провайдер "${p}" указан в AUTH_PROVIDERS, но credentials не заданы — выключен`)
       return false

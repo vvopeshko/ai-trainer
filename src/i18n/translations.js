@@ -384,6 +384,31 @@ export const translations = {
     'me.webAccessVerified': 'подтверждён',
     'me.webAccessPending': 'не подтверждён',
     'me.webAccessChange': 'Изменить',
+    'me.adoptedFromWeb': 'Вход по email {{email}} перенесён на этот аккаунт',
+
+    // Способы входа (/me, фаза 2)
+    'accounts.title': 'Способы входа',
+    'accounts.telegram': 'Telegram',
+    'accounts.email': 'Email',
+    'accounts.connected': 'Подключён',
+    'accounts.connect': 'Привязать',
+    'accounts.disconnect': 'Отвязать',
+    'accounts.linked': 'Telegram привязан',
+    'accounts.lastMethodError': 'Нельзя отвязать единственный способ входа',
+    'accounts.telegramLinkedElsewhere': 'Этот Telegram уже привязан к другому аккаунту. Войдите через Telegram, чтобы получить доступ к своим данным',
+    'accounts.anotherTelegramLinked': 'К аккаунту уже привязан другой Telegram',
+    'accounts.unlinkTelegramTitle': 'Отвязать Telegram?',
+    'accounts.unlinkTelegramWarning': 'Отвяжется бот: чат с тренером, уведомления и «Спросить тренера» из приложения перестанут работать',
+    'accounts.adoptionTitle': 'Нашли ваш аккаунт с данными',
+    'accounts.adoptionText': 'Этот Telegram привязан к аккаунту с вашими тренировками. Перенести вход по почте на него? Текущий пустой аккаунт будет удалён',
+    'accounts.adoptionConfirm': 'Да, перенести',
+    'accounts.adoptionCancel': 'Оставить как есть',
+    'accounts.logoutAll': 'Выйти на всех устройствах',
+    'accounts.logoutAllDone': 'Готово — сессии на других устройствах завершены',
+    'accounts.error': 'Не получилось. Попробуйте ещё раз',
+
+    // Навигация: десктопный сайдбар web-версии (остальные nav.* — выше)
+    'nav.today': 'Сегодня',
   },
 }
 

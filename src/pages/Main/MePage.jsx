@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Glass, Button } from '../../components/ui/index.js'
+import { Glass, Button, ConfirmDialog } from '../../components/ui/index.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
 import { usePlatform } from '../../contexts/PlatformContext.jsx'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiGet, apiPost } from '../../utils/api.js'
+import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
 import { authClient } from '../../utils/authClient.js'
 import { tokenStorage } from '../../utils/tokenStorage.js'
+import { TelegramLoginWidget } from '../../components/web/TelegramLoginWidget.jsx'
 
-// Профиль (/me). Фаза 1 web-версии: блок «Вход через браузер» — мост из
-// Mini App в веб (set-password, §6.3 ARCHITECTURE_WEB_AUTH.md). На web —
-// плюс кнопка «Выйти». Фаза 2 добавит сюда полный AccountSettings.
+// Профиль (/me). Web-версия, фазы 1–2 (product/ARCHITECTURE_WEB_AUTH.md):
+// «Вход через браузер» (set-password — мост из Mini App), способы входа
+// (Telegram привязка/отвязка + adoption, §6.5), «выйти на всех устройствах».
 
 export default function MePage() {
   const { t } = useTranslation()
@@ -29,6 +30,9 @@ export default function MePage() {
   })
   const me = initData?.user
   const emailEnabled = providersData?.providers?.includes('email')
+  const widgetEnabled = providersData?.providers?.includes('telegram_widget') && Boolean(providersData?.botUsername)
+  // Кол-во способов входа для guard'а отвязки (сервер проверяет всё равно)
+  const methodsCount = (me?.telegramId ? 1 : 0) + (me?.email ? 1 : 0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [email, setEmail] = useState('')
@@ -36,6 +40,12 @@ export default function MePage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState(null)
   const [error, setError] = useState(null)
+
+  // Способы входа (фаза 2)
+  const [accNotice, setAccNotice] = useState(null)
+  const [accError, setAccError] = useState(null)
+  const [unlinkOpen, setUnlinkOpen] = useState(false)
+  const [adoptWidgetData, setAdoptWidgetData] = useState(null) // payload виджета для /adopt
 
   async function submit(e) {
     e.preventDefault()
@@ -53,9 +63,80 @@ export default function MePage() {
       setPassword('')
       queryClient.invalidateQueries({ queryKey: ['auth', 'init'] })
     } catch (err) {
-      setError(err.status === 409 ? t('me.webAccessEmailTaken') : t('me.webAccessError'))
+      if (err.status === 409) {
+        // Email занят — возможно, это собственный пустой веб-аккаунт юзера.
+        // Молча пробуем adoption с теми же кредами (§6.5, зеркальный флоу).
+        try {
+          const adopted = await apiPost('/api/v1/auth/adopt-by-password', { email, password })
+          setNotice(t('me.adoptedFromWeb', { email: adopted.email }))
+          setFormOpen(false)
+          setPassword('')
+          queryClient.invalidateQueries({ queryKey: ['auth', 'init'] })
+          return
+        } catch {
+          setError(t('me.webAccessEmailTaken'))
+        }
+      } else {
+        setError(t('me.webAccessError'))
+      }
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function linkTelegram(widgetUser) {
+    setAccError(null)
+    setAccNotice(null)
+    try {
+      await apiPost('/api/v1/auth/telegram/link', widgetUser)
+      setAccNotice(t('accounts.linked'))
+      queryClient.invalidateQueries({ queryKey: ['auth', 'init'] })
+    } catch (err) {
+      if (err.status === 409 && err.payload?.adoptable) {
+        setAdoptWidgetData(widgetUser) // текущий аккаунт пуст → предлагаем перенос
+      } else if (err.payload?.error === 'telegram_linked_elsewhere') {
+        setAccError(t('accounts.telegramLinkedElsewhere'))
+      } else if (err.payload?.error === 'another_telegram_linked') {
+        setAccError(t('accounts.anotherTelegramLinked'))
+      } else {
+        setAccError(t('accounts.error'))
+      }
+    }
+  }
+
+  async function confirmAdopt() {
+    try {
+      const { token } = await apiPost('/api/v1/auth/adopt', adoptWidgetData)
+      tokenStorage.set(token)
+      window.location.replace('/') // перезагрузка: приложение откроется под старым аккаунтом с данными
+    } catch {
+      setAdoptWidgetData(null)
+      setAccError(t('accounts.error'))
+    }
+  }
+
+  async function confirmUnlink() {
+    setUnlinkOpen(false)
+    try {
+      await apiDelete('/api/v1/auth/telegram')
+      queryClient.invalidateQueries({ queryKey: ['auth', 'init'] })
+    } catch (err) {
+      setAccError(err.payload?.error === 'last_method' ? t('accounts.lastMethodError') : t('accounts.error'))
+    }
+  }
+
+  async function logoutAll() {
+    setAccError(null)
+    try {
+      await apiDelete('/api/v1/auth/sessions')
+      if (isWeb) {
+        tokenStorage.clear()
+        window.location.replace('/login')
+      } else {
+        setAccNotice(t('accounts.logoutAllDone'))
+      }
+    } catch {
+      setAccError(t('accounts.error'))
     }
   }
 
@@ -184,12 +265,120 @@ export default function MePage() {
         </Glass>
       )}
 
+      {/* Способы входа (фаза 2) */}
+      {me && (
+        <Glass radius={16} padding="var(--space-4)" style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ fontWeight: 600, marginBottom: 'var(--space-3)' }}>{t('accounts.title')}</div>
+
+          {/* Telegram */}
+          <MethodRow
+            label={t('accounts.telegram')}
+            value={me.telegramId ? (user?.username ? `@${user.username}` : t('accounts.connected')) : null}
+            action={
+              me.telegramId ? (
+                isWeb && methodsCount > 1 ? (
+                  <Button variant="ghost" size="sm" onClick={() => setUnlinkOpen(true)}>
+                    {t('accounts.disconnect')}
+                  </Button>
+                ) : null
+              ) : isWeb && widgetEnabled ? (
+                <TelegramLoginWidget
+                  botUsername={providersData.botUsername}
+                  size="medium"
+                  onAuth={linkTelegram}
+                />
+              ) : null
+            }
+          />
+
+          {/* Email — статус дублирует блок выше, здесь только строка-сводка */}
+          {emailEnabled && (
+            <MethodRow
+              label={t('accounts.email')}
+              value={me.email || null}
+              badge={me.email ? (me.emailVerified ? t('me.webAccessVerified') : t('me.webAccessPending')) : null}
+              badgeOk={me.emailVerified}
+            />
+          )}
+
+          {accError && (
+            <p style={{ margin: 'var(--space-2) 0 0', fontSize: 'var(--text-xs)', color: 'var(--danger)' }}>{accError}</p>
+          )}
+          {accNotice && (
+            <p style={{ margin: 'var(--space-2) 0 0', fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)' }}>{accNotice}</p>
+          )}
+
+          {/* Сессии браузера есть у обоих платформ (если юзер входил через веб) */}
+          {me.email && (
+            <Button variant="ghost" size="sm" onClick={logoutAll} style={{ marginTop: 'var(--space-3)' }}>
+              {t('accounts.logoutAll')}
+            </Button>
+          )}
+        </Glass>
+      )}
+
       {/* Выход — только web (в Mini App сессией управляет Telegram) */}
       {isWeb && (
         <Button variant="danger" size="md" block onClick={logout}>
           {t('me.logout')}
         </Button>
       )}
+
+      {/* Отвязка Telegram: предупреждение об отваливающихся бот-фичах */}
+      <ConfirmDialog
+        open={unlinkOpen}
+        title={t('accounts.unlinkTelegramTitle')}
+        message={t('accounts.unlinkTelegramWarning')}
+        confirmLabel={t('accounts.disconnect')}
+        variant="danger"
+        onConfirm={confirmUnlink}
+        onCancel={() => setUnlinkOpen(false)}
+      />
+
+      {/* Adoption: пустой веб-аккаунт → перенос входов на аккаунт с данными */}
+      <ConfirmDialog
+        open={Boolean(adoptWidgetData)}
+        title={t('accounts.adoptionTitle')}
+        message={t('accounts.adoptionText')}
+        confirmLabel={t('accounts.adoptionConfirm')}
+        cancelLabel={t('accounts.adoptionCancel')}
+        onConfirm={confirmAdopt}
+        onCancel={() => setAdoptWidgetData(null)}
+      />
+    </div>
+  )
+}
+
+function MethodRow({ label, value, badge, badgeOk, action }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        flexWrap: 'wrap',
+        padding: 'var(--space-2) 0',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <span style={{ fontSize: 'var(--text-sm)', minWidth: 72 }}>{label}</span>
+      <span style={{ flex: 1, fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)', wordBreak: 'break-all' }}>
+        {value ?? '—'}
+      </span>
+      {badge && (
+        <span
+          style={{
+            fontSize: 'var(--text-xs)',
+            padding: '2px 8px',
+            borderRadius: 999,
+            background: badgeOk ? 'hsla(140,55%,40%,0.2)' : 'hsla(38,90%,55%,0.18)',
+            color: badgeOk ? 'hsl(140,55%,75%)' : 'hsl(38,90%,72%)',
+          }}
+        >
+          {badge}
+        </span>
+      )}
+      {action}
     </div>
   )
 }
