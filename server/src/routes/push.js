@@ -3,7 +3,7 @@ import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { auth } from '../middleware/auth.js'
 import { authLimiter } from '../middleware/rateLimiter.js'
-import { webPushEnabled, getVapidPublicKey } from '../services/webPushService.js'
+import { webPushEnabled, getVapidPublicKey, sendPushToUser } from '../services/webPushService.js'
 import { track } from '../utils/analytics.js'
 
 // Web Push подписки PWA. Всё под auth (tma или Bearer — подписаться можно
@@ -47,6 +47,30 @@ router.post('/subscribe', authLimiter, async (req, res, next) => {
     })
     track(req.user.id, 'push_subscribed')
     res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/**
+ * POST /api/v1/push/test — тестовый push на все устройства юзера.
+ * Мимо очереди (мгновенная проверка пути до устройства). authLimiter
+ * (10/мин на IP) держит частоту в рамках.
+ */
+router.post('/test', authLimiter, async (req, res, next) => {
+  try {
+    if (!webPushEnabled()) return res.status(503).json({ error: 'Web push is not configured' })
+    const result = await sendPushToUser(req.user.id, {
+      title: 'AI Trainer — проверка связи 💪',
+      body: 'Уведомления работают! Так будут приходить сводки тренера.',
+      url: '/me',
+      tag: 'ait-test',
+    })
+    if (result.noSubscriptions) {
+      return res.status(404).json({ error: 'no_subscriptions' })
+    }
+    track(req.user.id, 'push_test', { sent: result.sent, failed: result.failed, gone: result.gone })
+    res.json({ ok: result.sent > 0, sent: result.sent, failed: result.failed, gone: result.gone })
   } catch (err) {
     next(err)
   }

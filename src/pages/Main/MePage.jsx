@@ -83,6 +83,18 @@ export default function MePage() {
     }
   }
 
+  // Тестовый push (мимо очереди — мгновенная проверка пути до устройства)
+  const [testState, setTestState] = useState(null) // null|busy|sent|failed
+  async function sendTestPush() {
+    setTestState('busy')
+    try {
+      const res = await apiPost('/api/v1/push/test')
+      setTestState(res.ok ? 'sent' : 'failed')
+    } catch {
+      setTestState('failed')
+    }
+  }
+
   // Способы входа (фаза 2)
   const [accNotice, setAccNotice] = useState(null)
   const [accError, setAccError] = useState(null)
@@ -368,9 +380,24 @@ export default function MePage() {
               <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)' }}>
                 {t('me.pushEnabled')}
               </p>
-              <Button variant="ghost" size="sm" onClick={togglePush}>
-                {t('me.pushDisable')}
-              </Button>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <Button variant="secondary" size="sm" loading={testState === 'busy'} onClick={sendTestPush}>
+                  {t('me.pushTest')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={togglePush}>
+                  {t('me.pushDisable')}
+                </Button>
+              </div>
+              {testState === 'sent' && (
+                <p style={{ margin: 'var(--space-2) 0 0', fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)' }}>
+                  {t('me.pushTestSent')}
+                </p>
+              )}
+              {testState === 'failed' && (
+                <p style={{ margin: 'var(--space-2) 0 0', fontSize: 'var(--text-xs)', color: 'var(--danger)' }}>
+                  {t('me.pushTestFailed')}
+                </p>
+              )}
             </>
           ) : pushState === 'denied' ? (
             <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
