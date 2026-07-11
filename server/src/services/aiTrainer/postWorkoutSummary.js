@@ -26,6 +26,7 @@ import {
   getWorkoutState,
 } from '../statsService.js'
 import { buildUserContext } from './buildUserContext.js'
+import { isNotificationEnabled } from './notificationPrefs.js'
 
 const DEFAULT_TZ = 'Europe/Moscow'
 const WEBAPP_URL = process.env.WEBAPP_URL || 'http://localhost:5173'
@@ -148,28 +149,26 @@ function buildFacts({ summary, adherence, monthStats, dayTitle, plannedCount, is
   return blocks.join('\n\n')
 }
 
-// ─── Основная функция ───────────────────────────────────────────────
+// ─── Рендер (общий для legacy-отправки и durable-очереди) ───────────
 
 /**
- * Сформировать и отправить пост-тренировочную сводку.
- * Fire-and-forget: вызывается без await из finish-хука, ошибки не пробрасывает.
+ * Собрать пост-тренировочную сводку без отправки. Очередь сохраняет результат
+ * в job: retry доставки НЕ зовёт LLM повторно.
  *
- * @param {{ id: string, telegramId: bigint, timezone?: string|null }} user — req.user
+ * @param {{ id: string, timezone?: string|null }} user
  * @param {{ id: string, programId?: string|null, programDayIndex?: number|null }} workout
- * @returns {Promise<boolean>} true если сообщение отправлено
+ * @returns {Promise<{ skip: string } | { html, pushTitle, pushBody, url, buttons, meta }>}
  */
-export async function sendPostWorkoutSummary(user, workout) {
-  try {
-    // Сводка уходит через бота: web-only юзеру (telegramId=null) слать некуда —
-    // выходим до LLM-вызова, чтобы не жечь токены впустую.
-    if (!user.telegramId) return false
-
+export async function renderPostWorkoutSummary(user, workout) {
+  {
     const userId = user.id
     const tz = user.timezone || DEFAULT_TZ
 
+    if (!(await isNotificationEnabled(userId, 'postWorkout'))) return { skip: 'digest_disabled' }
+
     const summary = await getWorkoutSummary(workout.id)
     // Пустая/удалённая тренировка (0 сетов) — ничего не шлём.
-    if (!summary) return false
+    if (!summary) return { skip: 'empty_workout' }
 
     // Числа — кодом. Параллельно.
     const [monthStats, adherence, weekRecords, workoutState, prevWorkout, program] =
@@ -230,15 +229,40 @@ export async function sendPostWorkoutSummary(user, workout) {
       ? [[{ text: '📊 Детали', web_app: { url: `${WEBAPP_URL}/progress` } }]]
       : undefined
 
-    const sent = await notify(user.telegramId, html, { buttons })
+    const tonnage = summary.tonnageKg != null ? ` · ${summary.tonnageKg} кг` : ''
+    return {
+      html,
+      pushTitle: `Тренировка записана: ${summary.setsCount} подходов${tonnage}`,
+      pushBody: observation || 'Открой детали — посмотри цифры и рекорды',
+      url: '/progress',
+      buttons,
+      meta: { workoutId: workout.id, hadObservation: Boolean(observation), prCount: prs.length, isFirst },
+    }
+  }
+}
 
-    track(userId, 'summary_sent', {
-      workoutId: workout.id,
-      sent,
-      hadObservation: Boolean(observation),
-      prCount: prs.length,
-      isFirst,
-    })
+// ─── Legacy-отправка (rollback-путь при NOTIFICATION_QUEUE=off) ──────
+
+/**
+ * Сформировать и отправить пост-тренировочную сводку в Telegram.
+ * Fire-and-forget: вызывается без await из finish-хука, ошибки не пробрасывает.
+ *
+ * @param {{ id: string, telegramId: bigint, timezone?: string|null }} user — req.user
+ * @param {{ id: string, programId?: string|null, programDayIndex?: number|null }} workout
+ * @returns {Promise<boolean>} true если сообщение отправлено
+ */
+export async function sendPostWorkoutSummary(user, workout) {
+  try {
+    // Сводка уходит через бота: web-only юзеру (telegramId=null) слать некуда —
+    // выходим до LLM-вызова, чтобы не жечь токены впустую.
+    if (!user.telegramId) return false
+
+    const rendered = await renderPostWorkoutSummary(user, workout)
+    if (rendered.skip) return false
+
+    const sent = await notify(user.telegramId, rendered.html, { buttons: rendered.buttons })
+
+    track(user.id, 'summary_sent', { sent, ...rendered.meta })
 
     return sent
   } catch (err) {

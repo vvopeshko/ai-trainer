@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-07-12 — Сервис уведомлений: durable-очередь + Web Push
+
+Архитектура из Flamy, адаптированная под AI Trainer — [NOTIFICATIONS.md](NOTIFICATIONS.md). Выкат через `NOTIFICATION_QUEUE=off→shadow→on` (сейчас off — поведение прода не изменилось; таблицы уже в Neon).
+
+- **`NotificationJob`** (Postgres как durable-очередь): planner (минутный cron, timezone-first + catch-up через полночь) → render → delivery. State machine pending→rendering→sending→sent / retry / failed / skipped; optimistic CAS-claim; stale locks >10 мин → retry; backoff 1→5→15→60→180 мин (6 попыток); tg 429 → `retry_after`.
+- **В очередь v1:** `weekly` (вс 19:00 локально, catch-up 24ч) и `post_workout` (событийный, periodKey=workoutId). `renderWeeklySummary`/`renderPostWorkoutSummary` выделены из send* — **сохранённый LLM-рендер: retry не жжёт токены повторно**. `reminder` остался на legacy (telegram-only).
+- **Web Push:** модель `PushSubscription` (устройства, 404/410 → автоудаление), `webPushService` (VAPID, TTL 1ч), push/notificationclick в SW (`src/sw.js`, переход vite-plugin-pwa на injectManifest; клики — только свой origin), тумблер «Уведомления» на `/me`, роуты `/api/v1/push/*`. **Юзеры без Telegram впервые получают уведомления тренера.**
+- **Мост идемпотентности** с legacy через NotificationLog — переключение флага не дублирует отправленное. ⚠️ Смоук поймал баг: мост проверялся и на ретраях → job скипался о собственный клейм после первой неудачи; исправлено (проверка только на attempts≤1) + регрессионный тест.
+- `GET /api/v1/admin/notifications?key=ANALYTICS_SECRET` — счётчики/старейший job/последние ошибки; retention терминальных jobs 60 дней.
+- Тесты: +44 (бэкенд 217) — core (due/catch-up/полночь/backoff/classify), planner (идемпотентность, shadow, выбор канала, битая TZ), worker (CAS, state machine, сохранённый рендер, мост). E2E-смоук на реальной БД: pending → retry → повторная доставка.
+
+## 2026-07-12 — PWA: установка на iOS/Android с gymwithai.me
+
+Полноценное installable-приложение поверх web-версии. Активации не требует — включается само с деплоем (SW регистрируется только на web-платформе, Mini App не затронут).
+
+- **Манифест** (`vite-plugin-pwa`): standalone, portrait, ru, иконки 192/512 + maskable; тема `#050507`.
+- **Иконки**: SVG-логотип (mint-гантель на тёмном радиальном фоне) → `public/icons/` (192/512/maskable/apple-touch-180/favicon). Генератор — `scripts/generateIcons.mjs` (sharp через `npm i --no-save`).
+- **Service worker** (Workbox, autoUpdate): прекэш app shell (30 файлов, ~600 KB) без `landing.html`; runtime-кэш — картинки/GIF упражнений (CacheFirst, 300 шт/30 дн), Google Fonts (год); API не кэшируется (свежесть — TanStack Query, auth кэшировать нельзя). `navigateFallbackDenylist`: `/api`, `/landing`.
+- **Регистрация SW — только `platform='web'`** (в main.jsx, по непустоте initData): Mini App живёт без SW, прекэш не задерживает его обновления.
+- **iOS standalone**: `apple-touch-icon`, `black-translucent` статус-бар, `apple-mobile-web-app-*` меты; `--safe-top/--safe-bottom` получили CSS-дефолт `env(safe-area-inset-*)` (Telegram-значения по-прежнему перезаписывает провайдер inline-стилем).
+- **Установка с /me** (браузер, не standalone): Android/Chrome — кнопка через `beforeinstallprompt` (`utils/installPrompt.js`, слушатель ставится в main.jsx до события); iOS — инструкция «Поделиться → На экран “Домой”».
+- **Бонус-фикс**: при `BOT_DISABLED=1` бот теперь делает `getMe` (username нужен виджету в `GET /providers`), отключается только поллинг; `bot.stop()` не зовётся на незапущенном боте.
+
+Сессия в standalone живёт в localStorage (bearer, sliding 30 дн) — активный юзер не разлогинивается. Следующий кандидат: web push (iOS 16.4+ для установленных PWA) как замена бот-уведомлений для web-only юзеров (фаза 3).
+
 ## 2026-07-11 — Web-версия, фаза 2: Login Widget, adoption, AccountSettings, десктоп
 
 Продолжение [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md). Для активации: `/setdomain` в BotFather (gymwithai.me) + `AUTH_PROVIDERS=email,telegram_widget` на Railway.

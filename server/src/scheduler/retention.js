@@ -22,6 +22,8 @@ export const RETENTION = {
   llmUsageDays: 90,
   notificationLogDays: 30,
   pendingContextDays: 30,
+  // Терминальные jobs очереди уведомлений (sent/skipped/failed) — аудит на 60 дней
+  notificationJobDays: 60,
 }
 
 let task = null
@@ -36,7 +38,7 @@ export async function runRetention(now = new Date(), db = prisma) {
   const ts = now.getTime()
   const cutoff = (days) => new Date(ts - days * DAY_MS)
 
-  const [analytics, llmUsage, notificationLog, pendingContext] = await Promise.all([
+  const [analytics, llmUsage, notificationLog, pendingContext, notificationJobs] = await Promise.all([
     db.analyticsEvent.deleteMany({
       where: { createdAt: { lt: cutoff(RETENTION.analyticsDays) } },
     }),
@@ -50,6 +52,13 @@ export async function runRetention(now = new Date(), db = prisma) {
     db.pendingChatContext.deleteMany({
       where: { consumedAt: { not: null, lt: cutoff(RETENTION.pendingContextDays) } },
     }),
+    // Только терминальные статусы: pending/retry живут до доставки
+    db.notificationJob.deleteMany({
+      where: {
+        status: { in: ['sent', 'skipped', 'failed'] },
+        updatedAt: { lt: cutoff(RETENTION.notificationJobDays) },
+      },
+    }),
   ])
 
   return {
@@ -57,6 +66,7 @@ export async function runRetention(now = new Date(), db = prisma) {
     llmUsage: llmUsage.count,
     notificationLog: notificationLog.count,
     pendingContext: pendingContext.count,
+    notificationJobs: notificationJobs.count,
   }
 }
 

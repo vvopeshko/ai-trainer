@@ -9,6 +9,7 @@ function makeDb() {
     llmUsage: { deleteMany: vi.fn().mockResolvedValue({ count: 2 }) },
     notificationLog: { deleteMany: vi.fn().mockResolvedValue({ count: 3 }) },
     pendingChatContext: { deleteMany: vi.fn().mockResolvedValue({ count: 4 }) },
+    notificationJob: { deleteMany: vi.fn().mockResolvedValue({ count: 5 }) },
   }
 }
 
@@ -21,7 +22,13 @@ describe('runRetention', () => {
 
     const res = await runRetention(now, db)
 
-    expect(res).toEqual({ analytics: 1, llmUsage: 2, notificationLog: 3, pendingContext: 4 })
+    expect(res).toEqual({
+      analytics: 1,
+      llmUsage: 2,
+      notificationLog: 3,
+      pendingContext: 4,
+      notificationJobs: 5,
+    })
 
     const cutoff = (days) => new Date(now.getTime() - days * DAY_MS)
 
@@ -33,6 +40,13 @@ describe('runRetention', () => {
     })
     expect(db.notificationLog.deleteMany).toHaveBeenCalledWith({
       where: { sentAt: { lt: cutoff(RETENTION.notificationLogDays) } },
+    })
+    // Jobs очереди: только терминальные статусы, pending/retry живут до доставки
+    expect(db.notificationJob.deleteMany).toHaveBeenCalledWith({
+      where: {
+        status: { in: ['sent', 'skipped', 'failed'] },
+        updatedAt: { lt: cutoff(RETENTION.notificationJobDays) },
+      },
     })
   })
 

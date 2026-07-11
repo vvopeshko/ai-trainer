@@ -107,21 +107,21 @@ function buildFacts({ weekStats, adherence, streak, records }) {
   return blocks.join('\n\n')
 }
 
-// ─── Основная функция ───────────────────────────────────────────────
+// ─── Рендер (общий для legacy-отправки и durable-очереди) ───────────
 
 /**
- * Сформировать и отправить еженедельную сводку.
- * Вызывается из шедулера; ошибки логируются, не пробрасываются.
+ * Собрать сводку без отправки. Числа — кодом, наблюдение — LLM (с деградацией).
+ * Очередь сохраняет результат в job: retry доставки НЕ зовёт LLM повторно.
  *
- * @param {{ id: string, telegramId: bigint, timezone?: string|null }} user
- * @returns {Promise<boolean>} true если сообщение отправлено
+ * @param {{ id: string, timezone?: string|null }} user
+ * @returns {Promise<{ skip: string } | { html: string, pushTitle: string, pushBody: string, url: string, buttons?: object[][], meta: object }>}
  */
-export async function sendWeeklySummary(user) {
+export async function renderWeeklySummary(user) {
   const userId = user.id
   const tz = user.timezone || DEFAULT_TZ
 
   // Настройки уведомлений (§Фаза 0.4).
-  if (!(await isNotificationEnabled(userId, 'weekly'))) return false
+  if (!(await isNotificationEnabled(userId, 'weekly'))) return { skip: 'digest_disabled' }
 
   // Числа — кодом. Параллельно.
   const [weekStats, adherence, records, streak] = await Promise.all([
@@ -132,12 +132,12 @@ export async function sendWeeklySummary(user) {
   ])
 
   // §3.3 — шлём только тем, кто тренировался на этой неделе.
-  if (weekStats.workouts < 1) return false
+  if (weekStats.workouts < 1) return { skip: 'no_activity' }
 
   const ctx = { weekStats, adherence, streak, records }
   const numbersHtml = buildNumbersHtml(ctx)
 
-  // Наблюдение тренера (LLM) — с деградацией.
+  // Наблюдение тренера (LLM) — с деградацией: сбой AI не отменяет сводку.
   let observation = null
   try {
     const userContext = await buildUserContext(userId, { recentLimit: 7, insights: true })
@@ -157,7 +157,6 @@ export async function sendWeeklySummary(user) {
   const html = observation ? `${numbersHtml}\n\n${escapeHtml(observation)}` : numbersHtml
 
   // Кнопки: отчёт + начать следующую. web_app только при https (Telegram-требование).
-  // Deep-link парсер появится в фазе 6 — пока обе кнопки ведут в мини-апп.
   const buttons = WEBAPP_URL.startsWith('https://')
     ? [
         [{ text: '📊 Отчёт', web_app: { url: `${WEBAPP_URL}/progress` } }],
@@ -165,15 +164,30 @@ export async function sendWeeklySummary(user) {
       ]
     : undefined
 
-  const sent = await notify(user.telegramId, html, { buttons })
+  return {
+    html,
+    pushTitle: `Итоги недели: ${weekStats.workouts} трен. · ${weekStats.tonnageKg} кг`,
+    pushBody: observation || 'Открой отчёт — посмотри динамику недели',
+    url: '/progress',
+    buttons,
+    meta: { hadObservation: Boolean(observation), workouts: weekStats.workouts, recordCount: records.length },
+  }
+}
 
-  track(userId, 'summary_sent', {
-    kind: 'weekly',
-    sent,
-    hadObservation: Boolean(observation),
-    workouts: weekStats.workouts,
-    recordCount: records.length,
-  })
+// ─── Legacy-отправка (rollback-путь при NOTIFICATION_QUEUE=off) ──────
+
+/**
+ * Сформировать и отправить еженедельную сводку напрямую в Telegram.
+ * @param {{ id: string, telegramId: bigint, timezone?: string|null }} user
+ * @returns {Promise<boolean>} true если сообщение отправлено
+ */
+export async function sendWeeklySummary(user) {
+  const rendered = await renderWeeklySummary(user)
+  if (rendered.skip) return false
+
+  const sent = await notify(user.telegramId, rendered.html, { buttons: rendered.buttons })
+
+  track(user.id, 'summary_sent', { kind: 'weekly', sent, ...rendered.meta })
 
   return sent
 }

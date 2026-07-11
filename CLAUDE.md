@@ -21,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/UPDATES.md](product/UPDATES.md)** | Changelog по датам |
 | **[product/machine-scanning.md](product/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
 | **[product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)** | План web-версии: Better Auth, мульти-провайдерная авторизация, фазы 1–3 |
+| **[product/NOTIFICATIONS.md](product/NOTIFICATIONS.md)** | Сервис уведомлений: durable-очередь в Postgres, Telegram + Web Push, флаги rollout |
 | **[product/implementation-plan.md](product/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
 | **[product/CODESTYLE.md](product/CODESTYLE.md)** | Code style guide: именование, компоненты, стили, паттерны |
 | **[product/design/DESIGN_BRIEF.md](product/design/DESIGN_BRIEF.md)** | Дизайн-бриф (Glass UI) |
@@ -30,7 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Стек
 
-- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + TanStack Query (кэш-слой данных, дедупликация, staleTime, инвалидация по мутациям) + Lucide + Recharts + body-muscles (анатомическая SVG-карта)
+- **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + TanStack Query (кэш-слой данных, дедупликация, staleTime, инвалидация по мутациям) + Lucide + Recharts + body-muscles (анатомическая SVG-карта) + vite-plugin-pwa (installable PWA; SW регистрируется только на web-платформе, Mini App без SW)
 - **Backend:** Express 5 + Prisma 6 + PostgreSQL (Neon) + Zod + Telegraf + node-cron + yt-search
 - **AI:** Claude API (`@anthropic-ai/sdk`, модель `claude-sonnet-4-6`) — и для чата, и для vision
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR). Cloudflare R2 (фото) — **планируется, в коде пока не используется** (фото тренажёров идут через Telegram `file_id`, не хранятся в R2).

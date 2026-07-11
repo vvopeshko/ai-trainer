@@ -58,6 +58,7 @@ model User {
   llmUsage               LlmUsage[]
   sessions               Session[]
   accounts               Account[]
+  pushSubscriptions      PushSubscription[]
 }
 
 // ═══════════════════════════════════════════════
@@ -118,6 +119,64 @@ model RateLimit {
   lastRequest BigInt?
 
   @@index([key])
+}
+
+// ═══════════════════════════════════════════════
+// NotificationJob — durable-очередь уведомлений (см. product/NOTIFICATIONS.md).
+//
+// Planner (минутный cron) идемпотентно создаёт jobs (createMany skipDuplicates
+// по @@unique), worker атомарно клеймит (optimistic CAS по status+lockedAt),
+// рендерит (LLM-текст сохраняется — retry не зовёт LLM повторно) и доставляет
+// в Telegram или Web Push. Заменяет прямую отправку для weekly/post_workout;
+// NotificationLog остаётся мостом идемпотентности с legacy-шедулером.
+//
+// recipientKey полиморфный ('user:<uuid>') — без FK, jobs переживают удаление
+// юзера как аудит; чистятся retention'ом.
+// ═══════════════════════════════════════════════
+model NotificationJob {
+  id            String    @id @default(uuid())
+  type          String // 'weekly' | 'post_workout' | ...
+  channel       String // 'telegram' | 'web_push'
+  recipientKey  String // 'user:<uuid>'
+  periodKey     String // weekKey | workoutId — идемпотентный ключ периода/события
+  timezone      String?
+  scheduledFor  DateTime  @default(now()) // ожидаемое время доставки (UTC)
+  status        String    @default("pending") // pending|rendering|sending|retry|sent|failed|skipped
+  payload       Json? // snapshot + delivery metadata (title, url, buttons)
+  renderedText  String?   @db.Text // готовый текст — retry не меняет и не пересчитывает
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(6)
+  nextAttemptAt DateTime  @default(now())
+  lockedAt      DateTime?
+  lockedBy      String?
+  sentAt        DateTime?
+  providerRef   String? // telegram message_id | 'push:<count>'
+  errorCode     String?
+  errorMessage  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Канал НЕ входит в unique: смена канала внутри периода не создаёт второй job
+  @@unique([type, recipientKey, periodKey])
+  @@index([status, nextAttemptAt, scheduledFor])
+  @@index([recipientKey, createdAt])
+}
+
+// ═══════════════════════════════════════════════
+// PushSubscription — Web Push подписки PWA (несколько устройств на юзера).
+// endpoint уникален глобально; 404/410 от push service → запись удаляется.
+// ═══════════════════════════════════════════════
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ═══════════════════════════════════════════════

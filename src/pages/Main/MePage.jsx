@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Glass, Button, ConfirmDialog } from '../../components/ui/index.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -8,6 +8,8 @@ import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
 import { authClient } from '../../utils/authClient.js'
 import { tokenStorage } from '../../utils/tokenStorage.js'
 import { TelegramLoginWidget } from '../../components/web/TelegramLoginWidget.jsx'
+import { canInstall, subscribeInstall, promptInstall, isStandalone, isIOS } from '../../utils/installPrompt.js'
+import { isPushSupported, getPushSubscription, subscribePush, unsubscribePush } from '../../utils/pushNotifications.js'
 
 // Профиль (/me). Web-версия, фазы 1–2 (product/ARCHITECTURE_WEB_AUTH.md):
 // «Вход через браузер» (set-password — мост из Mini App), способы входа
@@ -40,6 +42,46 @@ export default function MePage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState(null)
   const [error, setError] = useState(null)
+
+  // Установка PWA (только браузер, не standalone)
+  const [installable, setInstallable] = useState(() => canInstall())
+  const [installed, setInstalled] = useState(false)
+  useEffect(() => subscribeInstall((can) => {
+    setInstallable(can)
+    if (!can) setInstalled(true) // appinstalled
+  }), [])
+  const showInstall = isWeb && !isStandalone() && (installable || installed || isIOS())
+
+  async function install() {
+    const ok = await promptInstall()
+    if (ok) setInstalled(true)
+  }
+
+  // Push-уведомления (web/PWA). iOS в браузере пуши не умеет — только standalone.
+  const pushAvailable = isWeb && isPushSupported() && (!isIOS() || isStandalone())
+  const [pushState, setPushState] = useState('unknown') // unknown|on|off|denied|busy
+  useEffect(() => {
+    if (!pushAvailable) return
+    getPushSubscription()
+      .then((sub) => setPushState(sub ? 'on' : Notification.permission === 'denied' ? 'denied' : 'off'))
+      .catch(() => setPushState('off'))
+  }, [pushAvailable])
+
+  async function togglePush() {
+    setPushState('busy')
+    if (pushState === 'on') {
+      await unsubscribePush()
+      setPushState('off')
+    } else {
+      const result = await subscribePush()
+      if (result === 'subscribed') setPushState('on')
+      else if (result === 'denied') setPushState('denied')
+      else {
+        setPushState('off')
+        setAccError(t('me.pushError'))
+      }
+    }
+  }
 
   // Способы входа (фаза 2)
   const [accNotice, setAccNotice] = useState(null)
@@ -313,6 +355,68 @@ export default function MePage() {
             <Button variant="ghost" size="sm" onClick={logoutAll} style={{ marginTop: 'var(--space-3)' }}>
               {t('accounts.logoutAll')}
             </Button>
+          )}
+        </Glass>
+      )}
+
+      {/* Push-уведомления (web/PWA; в Mini App уведомления шлёт бот) */}
+      {pushAvailable && (
+        <Glass radius={16} padding="var(--space-4)" style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{t('me.pushTitle')}</div>
+          {pushState === 'on' ? (
+            <>
+              <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)' }}>
+                {t('me.pushEnabled')}
+              </p>
+              <Button variant="ghost" size="sm" onClick={togglePush}>
+                {t('me.pushDisable')}
+              </Button>
+            </>
+          ) : pushState === 'denied' ? (
+            <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
+              {t('me.pushDenied')}
+            </p>
+          ) : (
+            <>
+              <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
+                {t('me.pushSubtitle')}
+              </p>
+              <Button variant="accent" size="md" loading={pushState === 'busy'} onClick={togglePush}>
+                {t('me.pushEnable')}
+              </Button>
+            </>
+          )}
+        </Glass>
+      )}
+      {isWeb && isPushSupported() && isIOS() && !isStandalone() && (
+        <p style={{ margin: '0 0 var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
+          {t('me.pushIosHint')}
+        </p>
+      )}
+
+      {/* Установка PWA на телефон (браузер, не standalone) */}
+      {showInstall && (
+        <Glass radius={16} padding="var(--space-4)" style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{t('me.installTitle')}</div>
+          {installed ? (
+            <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)' }}>
+              {t('me.installDone')}
+            </p>
+          ) : (
+            <>
+              <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
+                {t('me.installSubtitle')}
+              </p>
+              {installable ? (
+                <Button variant="accent" size="md" onClick={install}>
+                  {t('me.installCta')}
+                </Button>
+              ) : (
+                <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)' }}>
+                  {t('me.installIosHint')}
+                </p>
+              )}
+            </>
           )}
         </Glass>
       )}

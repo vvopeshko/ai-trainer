@@ -93,10 +93,11 @@ export async function apiPatch(path, body, { timeout, signal } = {}) {
   return res.json()
 }
 
-export async function apiDelete(path, { timeout, signal } = {}) {
+export async function apiDelete(path, { timeout, signal, body } = {}) {
   const res = await fetchWithTimeout(`${API_URL}${path}`, {
     method: 'DELETE',
-    headers: baseHeaders(),
+    headers: body ? { ...baseHeaders(), 'Content-Type': 'application/json' } : baseHeaders(),
+    ...(body && { body: JSON.stringify(body) }),
     signal,
   }, timeout)
   if (!res.ok) throw await makeError(res)

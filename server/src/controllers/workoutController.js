@@ -2,6 +2,7 @@ import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { track } from '../utils/analytics.js'
 import { sendPostWorkoutSummary } from '../services/aiTrainer/postWorkoutSummary.js'
+import { enqueueNotification } from '../scheduler/notificationPlanner.js'
 
 /**
  * POST /api/v1/workouts
@@ -426,11 +427,23 @@ export async function update(req, res) {
     durationMin: Math.round(netDurationMs / 60000),
   })
 
-  // Пост-тренировочная сводка тренера (AI_TRAINER_PLAN фаза 1) — fire-and-forget:
-  // не блокирует ответ, ошибки не пробрасываются (как track()).
-  sendPostWorkoutSummary(req.user, updated).catch((err) =>
-    console.error('[workout] post-summary failed:', err.message),
-  )
+  // Пост-тренировочная сводка тренера — fire-and-forget: не блокирует ответ.
+  // NOTIFICATION_QUEUE=on → durable-очередь (retry, сохранённый LLM-рендер,
+  // web push для юзеров без Telegram); off/shadow → прямая legacy-отправка.
+  enqueueNotification({
+    type: 'post_workout',
+    user: req.user,
+    periodKey: updated.id, // идемпотентно: одна сводка на тренировку
+    payload: {
+      workoutId: updated.id,
+      programId: updated.programId ?? null,
+      programDayIndex: updated.programDayIndex ?? null,
+    },
+  })
+    .then((queued) => {
+      if (!queued) return sendPostWorkoutSummary(req.user, updated)
+    })
+    .catch((err) => console.error('[workout] post-summary failed:', err.message))
 
   res.json({ workout: updated })
 }

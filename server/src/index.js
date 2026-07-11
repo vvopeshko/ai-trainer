@@ -6,6 +6,7 @@ import { FRONTEND_URLS } from './utils/origins.js'
 import { createBot } from './bot/index.js'
 import { setBot, setBotUsername } from './bot/notifier.js'
 import { startScheduler, stopScheduler } from './scheduler/index.js'
+import { startNotificationService, stopNotificationService } from './scheduler/notificationService.js'
 import { startRetention, stopRetention } from './scheduler/retention.js'
 import { registerJobs } from './scheduler/jobs.js'
 import apiRoutes from './routes/index.js'
@@ -70,31 +71,43 @@ const server = app.listen(PORT, () => {
 // BOT_TOKEN (нужен для HMAC виджета/initData) не конфликтуют с прод-ботом,
 // который держит getUpdates на том же токене.
 let bot = null
-if (process.env.BOT_TOKEN && process.env.BOT_DISABLED !== '1') {
+let botLaunched = false
+if (process.env.BOT_TOKEN) {
   bot = createBot(process.env.BOT_TOKEN)
   setBot(bot) // даём notifier ссылку на бота для проактивных сообщений
+  // getMe — и при BOT_DISABLED: username нужен виджету (GET /providers) и t.me-ссылкам
   bot.telegram
     .getMe()
     .then((me) => {
-      setBotUsername(me.username) // для t.me-ссылок (handoff из мини-аппа, фаза 2.2)
-      console.log(`[bot] launched as @${me.username}`)
+      setBotUsername(me.username) // t.me-ссылки (handoff) + Login Widget
+      console.log(`[bot] connected as @${me.username}${botLaunched ? '' : ' (polling disabled)'}`)
     })
     .catch((err) => console.error('[bot] failed to connect:', err.message))
-  // Упавший long polling иначе оставляет процесс жить с мёртвым ботом
-  // (health-check зелёный, бот молчит). exit(1) → Railway перезапустит.
-  // NB: в Telegraf v4 launch() резолвится при ОСТАНОВКЕ бота — exit только в catch.
-  bot.launch().catch((err) => {
-    console.error('[bot] crashed:', err)
-    process.exit(1)
-  })
 
-  // Шедулер проактивных сообщений запускается только при наличии бота
-  // (без него notify() некуда слать).
-  registerJobs() // weekly-сводка + напоминания (фаза 3)
-  startScheduler()
+  if (process.env.BOT_DISABLED !== '1') {
+    botLaunched = true
+    // Упавший long polling иначе оставляет процесс жить с мёртвым ботом
+    // (health-check зелёный, бот молчит). exit(1) → Railway перезапустит.
+    // NB: в Telegraf v4 launch() резолвится при ОСТАНОВКЕ бота — exit только в catch.
+    bot.launch().catch((err) => {
+      console.error('[bot] crashed:', err)
+      process.exit(1)
+    })
+
+    // Шедулер проактивных сообщений запускается только при наличии бота
+    // (без него notify() некуда слать).
+    registerJobs() // weekly-сводка + напоминания (фаза 3)
+    startScheduler()
+  } else {
+    console.warn('[bot] BOT_DISABLED=1 — поллинг выключен (getMe/notify работают)')
+  }
 } else {
   console.warn('[bot] BOT_TOKEN not set — bot is disabled')
 }
+
+// Durable-очередь уведомлений (planner+worker) — независима от бота:
+// web push работает и без BOT_TOKEN / при BOT_DISABLED.
+startNotificationService()
 
 // Суточная чистка тех-таблиц — независима от бота (это обслуживание БД).
 startRetention()
@@ -103,8 +116,9 @@ startRetention()
 function shutdown(signal) {
   console.log(`[app] ${signal} — shutting down`)
   stopScheduler()
+  stopNotificationService()
   stopRetention()
-  if (bot) bot.stop(signal)
+  if (bot && botLaunched) bot.stop(signal) // stop() на незапущенном боте бросает
   server.close(() => {
     // Закрываем пул соединений Prisma после того, как Express дообработал запросы
     prisma.$disconnect().finally(() => process.exit(0))
