@@ -30,16 +30,19 @@ export async function postContext(req, res) {
 
   // Проактивная подсказка + сохранение в историю чата (для непрерывности диалога).
   // Fire-and-forget: недоступность бота не должна ронять ответ мини-аппу.
+  // Web-only юзер (telegramId=null) подсказку не получит, но ссылку на бота вернём.
   const nudge = buildNudge(type, name)
-  notify(req.user.telegramId, nudge)
-    .then((sent) => {
-      if (sent) {
-        return prisma.chatMessage.create({
-          data: { userId, role: 'assistant', content: nudge },
-        })
-      }
-    })
-    .catch((err) => console.error('[chat] context nudge failed:', err.message))
+  if (req.user.telegramId) {
+    notify(req.user.telegramId, nudge)
+      .then((sent) => {
+        if (sent) {
+          return prisma.chatMessage.create({
+            data: { userId, role: 'assistant', content: nudge },
+          })
+        }
+      })
+      .catch((err) => console.error('[chat] context nudge failed:', err.message))
+  }
 
   track(userId, 'chat_context', { type, hasRef: Boolean(refId) })
 

@@ -160,6 +160,10 @@ function buildFacts({ summary, adherence, monthStats, dayTitle, plannedCount, is
  */
 export async function sendPostWorkoutSummary(user, workout) {
   try {
+    // Сводка уходит через бота: web-only юзеру (telegramId=null) слать некуда —
+    // выходим до LLM-вызова, чтобы не жечь токены впустую.
+    if (!user.telegramId) return false
+
     const userId = user.id
     const tz = user.timezone || DEFAULT_TZ
 

@@ -21,13 +21,21 @@ datasource db {
 // ═══════════════════════════════════════════════
 model User {
   id            String   @id @default(uuid())
-  telegramId    BigInt   @unique
-  firstName     String
+  // Nullable: web-only юзеры (Better Auth) не имеют telegramId.
+  // Несколько NULL в unique-колонке Postgres допустимы.
+  telegramId    BigInt?  @unique
+  firstName     String   // BA-поле name маппится сюда (fields.name в auth/index.js)
   lastName      String?
   username      String?
   languageCode  String?
-  photoUrl      String?
+  photoUrl      String?  // BA-поле image маппится сюда
   timezone      String?
+
+  // Web-auth (Better Auth). ⚠️ email обязан оставаться String? — у TG-юзеров
+  // email нет. BA-codegen генерит String NOT NULL: после любого
+  // `@better-auth/cli generate` править руками (ловится parity-тестом).
+  email         String?  @unique
+  emailVerified Boolean  @default(false)
 
   firstSeenAt   DateTime @default(now())
   lastSeenAt    DateTime @default(now())
@@ -48,6 +56,68 @@ model User {
   insights               Insight[]
   planOverrides          WorkoutPlanOverride[]
   llmUsage               LlmUsage[]
+  sessions               Session[]
+  accounts               Account[]
+}
+
+// ═══════════════════════════════════════════════
+// Session / Account / Verification / RateLimit — таблицы Better Auth
+// (web-авторизация, см. product/ARCHITECTURE_WEB_AUTH.md §3.2).
+// Поля — ровно по требованиям BA 1.6 (getAuthTables). Канон Telegram-идентичности —
+// User.telegramId: записи в Account для Telegram НЕ создаются.
+// ═══════════════════════════════════════════════
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique // opaque session-токен — клиент носит как Bearer
+  expiresAt DateTime // sliding: BA продлевает при активности (updateAge)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  providerId            String // 'credential' (email+пароль) | 'google' | 'yandex' | ...
+  accountId             String // ID юзера у провайдера; для credential = userId
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  password              String? // scrypt-хеш (только providerId='credential')
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String // verify-email, reset-password, OAuth state — всё здесь
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// Встроенный rate limiting BA (rateLimit.storage='database' — переживает рестарт Railway)
+model RateLimit {
+  id          String  @id @default(uuid())
+  key         String?
+  count       Int?
+  lastRequest BigInt?
+
+  @@index([key])
 }
 
 // ═══════════════════════════════════════════════

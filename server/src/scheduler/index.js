@@ -109,6 +109,8 @@ export async function tick(now = new Date()) {
   if (jobs.length === 0) return
 
   const users = await prisma.user.findMany({
+    // Проактивные сообщения идут через бота — web-only юзеры (telegramId=null) вне рассылок
+    where: { telegramId: { not: null } },
     select: { id: true, telegramId: true, timezone: true, firstName: true },
   })
 
