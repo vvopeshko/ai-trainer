@@ -6,18 +6,23 @@
  * нам важно семейство ('claude-sonnet-4'). Неизвестная модель → фолбэк на Sonnet
  * + warn (чтобы не потерять расход и заметить новую модель).
  *
- * ⚠️ Цены — ориентир (cutoff январь 2025). Сверить с актуальным прайсом Anthropic:
+ * ⚠️ Цены — ориентир. Сверить с актуальным прайсом Anthropic:
  *    https://www.anthropic.com/pricing — править только PRICING ниже.
  *
- * Промпт-кэширование сейчас не используется (cache read/write дешевле/дороже),
- * поэтому формула простая: in*priceIn + out*priceOut.
+ * Промпт-кэширование: cache write = 1.25× входной цены, cache read = 0.1×.
+ * usage от API кладёт кэш-токены в отдельные поля (cache_creation_input_tokens /
+ * cache_read_input_tokens), input_tokens их НЕ включает.
  */
 
 const MTOK = 1_000_000
 
 // model-префикс → { in, out } в USD за 1M токенов.
+// Порядок важен: матчим первый подошедший префикс, специфичные — выше общих.
 const PRICING = {
-  'claude-opus-4': { in: 15, out: 75 },
+  'claude-opus-4-0': { in: 15, out: 75 }, // legacy-прайс Opus ≤4.5
+  'claude-opus-4-1': { in: 15, out: 75 },
+  'claude-opus-4-5': { in: 15, out: 75 },
+  'claude-opus-4': { in: 5, out: 25 }, // Opus 4.6+
   'claude-sonnet-4': { in: 3, out: 15 },
   'claude-haiku-4': { in: 1, out: 5 },
   'claude-3-5-haiku': { in: 0.8, out: 4 },
@@ -37,16 +42,22 @@ export function getPricing(model) {
 }
 
 /**
- * Оценка стоимости вызова в USD.
+ * Оценка стоимости вызова в USD (с учётом prompt caching).
  * @param {string} model
- * @param {{ input_tokens?: number, output_tokens?: number }} [usage]
+ * @param {{ input_tokens?: number, output_tokens?: number,
+ *           cache_creation_input_tokens?: number, cache_read_input_tokens?: number }} [usage]
  * @returns {number} стоимость в USD (может быть дробью цента)
  */
 export function estimateCostUsd(model, usage = {}) {
   const inTok = usage.input_tokens ?? 0
   const outTok = usage.output_tokens ?? 0
+  const cacheWrite = usage.cache_creation_input_tokens ?? 0
+  const cacheRead = usage.cache_read_input_tokens ?? 0
   const price = getPricing(model)
-  return (inTok * price.in + outTok * price.out) / MTOK
+  return (
+    (inTok * price.in + cacheWrite * price.in * 1.25 + cacheRead * price.in * 0.1 + outTok * price.out) /
+    MTOK
+  )
 }
 
 export default { getPricing, estimateCostUsd }

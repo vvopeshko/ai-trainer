@@ -52,6 +52,10 @@ const identificationSchema = z.object({
   suggestedExercises: z.array(exerciseSchema),
 })
 
+// Ниже этого порога считаем, что на фото не тренажёр (или совсем мутный кадр):
+// success: false вместо выдачи мусорных упражнений с уверенным видом.
+const MIN_CONFIDENCE = 0.3
+
 // ─── 3. Основная функция ────────────────────────────────────────────
 
 /**
@@ -118,9 +122,11 @@ export async function identifyMachine(userId, imageBase64, options = {}) {
       data: {
         userId,
         imageUrl: telegramFileId,
-        recognizedName: parsed.machineName ?? null,
+        recognizedName: typeof parsed.machineName === 'string' ? parsed.machineName : null,
         confidence: 0,
-        suggestedExercises: parsed.suggestedExercises ?? [],
+        // Zod не прошёл → parsed.suggestedExercises невалидированы, в БД
+        // такое сырьё не пишем (иначе мусор всплывёт при чтении записи).
+        suggestedExercises: [],
         model: result.model,
       },
     })
@@ -139,7 +145,38 @@ export async function identifyMachine(userId, imageBase64, options = {}) {
 
   const data = validation.data
 
-  // ─── 4d. Сохранение в БД ────────────────────────────────────────
+  // ─── 4d. Совсем низкая уверенность — честный отказ ──────────────
+  // LLM корректно ответил, но по сути «это не тренажёр» / «не разглядеть».
+  // Раньше возвращали success: true с confidence 0 и мусорными упражнениями.
+  if (data.confidence < MIN_CONFIDENCE) {
+    const record = await prisma.machineIdentification.create({
+      data: {
+        userId,
+        imageUrl: telegramFileId,
+        recognizedName: data.machineName || null,
+        confidence: data.confidence,
+        suggestedExercises: [],
+        model: result.model,
+      },
+    })
+
+    track(userId, 'exercise_identification_failed', {
+      machineId: record.id,
+      reason: 'low_confidence',
+      confidence: data.confidence,
+      model: result.model,
+    })
+
+    return {
+      id: record.id,
+      success: false,
+      confidence: data.confidence,
+      error:
+        'Не уверен, что на фото тренажёр. Попробуй сфоткать его целиком, ближе и при хорошем свете.',
+    }
+  }
+
+  // ─── 4e. Сохранение в БД ────────────────────────────────────────
   const record = await prisma.machineIdentification.create({
     data: {
       userId,
@@ -151,7 +188,7 @@ export async function identifyMachine(userId, imageBase64, options = {}) {
     },
   })
 
-  // ─── 4e. Аналитика (fire-and-forget) ───────────────────────────
+  // ─── 4f. Аналитика (fire-and-forget) ───────────────────────────
   const isLowConfidence = data.confidence < 0.5
 
   track(userId, isLowConfidence ? 'exercise_identification_failed' : 'exercise_identified', {
@@ -164,7 +201,7 @@ export async function identifyMachine(userId, imageBase64, options = {}) {
     tokensOutput: result.usage?.output_tokens,
   })
 
-  // ─── 4f. Возврат результата ─────────────────────────────────────
+  // ─── 4g. Возврат результата ─────────────────────────────────────
   return {
     id: record.id,
     success: true,

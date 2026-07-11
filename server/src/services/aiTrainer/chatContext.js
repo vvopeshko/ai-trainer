@@ -5,8 +5,9 @@
  * Поток:
  *   1. мини-апп: POST /chat/context { type, refId } → createPendingContext()
  *      (+ проактивная подсказка через notifier) → openTelegramLink открывает бота;
- *   2. бот: при следующем сообщении consumePendingContext() берёт свежий (TTL ~10 мин)
- *      неиспользованный контекст, помечает consumed и отдаёт markdown-блок для system.
+ *   2. бот: при следующем сообщении peekPendingContext() берёт свежий (TTL ~10 мин)
+ *      неиспользованный контекст и отдаёт markdown-блок для system + commit();
+ *      chat.js коммитит (помечает consumed) только после успешного ответа LLM.
  *
  * Резолв упражнения/программы — read-only (числа считает statsService, принцип №1).
  */
@@ -73,10 +74,14 @@ export function buildNudge(type, name) {
 // ─── Подхват (сторона бота) ─────────────────────────────────────────
 
 /**
- * Берёт свежий неиспользованный контекст, помечает consumed, резолвит в блок system.
- * @returns {Promise<{ type: string, block: string }|null>}
+ * Peek: берёт свежий неиспользованный контекст и резолвит в блок для system.
+ * Пометка consumed разнесена с чтением намеренно (peek/commit): chat.js
+ * вызывает commit() только после успешного (не degraded) ответа LLM — если
+ * LLM упал и юзер повторил вопрос, контекст ещё жив.
+ *
+ * @returns {Promise<{ type: string, block: string, commit: () => Promise<boolean> }|null>}
  */
-export async function consumePendingContext(userId, tz = DEFAULT_TZ) {
+export async function peekPendingContext(userId, tz = DEFAULT_TZ) {
   const cutoff = new Date(Date.now() - TTL_MS)
   const ctx = await prisma.pendingChatContext.findFirst({
     where: { userId, consumedAt: null, createdAt: { gte: cutoff } },
@@ -84,13 +89,28 @@ export async function consumePendingContext(userId, tz = DEFAULT_TZ) {
   })
   if (!ctx) return null
 
-  await prisma.pendingChatContext.update({
-    where: { id: ctx.id },
+  const block = await resolveContextBlock(userId, ctx, tz)
+  if (!block) {
+    // Нерезолвящийся контекст (битый refId и т.п.) гасим сразу — иначе он
+    // будет подхватываться на каждое сообщение до истечения TTL.
+    await markContextConsumed(ctx.id)
+    return null
+  }
+
+  return { type: ctx.type, block, commit: () => markContextConsumed(ctx.id) }
+}
+
+/**
+ * Атомарно помечает контекст использованным: updateMany с условием
+ * consumedAt: null — при гонке двух быстрых сообщений пометит ровно одно.
+ * @returns {Promise<boolean>} true — пометили мы, false — уже был consumed.
+ */
+export async function markContextConsumed(id) {
+  const { count } = await prisma.pendingChatContext.updateMany({
+    where: { id, consumedAt: null },
     data: { consumedAt: new Date() },
   })
-
-  const block = await resolveContextBlock(userId, ctx, tz)
-  return block ? { type: ctx.type, block } : null
+  return count > 0
 }
 
 async function resolveContextBlock(userId, ctx, tz) {

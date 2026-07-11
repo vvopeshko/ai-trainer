@@ -30,6 +30,11 @@ Thumbs.db
 
 # Drafts / scratch — не коммитим черновики
 src/pages/Draft/
+server/scripts/_*.mjs
+
+# Регенерируемые дампы данных (source of truth для seed — enriched-exercises.json)
+server/data/movekit-*.json
+server/data/free-exercise-db.json
 
 # Misc
 *.tgz

@@ -231,9 +231,16 @@ export const translations = {
     'library.diff.beginner': 'Начинающий',
     'library.diff.intermediate': 'Средний',
     'library.diff.advanced': 'Продвинутый',
-    // Category
+    // Category — фактические значения Exercise.category из базы (free-exercise-db)
     'library.cat.compound': 'Базовое',
     'library.cat.isolation': 'Изолирующее',
+    'library.cat.strength': 'Силовое',
+    'library.cat.cardio': 'Кардио',
+    'library.cat.stretching': 'Растяжка',
+    'library.cat.plyometrics': 'Плиометрика',
+    'library.cat.powerlifting': 'Пауэрлифтинг',
+    'library.cat.olympic weightlifting': 'Тяжёлая атлетика',
+    'library.cat.strongman': 'Стронгмен',
 
     // Exercise detail tabs
     'exercise.askTrainer': 'Спросить про упражнение',
@@ -271,6 +278,7 @@ export const translations = {
     'errors.network': 'Ошибка сети. Проверь подключение',
     'errors.workoutStart': 'Не удалось начать тренировку',
     'errors.workoutFinish': 'Не удалось завершить тренировку',
+    'errors.workoutDetail': 'Не удалось загрузить тренировку',
     'errors.saveFailed': 'Не удалось сохранить',
 
     // Summary screen (BRD §12.3)

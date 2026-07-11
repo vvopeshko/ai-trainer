@@ -21,7 +21,7 @@ import {
   getLoggedExercisesSummary,
 } from '../statsService.js'
 import { getRecentWorkouts } from './buildUserContext.js'
-import { applyProgramEdit } from './programEditor.js'
+import { applyProgramEdit, computeNextDayIndex } from './programEditor.js'
 import { track } from '../../utils/analytics.js'
 
 const DEFAULT_TZ = 'Europe/Moscow'
@@ -216,11 +216,20 @@ export const CHAT_TOOLS = [
 
 // ─── Read-only резолв упражнения (без auto-create) ──────────────────
 
+/**
+ * Экранирует спецсимволы LIKE/ILIKE (%, _, \) в пользовательском вводе —
+ * иначе term вроде "100%" или "_" ломает паттерн или матчит всё подряд.
+ */
+function escapeLike(s) {
+  return s.replace(/[\\%_]/g, '\\$&')
+}
+
 // Экспортируется для programEditor (резолв «нового» упражнения по имени).
 // Function declaration → hoisted, поэтому безопасно при циклическом импорте.
 export async function resolveExerciseReadonly(query) {
   if (!query) return null
   const term = String(query).trim().toLowerCase()
+  const like = `%${escapeLike(term)}%` // для ILIKE; точные сравнения — по сырому term
 
   // slug → nameRu/nameEn (ILIKE) → alias. Один запрос с приоритетом.
   const rows = await prisma.$queryRaw`
@@ -229,13 +238,13 @@ export async function resolveExerciseReadonly(query) {
         WHEN lower(slug) = ${term} THEN 0
         WHEN lower("nameRu") = ${term} OR lower("nameEn") = ${term} THEN 1
         WHEN EXISTS (SELECT 1 FROM unnest(aliases) a WHERE lower(a) = ${term}) THEN 2
-        WHEN lower("nameRu") ILIKE ${'%' + term + '%'} OR lower("nameEn") ILIKE ${'%' + term + '%'} THEN 3
+        WHEN lower("nameRu") ILIKE ${like} OR lower("nameEn") ILIKE ${like} THEN 3
         ELSE 9
       END AS priority
     FROM "Exercise"
     WHERE lower(slug) = ${term}
       OR lower("nameRu") = ${term} OR lower("nameEn") = ${term}
-      OR lower("nameRu") ILIKE ${'%' + term + '%'} OR lower("nameEn") ILIKE ${'%' + term + '%'}
+      OR lower("nameRu") ILIKE ${like} OR lower("nameEn") ILIKE ${like}
       OR EXISTS (SELECT 1 FROM unnest(aliases) a WHERE lower(a) = ${term})
     ORDER BY priority ASC
     LIMIT 1
@@ -257,6 +266,7 @@ function formatReps(e) {
 
 async function searchCatalog({ query, muscle, equipment } = {}) {
   const term = query ? String(query).trim().toLowerCase() : null
+  const like = term ? `%${escapeLike(term)}%` : null // LIKE-паттерн с экранированием %/_/\
   const muscleF = muscle ? String(muscle).trim().toLowerCase() : null
   const equipF = equipment ? String(equipment).trim().toLowerCase() : null
 
@@ -265,9 +275,9 @@ async function searchCatalog({ query, muscle, equipment } = {}) {
     FROM "Exercise"
     WHERE
       (${term}::text IS NULL
-        OR lower("nameRu") LIKE '%' || ${term} || '%'
-        OR lower("nameEn") LIKE '%' || ${term} || '%'
-        OR EXISTS (SELECT 1 FROM unnest(aliases) a WHERE lower(a) LIKE '%' || ${term} || '%'))
+        OR lower("nameRu") LIKE ${like}
+        OR lower("nameEn") LIKE ${like}
+        OR EXISTS (SELECT 1 FROM unnest(aliases) a WHERE lower(a) LIKE ${like}))
       AND (${muscleF}::text IS NULL OR ${muscleF} = ANY("primaryMuscles"))
       AND (${equipF}::text IS NULL OR ${equipF} = ANY(equipment))
     ORDER BY "nameRu"
@@ -283,13 +293,21 @@ async function searchCatalog({ query, muscle, equipment } = {}) {
 
 // ─── Применение правки программы + аналитика ────────────────────────
 
-async function runProgramEdit(userId, op, input, params) {
+async function runProgramEdit(userId, op, input, params, writeOps) {
   const out = await applyProgramEdit({
     userId,
     scope: input.scope,
     dayIndex: input.dayIndex,
     op,
     params,
+  })
+  // След выполненной write-операции: chat.js сохранит его в историю, если
+  // финальный ответ LLM не родился — иначе модель не узнает о применённой правке.
+  writeOps?.push({
+    tool: `${op}_exercise`,
+    scope: out.scope,
+    dayIndex: out.dayIndex,
+    summary: out.summary,
   })
   track(userId, 'program_edit', { scope: out.scope, op, dayIndex: out.dayIndex })
   return out
@@ -301,8 +319,11 @@ async function runProgramEdit(userId, op, input, params) {
  * Возвращает executeTool(name, input) для конкретного юзера/таймзоны.
  * @param {string} userId
  * @param {string} [tz]
+ * @param {Array<object>} [writeOps] — аккумулятор выполненных write-операций
+ *   (replace/adjust/add/remove): вызывающий код видит, что программа уже
+ *   изменена, даже если LLM-петля упала после выполнения инструмента.
  */
-export function buildToolExecutor(userId, tz = DEFAULT_TZ) {
+export function buildToolExecutor(userId, tz = DEFAULT_TZ, writeOps = null) {
   return async function executeTool(name, input = {}) {
     switch (name) {
       case 'get_exercise_history': {
@@ -343,10 +364,11 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ) {
       case 'get_program_details': {
         const prog = await prisma.program.findFirst({
           where: { userId, isActive: true },
-          select: { name: true, planJson: true, guidelines: true },
+          select: { id: true, name: true, planJson: true, guidelines: true },
         })
         if (!prog) return { note: 'У юзера нет активной программы.' }
-        const days = (prog.planJson?.days || []).map((d, i) => ({
+        const rawDays = prog.planJson?.days || []
+        const days = rawDays.map((d, i) => ({
           dayIndex: i, // 0-based — передавать в write-инструменты (replace/adjust/...)
           day: i + 1,
           title: d.title || `День ${i + 1}`,
@@ -356,7 +378,17 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ) {
             reps: formatReps(e),
           })),
         }))
-        return { name: prog.name, days, guidelines: prog.guidelines ?? null }
+        // Какой день будет следующим — критично для scope: 'next': без этого
+        // оверрайд может лечь не на тот день и молча ждать его по циклу.
+        const nextDayIndex = await computeNextDayIndex(userId, prog.id, rawDays.length)
+        const nextTitle = rawDays[nextDayIndex]?.title || `День ${nextDayIndex + 1}`
+        return {
+          name: prog.name,
+          days,
+          nextDayIndex,
+          nextDayHint: `Следующая тренировка юзера: день ${nextDayIndex + 1} («${nextTitle}») — для scope "next" передавай dayIndex=${nextDayIndex}.`,
+          guidelines: prog.guidelines ?? null,
+        }
       }
 
       // ─── Расширенный контекст (read-only) ───
@@ -389,7 +421,7 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ) {
         return runProgramEdit(userId, 'replace', input, {
           fromExercise: input.fromExercise,
           toExerciseId: input.toExerciseId,
-        })
+        }, writeOps)
 
       case 'adjust_exercise':
         return runProgramEdit(userId, 'adjust', input, {
@@ -398,7 +430,7 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ) {
           repsMin: input.repsMin,
           repsMax: input.repsMax,
           restSec: input.restSec,
-        })
+        }, writeOps)
 
       case 'add_exercise':
         return runProgramEdit(userId, 'add', input, {
@@ -407,10 +439,10 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ) {
           repsMin: input.repsMin,
           repsMax: input.repsMax,
           restSec: input.restSec,
-        })
+        }, writeOps)
 
       case 'remove_exercise':
-        return runProgramEdit(userId, 'remove', input, { exercise: input.exercise })
+        return runProgramEdit(userId, 'remove', input, { exercise: input.exercise }, writeOps)
 
       default:
         return { error: `Неизвестный инструмент: ${name}` }

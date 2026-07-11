@@ -139,6 +139,16 @@ export async function editDayExercises(dayExercises, op, params = {}) {
         exerciseId: params.toExerciseId,
         exerciseName: params.toExercise,
       })
+      // Защита от дублей: ретрай модели / двойное «да» юзера не должны
+      // добавить упражнение второй раз. Ошибка уходит модели как tool_result.
+      const dupIdx = list.findIndex(
+        (e) => e.exerciseId === ex.id || normalize(e.slug) === normalize(ex.slug),
+      )
+      if (dupIdx !== -1) {
+        throw new Error(
+          `«${ex.nameRu}» уже есть в этом дне — добавлять повторно не нужно. Если хочешь изменить его параметры, используй adjust_exercise.`,
+        )
+      }
       const added = buildPlanExercise(ex, {
         sets: params.sets,
         repsMin: params.repsMin,
@@ -167,7 +177,39 @@ export async function editDayExercises(dayExercises, op, params = {}) {
 }
 
 /**
+ * Индекс следующего дня программы по циклу: последняя завершённая тренировка
+ * этой программы +1 (mod число дней). Тот же расчёт использует
+ * getNextWorkout (API) и get_program_details (чат-инструменты) — чтобы
+ * правка со scope: 'next' легла на реально следующий день.
+ *
+ * @param {string} userId
+ * @param {string} programId
+ * @param {number} totalDays — days.length из planJson
+ * @param {object} [db=prisma] — prisma-клиент или транзакция (tx)
+ * @returns {Promise<number>}
+ */
+export async function computeNextDayIndex(userId, programId, totalDays, db = prisma) {
+  if (!totalDays) return 0
+  const lastWorkout = await db.workout.findFirst({
+    where: {
+      userId,
+      programId,
+      finishedAt: { not: null },
+      programDayIndex: { not: null },
+    },
+    orderBy: { finishedAt: 'desc' },
+    select: { programDayIndex: true },
+  })
+  return lastWorkout ? (lastWorkout.programDayIndex + 1) % totalDays : 0
+}
+
+/**
  * Оркестратор: применяет правку к дню активной программы с учётом scope.
+ *
+ * Read-modify-write planJson обёрнут в interactive-транзакцию с оптимистичной
+ * блокировкой по updatedAt: параллельная правка (второе сообщение в чате,
+ * PATCH из мини-аппа) не затирается молча — конфликт возвращается ошибкой,
+ * которую модель видит как tool_result и может повторить операцию.
  *
  * @param {object} args
  * @param {string} args.userId
@@ -182,50 +224,57 @@ export async function applyProgramEdit({ userId, scope, dayIndex, op, params }) 
     throw new Error(`Некорректный scope "${scope}". Ожидается "program" или "next".`)
   }
 
-  const program = await prisma.program.findFirst({
-    where: { userId, isActive: true },
-    select: { id: true, planJson: true },
-  })
-  if (!program) {
-    throw new Error('У юзера нет активной программы — нечего редактировать.')
-  }
-
-  const days = program.planJson?.days || []
-  if (dayIndex == null || dayIndex < 0 || dayIndex >= days.length) {
-    throw new Error(
-      `Некорректный dayIndex ${dayIndex}. В программе ${days.length} дн. (индексы 0..${days.length - 1}).`,
-    )
-  }
-
-  const dayTitle = days[dayIndex].title ?? null
-
-  if (scope === 'next') {
-    // База для правки = текущий оверрайд (если уже есть) или упражнения дня шаблона.
-    const existing = await prisma.workoutPlanOverride.findUnique({
-      where: { userId_programId_dayIndex: { userId, programId: program.id, dayIndex } },
-      select: { exercises: true },
+  return prisma.$transaction(async (tx) => {
+    // Программу читаем ВНУТРИ транзакции — правим то, что реально в БД сейчас.
+    const program = await tx.program.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true, planJson: true, updatedAt: true },
     })
-    const baseExercises = existing?.exercises || days[dayIndex].exercises || []
+    if (!program) {
+      throw new Error('У юзера нет активной программы — нечего редактировать.')
+    }
+
+    const days = program.planJson?.days || []
+    if (dayIndex == null || dayIndex < 0 || dayIndex >= days.length) {
+      throw new Error(
+        `Некорректный dayIndex ${dayIndex}. В программе ${days.length} дн. (индексы 0..${days.length - 1}).`,
+      )
+    }
+
+    const dayTitle = days[dayIndex].title ?? null
+
+    if (scope === 'next') {
+      // База для правки = текущий оверрайд (если уже есть) или упражнения дня шаблона.
+      const existing = await tx.workoutPlanOverride.findUnique({
+        where: { userId_programId_dayIndex: { userId, programId: program.id, dayIndex } },
+        select: { exercises: true },
+      })
+      const baseExercises = existing?.exercises || days[dayIndex].exercises || []
+      const { exercises, summary } = await editDayExercises(baseExercises, op, params)
+
+      await tx.workoutPlanOverride.upsert({
+        where: { userId_programId_dayIndex: { userId, programId: program.id, dayIndex } },
+        create: { userId, programId: program.id, dayIndex, exercises },
+        update: { exercises },
+      })
+      return { scope, dayIndex, dayTitle, summary }
+    }
+
+    // scope === 'program' — пишем в шаблон программы. Условный update по
+    // updatedAt: если planJson изменился между чтением и записью — count 0.
+    const baseExercises = days[dayIndex].exercises || []
     const { exercises, summary } = await editDayExercises(baseExercises, op, params)
+    const newDays = days.map((d, i) => (i === dayIndex ? { ...d, exercises } : d))
 
-    await prisma.workoutPlanOverride.upsert({
-      where: { userId_programId_dayIndex: { userId, programId: program.id, dayIndex } },
-      create: { userId, programId: program.id, dayIndex, exercises },
-      update: { exercises },
+    const { count } = await tx.program.updateMany({
+      where: { id: program.id, updatedAt: program.updatedAt },
+      data: { planJson: { ...program.planJson, days: newDays } },
     })
+    if (count === 0) {
+      throw new Error('Программа изменилась параллельно (другая правка). Повтори операцию.')
+    }
     return { scope, dayIndex, dayTitle, summary }
-  }
-
-  // scope === 'program' — пишем в шаблон программы.
-  const baseExercises = days[dayIndex].exercises || []
-  const { exercises, summary } = await editDayExercises(baseExercises, op, params)
-  const newDays = days.map((d, i) => (i === dayIndex ? { ...d, exercises } : d))
-
-  await prisma.program.update({
-    where: { id: program.id },
-    data: { planJson: { ...program.planJson, days: newDays } },
   })
-  return { scope, dayIndex, dayTitle, summary }
 }
 
-export default { editDayExercises, applyProgramEdit }
+export default { editDayExercises, applyProgramEdit, computeNextDayIndex }

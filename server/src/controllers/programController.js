@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { importProgram } from '../services/aiTrainer/importProgram.js'
+import { computeNextDayIndex } from '../services/aiTrainer/programEditor.js'
 
 /**
  * GET /api/v1/programs
@@ -64,21 +65,9 @@ export async function getNextWorkout(req, res) {
     return res.json({ day: null })
   }
 
-  // Последняя завершённая тренировка этой программы
-  const lastWorkout = await prisma.workout.findFirst({
-    where: {
-      userId: req.user.id,
-      programId: program.id,
-      finishedAt: { not: null },
-      programDayIndex: { not: null },
-    },
-    orderBy: { finishedAt: 'desc' },
-    select: { programDayIndex: true },
-  })
-
-  const nextDayIndex = lastWorkout
-    ? (lastWorkout.programDayIndex + 1) % days.length
-    : 0
+  // Индекс следующего дня по циклу — общий хелпер (его же использует
+  // get_program_details в чат-инструментах, чтобы scope: 'next' лёг на тот день).
+  const nextDayIndex = await computeNextDayIndex(req.user.id, program.id, days.length)
 
   // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b):
   // если есть — подмешиваем переопределённые упражнения поверх шаблона дня.

@@ -17,6 +17,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMap.jsx'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
+import { useToast } from '../../components/ui/Toast.jsx'
 import { useMonthStats, useRecentWorkouts, useProgress, useProgressInsights } from '../../hooks/queries.js'
 import { useDeleteWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
@@ -428,6 +429,7 @@ function InsightsSection() {
 export default function ProgressPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   const { data: monthStats, isLoading: statsLoading } = useMonthStats()
   const { data: recent = [] } = useRecentWorkouts()
@@ -472,7 +474,12 @@ export default function ProgressPage() {
         staleTime: Infinity,
       })
       setWorkoutDetail(data.workout)
-    } catch { /* ignore */ }
+    } catch {
+      // Ошибка загрузки: закрываем шит (иначе он вечно висит на скелетоне) и показываем toast
+      setSelectedWorkout(null)
+      setWorkoutDetail(null)
+      toast.show(t('errors.workoutDetail'))
+    }
   }
 
   const handleCloseDetail = () => {

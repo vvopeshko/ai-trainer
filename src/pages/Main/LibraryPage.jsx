@@ -152,6 +152,11 @@ function ExerciseRow({ exercise, isLast, onClick }) {
         background: 'none', border: 'none', cursor: 'pointer',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
+        // Перф: браузер скипает layout/paint офскрин-строк (каталог — 924 строки
+        // без виртуализации). 44px = фактическая высота строки: паддинги 8+8 +
+        // заголовок ~13 + подзаголовок ~14 + бордер 1.
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 44px',
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>

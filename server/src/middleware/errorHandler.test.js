@@ -28,6 +28,67 @@ describe('errorHandler', () => {
     expect(res.body.issues[0].path).toEqual(['name'])
   })
 
+  describe('prisma error codes', () => {
+    it('maps P2002 (unique violation) to 400', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const err = new Error('Unique constraint failed on the fields: (`slug`)')
+      err.code = 'P2002'
+      const res = mockRes()
+      errorHandler(err, mockReq, res, () => {})
+
+      expect(res.statusCode).toBe(400)
+      expect(res.body.error).toBe('Record already exists (unique constraint violation)')
+      console.warn.mockRestore()
+    })
+
+    it('maps P2003 (FK violation) to 400', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const err = new Error('Foreign key constraint failed on the field: `exerciseId`')
+      err.code = 'P2003'
+      const res = mockRes()
+      errorHandler(err, mockReq, res, () => {})
+
+      expect(res.statusCode).toBe(400)
+      expect(res.body.error).toBe('Referenced record does not exist')
+      console.warn.mockRestore()
+    })
+
+    it('maps P2025 (record not found) to 404', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const err = new Error('An operation failed because it depends on one or more records that were required but not found')
+      err.code = 'P2025'
+      const res = mockRes()
+      errorHandler(err, mockReq, res, () => {})
+
+      expect(res.statusCode).toBe(404)
+      expect(res.body.error).toBe('Record not found')
+      console.warn.mockRestore()
+    })
+
+    it('does not leak internal prisma message to the client', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const err = new Error('Invalid `prisma.workoutSet.create()` invocation: secret internals')
+      err.code = 'P2003'
+      const res = mockRes()
+      errorHandler(err, mockReq, res, () => {})
+
+      expect(JSON.stringify(res.body)).not.toContain('secret internals')
+      console.warn.mockRestore()
+    })
+
+    it('leaves unknown prisma-like codes to the generic 500 branch', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const err = new Error('Query engine exploded')
+      err.code = 'P1001'
+      const res = mockRes()
+      errorHandler(err, mockReq, res, () => {})
+
+      expect(res.statusCode).toBe(500)
+      expect(res.body.error).toBe('Internal Server Error')
+      console.error.mockRestore()
+    })
+  })
+
   it('returns generic message for 500 errors (hides internal details)', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const err = new Error('Database connection pool exhausted')

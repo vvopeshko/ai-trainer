@@ -153,7 +153,7 @@ cd server && npx prisma generate       # регенерация клиента (
 
 ### Бэкенд: архитектура
 
-Монолит в одном процессе: Express API + Telegraf бот (шедулер пока не реализован). `BigInt.prototype.toJSON` monkey-patch в `server/src/index.js` — Prisma возвращает `telegramId` как BigInt, без патча `JSON.stringify` падает. JSON body limit — 1MB (`express.json({ limit: '1mb' })`). Rate limiting через `express-rate-limit`: глобальный 100 req/мин + LLM 5 req/мин.
+Монолит в одном процессе: Express API + Telegraf бот + node-cron шедулер (`server/src/scheduler/` — weekly-сводка, напоминания; идемпотентность через `NotificationLog`). `BigInt.prototype.toJSON` monkey-patch в `server/src/index.js` — Prisma возвращает `telegramId` как BigInt, без патча `JSON.stringify` падает. JSON body limit — 1MB (`express.json({ limit: '1mb' })`). Rate limiting через `express-rate-limit`: глобальный 100 req/мин + LLM 5 req/мин.
 
 - Все роуты под `/api/v1/*`, защищены `telegramAuth` middleware.
 - Health-check: `GET /api/health` (без авторизации).
@@ -198,7 +198,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Prisma / БД
 
-11 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише). Полная схема — `server/prisma/schema.prisma`.
+15 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише), `NotificationLog` (идемпотентность проактивных рассылок), `PendingChatContext` (handoff из мини-аппа в чат, peek/commit), `Insight` (кэш дневного инсайта), `LlmUsage` (учёт токенов LLM с денежной оценкой для `/cost`). Полная схема — `server/prisma/schema.prisma`.
 
 **Миграций НЕТ, только `prisma db push`.** В референсном проекте `db push` однажды дропнул все таблицы (2026-03-08) при добавлении NOT NULL колонки. Спасла Neon PITR.
 

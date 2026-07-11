@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-07-11 — Code review + фиксы фаз 0/1/1.5 + перф фронтенда
+
+Свежее многозонное ревью (бэкенд-ядро, AI-слой, фронтенд корректность+перф, схема/инфра) → план в [CODE_REVIEW_PLAN.md](CODE_REVIEW_PLAN.md). Реализованы фазы 0, 1, 1.5 целиком + топ-3 оптимизации фронтенда (51 пункт). Тесты: 135 зелёных (66 фронт + 69 бэк), было 106.
+
+### Фаза 0 — критичное
+
+- **Чат перестал стабильно ломаться:** окно истории отбрасывает ведущие assistant-сообщения (иначе API 400 после ~10 обменов); финальный раунд tool-петли шлёт `tool_choice: { type: 'none' }` вместо удаления `tools` (tool-блоки в истории без `tools` → 400) — `chat.js`, `llm.js`.
+- **Деньги/abuse:** троттл LLM-чата в боте (5 сообщений/мин per telegramId); `llmLimiter` ключуется по проверенному `req.user.id` вместо подделываемого заголовка (+ `app.set('trust proxy', 1)`); админ-проверки `/cost` и vision — fail-closed.
+- **Потеря данных на фронте:** ProgramEditPage сбрасывает локальный стейт при смене `:id` (правки программы A больше не перезапишут план B); ошибка POST сета откатывает optimistic-сет из UI; `handleFinish` дожидается in-flight POST сетов и ретраит неудавшиеся удаления; финиш/отмена/старт идут через TanStack-мутации с инвалидацией `workouts.active`.
+- **movekit `--apply`:** guard от затирания существующего `gifUrl` в null.
+
+### Фаза 1.5 — стоимость LLM
+
+- **`@anthropic-ai/sdk` 0.33 → 0.111**; таймаут/ретраи отданы SDK (самодельный `withTimeout` не абортил запрос — токены тратились после «таймаута»), двойной слой ретраев убран.
+- **Prompt caching** в чате: стабильный префикс (tools + `SYSTEM_BASE`) кэшируется между сообщениями и внутри tool-цикла — срезает основную часть input-токенов.
+- **Честный учёт usage:** запись в `finally` (многораундовые вызовы больше не теряются при ошибке), кэш-токены учитываются в `/cost` (write 1.25×, read 0.1×), прайс Opus 4.6+ поправлен ($5/$25), «сегодня» в `/cost` считается от полуночи в TZ админа, enrich-скрипт виден в отчёте.
+
+### Фаза 1 — корректность
+
+- **Бэкенд:** Serializable-транзакция + retry(P2034) против двух активных тренировок; Prisma-коды P2002/P2003→400, P2025→404 в `errorHandler`; валидация `X-Timezone` (мусор больше не валит статистику 500-ками); HTML+`escapeHtml` во всех ответах бота (+ retry без parse_mode для ответа чата); упавший long polling → `process.exit(1)` (Railway перезапустит); `batchLastResults` на `DISTINCT ON`; транслитерация кириллицы в `slugify` + `upsert` в `exerciseResolver` + отказ от auto-create при пустом slug; батч-резолв вместо N+1 в import/generateProgram; `generateProgram` maxTokens 4096→8192; graceful shutdown (`$disconnect` + force-exit + `unhandledRejection`).
+- **AI-слой:** optimistic lock (`updatedAt`) на `planJson` против lost update; `nextDayIndex` в `get_program_details` для `scope: 'next'`; защита от дублей в `add_exercise`; peek/commit pending-контекста (не сгорает при фейле LLM); след выполненных write-правок в истории при degraded-ответе; экранирование `%_\` в ILIKE; `identifyMachine` возвращает `success: false` при confidence < 0.3.
+- **Фронтенд:** `muscleMapping` синхронизирован с серверными ID (+ тест-инвариант на 24 muscle ID); SummaryPage работает при прямом открытии (`useWorkoutDetail`); partial progress переживает перезапуск приложения; ключи сетов по `tempId` (swipe-корзина не переезжает на соседний сет); мышцы Summary добираются из `planExercises`; debounce PUT настроек упражнения; ключи `library.cat.*` для реальных категорий.
+
+### Оптимизация фронтенда (топ-3)
+
+- Секундный live-таймер перенесён из корня WorkoutPage (~1400 строк) внутрь `WorkoutTopBar` — страница больше не ре-рендерится каждую секунду тренировки.
+- `content-visibility: auto` на строки LibraryPage (924 упражнения без виртуализации).
+- Mesh статичен — убраны три вечно анимированных GPU-слоя с `blur(70px)`.
+
+### Инфра / гигиена
+
+- `.gitignore`: регенерируемые дампы (`movekit-*.json`, `free-exercise-db.json`) и черновики (`server/scripts/_*.mjs`) не коммитятся.
+- Vitest-конфиги (`vite.config.js test.include`, `server/vitest.config.js`) и новые тесты (formatters, muscleMapping, weightUnit, parseJsonFromLLM) зафиксированы.
+
+### Осталось (в плане)
+
+Фаза 2 (индексы БД — ручной SQL на проде, retention, FK), Фаза 2.5 (тесты `workoutController`/chat-цикла), остаток перфа (персист каталога в localStorage, lazy ExerciseDetailSheet/BodyMap, drag через ref) и косметика Фазы 3 (i18n-хардкоды, токены цветов, доступность, доки vs код).
+
+---
+
 ## 2026-06-13 — AI-тренер phase 5: расширенный контекст + рефайн программы через чат
 
 ### Что сделано

@@ -14,7 +14,7 @@ import llm from '../../utils/llm.js'
 import prisma from '../../utils/prisma.js'
 import { track } from '../../utils/analytics.js'
 import { parseJsonFromLLM } from '../../utils/parseJsonFromLLM.js'
-import { resolveExercise } from '../exerciseResolver.js'
+import { resolveExercisesBatch } from '../exerciseResolver.js'
 
 // ─── Загрузка промпта ────────────────────────────────────────────────
 
@@ -138,7 +138,9 @@ export async function generateProgram(userId, profile) {
     [{ role: 'user', content: userPrompt }],
     {
       system: SYSTEM_PROMPT,
-      maxTokens: 4096,
+      // 8192 (как в importProgram): большая программа (5-6 дней × 6-7 упражнений)
+      // на 4096 обрезалась → Zod fail без шансов на успех
+      maxTokens: 8192,
       meta: { userId, feature: 'program_generate' },
     },
   )
@@ -163,25 +165,28 @@ export async function generateProgram(userId, profile) {
 
   const data = validation.data
 
-  // 5. Привязка упражнений к БД через exerciseResolver
+  // 5. Привязка упражнений к БД через exerciseResolver.
+  // Собираем уникальные имена (включая alternatives) и резолвим одним батчем —
+  // последовательные await в цикле давали N+1 запросов к БД.
+  const toResolve = []
+  for (const day of data.days) {
+    for (const ex of day.exercises) {
+      toResolve.push({ slug: ex.slug, nameRu: ex.nameRu })
+      for (const altSlug of ex.alternatives ?? []) toResolve.push({ slug: altSlug })
+    }
+  }
+  const resolvedMap = await resolveExercisesBatch(toResolve)
+
   const resolvedDays = []
   for (const day of data.days) {
     const resolvedExercises = []
     for (const ex of day.exercises) {
-      const resolved = await resolveExercise({
-        slug: ex.slug,
-        nameRu: ex.nameRu,
-      })
-      // Резолвим alternatives slug → exerciseId
-      const resolvedAlts = []
-      if (ex.alternatives?.length > 0) {
-        for (const altSlug of ex.alternatives) {
-          try {
-            const alt = await resolveExercise({ slug: altSlug })
-            resolvedAlts.push(alt.exerciseId)
-          } catch { /* skip unresolved */ }
-        }
-      }
+      const resolved = resolvedMap.get(ex.slug)
+      if (!resolved) continue // мусорное имя от LLM — пропускаем, не создаём
+
+      const resolvedAlts = (ex.alternatives ?? [])
+        .map((altSlug) => resolvedMap.get(altSlug)?.exerciseId)
+        .filter(Boolean)
 
       resolvedExercises.push({
         exerciseId: resolved.exerciseId,
@@ -196,12 +201,18 @@ export async function generateProgram(userId, profile) {
         alternatives: resolvedAlts,
       })
     }
+    if (resolvedExercises.length === 0) continue // день без единого упражнения не сохраняем
     resolvedDays.push({
       title: day.title,
       ...(day.durationMin && { durationMin: day.durationMin }),
       ...(day.notes && { notes: day.notes }),
       exercises: resolvedExercises,
     })
+  }
+
+  if (resolvedDays.length === 0) {
+    track(userId, 'program_generation_failed', { reason: 'no_resolved_exercises' })
+    return { success: false, error: 'Не удалось сгенерировать программу. Попробуй ещё раз.' }
   }
 
   // 6. Сохранение программы (isActive: false — юзер сам активирует)

@@ -169,42 +169,38 @@ export async function batchLastResults(req, res) {
     .object({ exerciseIds: z.array(z.string().uuid()).min(1).max(50) })
     .parse(req.body)
 
-  const sets = await prisma.workoutSet.findMany({
-    where: {
-      exerciseId: { in: exerciseIds },
-      workout: { userId: req.user.id, finishedAt: { not: null } },
-      isWarmup: false,
-    },
-    orderBy: [{ workout: { startedAt: 'desc' } }, { setOrder: 'asc' }],
-    select: {
-      exerciseId: true,
-      weightKg: true,
-      reps: true,
-      workout: { select: { startedAt: true } },
-    },
-  })
-
-  // Группируем по exerciseId, берём только подходы из последней тренировки
-  const grouped = {}
-  for (const s of sets) {
-    if (!grouped[s.exerciseId]) grouped[s.exerciseId] = []
-    grouped[s.exerciseId].push(s)
-  }
+  // DISTINCT ON: последняя завершённая тренировка по каждому упражнению,
+  // затем только её рабочие подходы. Prisma-вариант тянул ВСЕ сеты юзера
+  // по этим упражнениям за всю историю — на длинной истории это сотни строк зря.
+  const rows = await prisma.$queryRaw`
+    WITH last AS (
+      SELECT DISTINCT ON (ws."exerciseId") ws."exerciseId", ws."workoutId", w."startedAt"
+      FROM "WorkoutSet" ws
+      JOIN "Workout" w ON w.id = ws."workoutId"
+      WHERE ws."exerciseId" = ANY(${exerciseIds})
+        AND w."userId" = ${req.user.id}
+        AND w."finishedAt" IS NOT NULL
+        AND ws."isWarmup" = false
+      ORDER BY ws."exerciseId", w."startedAt" DESC
+    )
+    SELECT ws."exerciseId", ws."weightKg", ws.reps, l."startedAt"
+    FROM "WorkoutSet" ws
+    JOIN last l ON l."workoutId" = ws."workoutId" AND l."exerciseId" = ws."exerciseId"
+    WHERE ws."isWarmup" = false
+    ORDER BY ws."setOrder" ASC
+  `
 
   const results = {}
   for (const exId of exerciseIds) {
-    const exSets = grouped[exId]
-    if (!exSets || exSets.length === 0) {
-      results[exId] = { lastSets: null, date: null }
-      continue
+    results[exId] = { lastSets: null, date: null }
+  }
+  for (const r of rows) {
+    const entry = results[r.exerciseId]
+    if (!entry.lastSets) {
+      entry.lastSets = []
+      entry.date = r.startedAt
     }
-    const lastDate = exSets[0].workout.startedAt
-    results[exId] = {
-      date: lastDate,
-      lastSets: exSets
-        .filter(s => s.workout.startedAt.getTime() === lastDate.getTime())
-        .map(s => ({ weightKg: s.weightKg, reps: s.reps })),
-    }
+    entry.lastSets.push({ weightKg: r.weightKg, reps: r.reps })
   }
 
   res.json({ results })

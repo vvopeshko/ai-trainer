@@ -18,13 +18,25 @@ const FEATURE_LABELS = {
   post_workout: 'Сводка после тренировки',
   weekly_summary: 'Недельная сводка',
   daily_insight: 'Дневной инсайт',
+  enrich_media: 'Обогащение медиа',
 }
 
+// «Сегодня» считаем от полуночи в TZ админа, не UTC: для Москвы UTC-полночь —
+// это 03:00, и утренний /cost показывал бы хвост вчерашнего дня как сегодняшний.
+const REPORT_TZ = process.env.REPORT_TZ || 'Europe/Moscow'
+
 function startOfDaysAgo(days) {
-  const d = new Date()
-  d.setUTCHours(0, 0, 0, 0)
-  d.setUTCDate(d.getUTCDate() - days)
-  return d
+  // Текущая дата в REPORT_TZ (en-CA → YYYY-MM-DD), затем UTC-момент её полуночи
+  // со сдвигом на офсет зоны. Офсет берём через разницу «локального» и UTC времени.
+  const now = new Date()
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: REPORT_TZ })
+    .format(now)
+    .split('-')
+    .map(Number)
+  const utcMidnight = Date.UTC(y, m - 1, d - days)
+  const asTz = new Date(new Date(utcMidnight).toLocaleString('en-US', { timeZone: REPORT_TZ }))
+  const offsetMs = asTz.getTime() - utcMidnight
+  return new Date(utcMidnight - offsetMs)
 }
 
 /** Итоги (count, tokens, costUsd) за период от since. */

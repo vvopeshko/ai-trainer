@@ -28,6 +28,7 @@ import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryKeys.js'
+import { useFinishWorkout, useCancelWorkout } from '../../hooks/mutations.js'
 import { useActiveWorkout } from '../../contexts/ActiveWorkoutContext.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { WorkoutTopBar } from './workout/WorkoutTopBar.jsx'
@@ -38,6 +39,14 @@ import { UpcomingExerciseItem } from './workout/UpcomingExerciseItem.jsx'
 import { ExpandedUpcomingCard } from './workout/ExpandedUpcomingCard.jsx'
 import { WorkoutSkeleton } from './workout/WorkoutSkeleton.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
+
+// Чистое время тренировки на момент вызова (для Summary): таймер живёт
+// внутри WorkoutTopBar, чтобы секундный тик не ре-рендерил страницу.
+function calcElapsedSec(startedAt, pausedAt, totalPausedMs) {
+  if (!startedAt) return 0
+  const end = pausedAt ?? Date.now()
+  return Math.max(0, Math.floor((end - startedAt - totalPausedMs) / 1000))
+}
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
 
@@ -63,7 +72,6 @@ export default function WorkoutPage() {
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showAlternatives, setShowAlternatives] = useState(false)
   const [pendingSwap, setPendingSwap] = useState(null) // alt object awaiting confirm
-  const [elapsedSec, setElapsedSec] = useState(0)
   const [startedAt, setStartedAt] = useState(null)
   const [resting, setResting] = useState(false)
   const [pausedAt, setPausedAt] = useState(null)
@@ -74,6 +82,9 @@ export default function WorkoutPage() {
   const [lastResultsCache, setLastResultsCache] = useState({})
   const [partialSets, setPartialSets] = useState({}) // { exerciseId: [...sets] }
   const pendingDeletionsRef = useRef(new Set()) // tempId'ы сетов, удалённых до ответа POST
+  const pendingSetPostsRef = useRef(new Set()) // in-flight POST'ы сетов (finish их дожидается)
+  const finishWorkoutMutation = useFinishWorkout()
+  const cancelWorkoutMutation = useCancelWorkout()
   const [exerciseSettings, setExerciseSettingsState] = useState(() => getExerciseSettings(null))
   const [detailExerciseId, setDetailExerciseId] = useState(null)
 
@@ -167,15 +178,6 @@ export default function WorkoutPage() {
     }
   }, [draggingId])
 
-  // ── Timer (accounts for pause) ──
-  useEffect(() => {
-    if (!startedAt || pausedAt) return
-    const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - startedAt - totalPausedMs) / 1000)))
-    tick()
-    const interval = setInterval(tick, 1000)
-    return () => clearInterval(interval)
-  }, [startedAt, pausedAt, totalPausedMs])
-
   // ── Mount: check active workout ──
   useEffect(() => {
     let cancelled = false
@@ -234,17 +236,44 @@ export default function WorkoutPage() {
           }
           grouped[s.exerciseId].sets.push(s)
         }
-        setAllExercises(order.map(id => grouped[id]))
 
         if (data.planExercises) {
-          const doneIds = new Set(order)
-          const nextIdx = data.planExercises.findIndex(pe => !doneIds.has(pe.exerciseId))
+          // Восстановление partial progress после перезапуска приложения:
+          // упражнение с 2/4 подходами — не «сделано», а «в процессе».
+          // Раньше все залогированные упражнения помечались завершёнными.
+          const byPlan = new Map(data.planExercises.map(pe => [pe.exerciseId, pe]))
+          const done = []
+          const partial = {}
+          for (const exId of order) {
+            const pe = byPlan.get(exId)
+            if (pe && grouped[exId].sets.length < pe.sets) partial[exId] = grouped[exId].sets
+            else done.push(grouped[exId])
+          }
+          setAllExercises(done)
+          if (Object.keys(partial).length > 0) setPartialSets(partial)
+
+          const doneIds = new Set(done.map(d => d.exercise.id))
+          // Текущее: первое незатронутое; если остались только partial — первое из них.
+          const nextIdx = data.planExercises.findIndex(
+            pe => !doneIds.has(pe.exerciseId) && !partial[pe.exerciseId],
+          )
           if (nextIdx >= 0) {
             setPlanIndex(nextIdx)
             setCurrentExercise({ id: data.planExercises[nextIdx].exerciseId, nameRu: data.planExercises[nextIdx].nameRu, slug: data.planExercises[nextIdx].slug })
           } else {
-            setPlanIndex(data.planExercises.length)
+            const partialIdx = data.planExercises.findIndex(pe => partial[pe.exerciseId])
+            if (partialIdx >= 0) {
+              const pe = data.planExercises[partialIdx]
+              setPlanIndex(partialIdx)
+              setCurrentExercise({ id: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug })
+              setDoneSets(partial[pe.exerciseId])
+              setPartialSets(prev => { const n = { ...prev }; delete n[pe.exerciseId]; return n })
+            } else {
+              setPlanIndex(data.planExercises.length)
+            }
           }
+        } else {
+          setAllExercises(order.map(id => grouped[id]))
         }
       } else if (data.planExercises) {
         // Fresh start with plan — auto-select first exercise
@@ -290,12 +319,27 @@ export default function WorkoutPage() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Удаление сета на сервере ──
+  // Молчаливый .catch(() => {}) оставлял сет в БД (портил статистику), а юзер
+  // не узнавал. Теперь: toast + очередь неудавшихся, ретрай перед финишем.
+  const failedDeletionsRef = useRef([]) // setId, которые не удалось удалить
+  const deleteSetOnServer = (setId) => {
+    if (!setId || !workoutId) return
+    apiDelete(`/api/v1/workouts/${workoutId}/sets/${setId}`).catch(() => {
+      failedDeletionsRef.current.push(setId)
+      toast.show(t('errors.network'))
+    })
+  }
+
   // ── Ensure workout exists ──
   const ensureWorkout = async () => {
     if (workoutId) return workoutId
     const { workout } = await apiPost('/api/v1/workouts', {})
     setWorkoutId(workout.id)
     setStartedAt(new Date(workout.startedAt).getTime())
+    // Кэш активной тренировки устарел (там workout: null) — без инвалидации
+    // Home до 30с показывал бы «нет тренировки».
+    queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
     return workout.id
   }
 
@@ -391,7 +435,7 @@ export default function WorkoutPage() {
     }
   }
 
-  const handleSetDone = async ({ weight, reps }) => {
+  const handleSetDone = ({ weight, reps }) => {
     if (!workoutId || !currentExercise) return
 
     const tempId = crypto.randomUUID()
@@ -401,45 +445,73 @@ export default function WorkoutPage() {
     try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
     setResting(true)
 
-    try {
-      const { set } = await apiPost(`/api/v1/workouts/${workoutId}/sets`, {
-        exerciseId: currentExercise.id,
-        exerciseOrder: allExercises.length,
-        setOrder: doneSets.length,
-        weightKg: weight || null,
-        reps,
-      })
+    const postSet = async () => {
+      try {
+        const { set } = await apiPost(`/api/v1/workouts/${workoutId}/sets`, {
+          exerciseId: currentExercise.id,
+          exerciseOrder: allExercises.length,
+          setOrder: doneSets.length,
+          weightKg: weight || null,
+          reps,
+        })
 
-      // Сет удалили пока POST летел → сразу удаляем на сервере
-      if (pendingDeletionsRef.current.has(tempId)) {
-        pendingDeletionsRef.current.delete(tempId)
-        apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
-        return
-      }
-
-      // Патчим id по tempId (не по позиции)
-      setDoneSets(prev => prev.map(s =>
-        s.tempId === tempId ? { ...s, id: set.id } : s
-      ))
-      setAllExercises(prev => prev.map(ex => ({
-        ...ex,
-        sets: ex.sets.map(s => s.tempId === tempId ? { ...s, id: set.id } : s),
-      })))
-      setPartialSets(prev => {
-        let changed = false
-        const result = {}
-        for (const [exId, sets] of Object.entries(prev)) {
-          result[exId] = sets.map(s => {
-            if (s.tempId === tempId) { changed = true; return { ...s, id: set.id } }
-            return s
-          })
+        // Сет удалили пока POST летел → сразу удаляем на сервере
+        if (pendingDeletionsRef.current.has(tempId)) {
+          pendingDeletionsRef.current.delete(tempId)
+          deleteSetOnServer(set.id)
+          return
         }
-        return changed ? result : prev
-      })
-    } catch (err) {
-      console.error('Failed to log set:', err)
-      toast.show(t('errors.network'))
+
+        // Патчим id по tempId (не по позиции)
+        setDoneSets(prev => prev.map(s =>
+          s.tempId === tempId ? { ...s, id: set.id } : s
+        ))
+        setAllExercises(prev => prev.map(ex => ({
+          ...ex,
+          sets: ex.sets.map(s => s.tempId === tempId ? { ...s, id: set.id } : s),
+        })))
+        setPartialSets(prev => {
+          let changed = false
+          const result = {}
+          for (const [exId, sets] of Object.entries(prev)) {
+            result[exId] = sets.map(s => {
+              if (s.tempId === tempId) { changed = true; return { ...s, id: set.id } }
+              return s
+            })
+          }
+          return changed ? result : prev
+        })
+      } catch (err) {
+        console.error('Failed to log set:', err)
+        // Откат оптимистичного сета: на сервере его нет — оставить в UI значит
+        // молча потерять подход (выглядит записанным, после перезахода исчезнет).
+        // К моменту ошибки сет мог переехать из doneSets в allExercises/partialSets
+        // (saveCurrentExercise) — чистим по tempId во всех трёх местах.
+        pendingDeletionsRef.current.delete(tempId)
+        setDoneSets(prev => prev.filter(s => s.tempId !== tempId))
+        setAllExercises(prev => prev
+          .map(ex => ({ ...ex, sets: ex.sets.filter(s => s.tempId !== tempId) }))
+          .filter(ex => ex.sets.length > 0))
+        setPartialSets(prev => {
+          let changed = false
+          const result = {}
+          for (const [exId, sets] of Object.entries(prev)) {
+            const filtered = sets.filter(s => s.tempId !== tempId)
+            if (filtered.length !== sets.length) changed = true
+            if (filtered.length > 0) result[exId] = filtered
+          }
+          return changed ? result : prev
+        })
+        setResting(false)
+        toast.show(t('errors.network'))
+      }
     }
+
+    // Трекаем in-flight POST: handleFinish дожидается всех, чтобы PATCH finish
+    // не обогнал запись последнего подхода.
+    const postPromise = postSet()
+    pendingSetPostsRef.current.add(postPromise)
+    postPromise.finally(() => pendingSetPostsRef.current.delete(postPromise))
   }
 
   const handleRestComplete = () => {
@@ -457,17 +529,19 @@ export default function WorkoutPage() {
     const item = allExercises[exerciseIndex]
     const set = item.sets[setIndex]
     if (set?.id && workoutId) {
-      apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+      deleteSetOnServer(set.id)
     } else if (set?.tempId && !set.id) {
       pendingDeletionsRef.current.add(set.tempId)
     }
+    // setExpandedDoneIndex — вне updater'а: сайд-эффекты в pure-функции
+    // в StrictMode выполняются дважды.
+    if (item.sets.length === 1) setExpandedDoneIndex(null)
     setAllExercises(prev => {
       const updated = [...prev]
       const newSets = [...updated[exerciseIndex].sets]
       newSets.splice(setIndex, 1)
       if (newSets.length === 0) {
         updated.splice(exerciseIndex, 1)
-        setExpandedDoneIndex(null)
       } else {
         updated[exerciseIndex] = { ...updated[exerciseIndex], sets: newSets }
       }
@@ -481,7 +555,7 @@ export default function WorkoutPage() {
     if (workoutId) {
       for (const set of item.sets) {
         if (set?.id) {
-          apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+          deleteSetOnServer(set.id)
         } else if (set?.tempId && !set.id) {
           pendingDeletionsRef.current.add(set.tempId)
         }
@@ -508,7 +582,7 @@ export default function WorkoutPage() {
   const handleUndoLastSet = () => {
     const lastSet = doneSets[doneSets.length - 1]
     if (lastSet?.id && workoutId) {
-      apiDelete(`/api/v1/workouts/${workoutId}/sets/${lastSet.id}`).catch(() => {})
+      deleteSetOnServer(lastSet.id)
     } else if (lastSet?.tempId && !lastSet.id) {
       pendingDeletionsRef.current.add(lastSet.tempId)
     }
@@ -519,7 +593,7 @@ export default function WorkoutPage() {
   const handleDeleteCurrentSet = (setIndex) => {
     const set = doneSets[setIndex]
     if (set?.id && workoutId) {
-      apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+      deleteSetOnServer(set.id)
     } else if (set?.tempId && !set.id) {
       pendingDeletionsRef.current.add(set.tempId)
     }
@@ -545,7 +619,7 @@ export default function WorkoutPage() {
     if (!sets) return
     const set = sets[setIndex]
     if (set?.id && workoutId) {
-      apiDelete(`/api/v1/workouts/${workoutId}/sets/${set.id}`).catch(() => {})
+      deleteSetOnServer(set.id)
     } else if (set?.tempId && !set.id) {
       pendingDeletionsRef.current.add(set.tempId)
     }
@@ -612,9 +686,7 @@ export default function WorkoutPage() {
 
   const handlePause = async () => {
     if (!workoutId || pausedAt) return
-    const now = Date.now()
-    setPausedAt(now)
-    setElapsedSec(Math.max(0, Math.floor((now - startedAt - totalPausedMs) / 1000)))
+    setPausedAt(Date.now())
     apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'pause' })
       .catch(err => console.error('Failed to pause workout:', err))
   }
@@ -649,10 +721,13 @@ export default function WorkoutPage() {
         if (s.weightKg && s.reps) tonnageKg += s.weightKg * s.reps
       }
     }
+    // У упражнений из плана нет primaryMuscles ({id, nameRu, slug}) — мышцы
+    // добираем из planExercises по exerciseId, иначе чипы Summary пустые.
+    const musclesFor = (exercise) =>
+      exercise?.primaryMuscles ??
+      planExercises?.find(pe => pe.exerciseId === exercise?.id)?.primaryMuscles
     const collectMuscles = (exercise) => {
-      if (exercise?.primaryMuscles) {
-        exercise.primaryMuscles.forEach(m => muscleSet.add(m))
-      }
+      musclesFor(exercise)?.forEach(m => muscleSet.add(m))
     }
 
     for (const ex of allExercises) {
@@ -661,14 +736,34 @@ export default function WorkoutPage() {
     }
     collectSets(doneSets)
     if (currentExercise) collectMuscles(currentExercise)
-    for (const sets of Object.values(partialSets)) {
+    for (const [exId, sets] of Object.entries(partialSets)) {
       collectSets(sets)
+      collectMuscles({ id: exId })
     }
 
     tonnageKg = Math.round(tonnageKg)
 
     try {
-      const result = await apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'finish' })
+      // Дожидаемся in-flight POST сетов: типичный кейс — залогировал последний
+      // подход и сразу жмёшь «Готово». Без ожидания finish обгонит POST:
+      // сервер посчитает сеты без последнего (а при 0 сетов удалит тренировку).
+      if (pendingSetPostsRef.current.size > 0) {
+        await Promise.allSettled([...pendingSetPostsRef.current])
+      }
+
+      // Ретраим неудавшиеся удаления: иначе удалённые в UI сеты останутся
+      // в БД и попадут в статистику финиша.
+      if (failedDeletionsRef.current.length > 0) {
+        const ids = [...failedDeletionsRef.current]
+        failedDeletionsRef.current = []
+        await Promise.allSettled(
+          ids.map(id => apiDelete(`/api/v1/workouts/${workoutId}/sets/${id}`)),
+        )
+      }
+
+      // Мутация даёт optimistic (active → null) и инвалидацию stats/recent/
+      // progress/programs.next — без неё Home до 5 мин показывал бы старые данные.
+      const result = await finishWorkoutMutation.mutateAsync(workoutId)
       try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
 
       clearWorkoutState()
@@ -678,7 +773,7 @@ export default function WorkoutPage() {
         state: {
           totalSets,
           totalExercises,
-          elapsedSec,
+          elapsedSec: calcElapsedSec(startedAt, pausedAt, totalPausedMs),
           tonnageKg: tonnageKg || null,
           muscles: [...muscleSet],
         },
@@ -702,7 +797,8 @@ export default function WorkoutPage() {
     setConfirmCancel(false)
     clearWorkoutState()
     if (workoutId) {
-      try { await apiDelete(`/api/v1/workouts/${workoutId}`) } catch {}
+      // Мутация optimistic-обнуляет workouts.active — Home сразу без тренировки.
+      try { await cancelWorkoutMutation.mutateAsync(workoutId) } catch {}
     }
     navigate('/')
   }
@@ -735,7 +831,7 @@ export default function WorkoutPage() {
     // Delete any logged sets for current exercise from backend
     for (const s of doneSets) {
       if (s?.id && workoutId) {
-        apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+        deleteSetOnServer(s.id)
       } else if (s?.tempId && !s.id) {
         pendingDeletionsRef.current.add(s.tempId)
       }
@@ -781,7 +877,7 @@ export default function WorkoutPage() {
       // Delete partial sets from backend
       for (const s of partial) {
         if (s?.id && workoutId) {
-          apiDelete(`/api/v1/workouts/${workoutId}/sets/${s.id}`).catch(() => {})
+          deleteSetOnServer(s.id)
         } else if (s?.tempId && !s.id) {
           pendingDeletionsRef.current.add(s.tempId)
         }
@@ -852,7 +948,9 @@ export default function WorkoutPage() {
     <div style={{ background: '#08080B', minHeight: '100vh' }}>
       {/* WorkoutTopBar */}
       <WorkoutTopBar
-        elapsed={elapsedSec}
+        startedAt={startedAt}
+        pausedAt={pausedAt}
+        totalPausedMs={totalPausedMs}
         exerciseNum={currentExerciseNum}
         totalExercises={hasPlan ? planExercises.length : 0}
         doneSetCount={totalDoneSets}
@@ -861,7 +959,6 @@ export default function WorkoutPage() {
         onFinish={handleFinish}
         onCancel={() => setConfirmCancel(true)}
         hasAnySets={hasAnySets}
-        paused={!!pausedAt}
         onPause={handlePause}
         onResume={handleResume}
       />
@@ -895,7 +992,7 @@ export default function WorkoutPage() {
                         <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
                           {item.sets.map((s, si) => (
                             <DoneSetRow
-                              key={si}
+                              key={s.tempId ?? s.id ?? si}
                               index={si}
                               weight={s.weightKg ?? 0}
                               reps={s.reps}
@@ -992,8 +1089,10 @@ export default function WorkoutPage() {
             {/* Done sets inline */}
             {doneSets.length > 0 && (
               <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* key по tempId/id: с key={i} swipe-открытая «корзина» после
+                    удаления переезжала на соседний сет (React переиспользует DOM). */}
                 {doneSets.map((s, i) => (
-                  <DoneSetRow key={i} index={i} weight={s.weightKg ?? 0} reps={s.reps}
+                  <DoneSetRow key={s.tempId ?? s.id ?? i} index={i} weight={s.weightKg ?? 0} reps={s.reps}
                     onDelete={() => handleDeleteCurrentSet(i)} />
                 ))}
                 <button onClick={handleUndoLastSet} style={{
@@ -1098,7 +1197,7 @@ export default function WorkoutPage() {
                       ? `${currentPlanExercise.repsMin}`
                       : `${currentPlanExercise.repsMin}–${currentPlanExercise.repsMax}`
                     return (
-                      <SwipeRow key={i} deleteWidth={56} onDelete={handleRemovePlannedSet}>
+                      <SwipeRow key={setNum} deleteWidth={56} onDelete={handleRemovePlannedSet}>
                         <div style={{
                           padding: '9px 12px', borderRadius: 10,
                           border: '1px dashed rgba(255,255,255,0.07)',

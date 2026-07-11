@@ -21,16 +21,6 @@ function client() {
   return _client
 }
 
-/**
- * Оборачивает промис в таймаут. При превышении — AbortError.
- */
-function withTimeout(promise, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`LLM request timed out after ${ms}ms`)), ms)
-    promise.then(resolve, reject).finally(() => clearTimeout(timer))
-  })
-}
-
 /** Первый текстовый блок из ответа (с tools текст может быть не в [0]). */
 function extractText(res) {
   return res.content?.find((b) => b.type === 'text')?.text ?? ''
@@ -42,30 +32,23 @@ function maybeRecordUsage(meta, model, usage) {
   recordLlmUsage({ userId: meta.userId ?? null, feature: meta.feature, model, usage })
 }
 
-/** Один вызов messages.create с таймаутом и retry на сетевых ошибках. */
-async function createWithRetry(params, { timeout, maxRetries }) {
-  let lastError
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await withTimeout(client().messages.create(params), timeout)
-    } catch (err) {
-      lastError = err
-      const isRetryable =
-        err.message?.includes('Connection error') || err.message?.includes('ECONNRESET')
-      if (!isRetryable || attempt === maxRetries) throw err
-      const delay = 1000 * (attempt + 1)
-      console.warn(`[llm] retry ${attempt + 1}/${maxRetries} after ${delay}ms: ${err.message}`)
-      await new Promise((r) => setTimeout(r, delay))
-    }
-  }
-  throw lastError
+/**
+ * Один вызов messages.create. Таймаут и ретраи — средствами SDK:
+ * SDK сам ретраит 429/5xx/сетевые ошибки с backoff и по таймауту АБОРТИТ
+ * HTTP-запрос (самодельная обёртка Promise.race оставляла запрос жить —
+ * токены тратились после «таймаута», а usage не записывался).
+ */
+function createRequest(params, { timeout, maxRetries }) {
+  return client().messages.create(params, { timeout, maxRetries })
 }
 
 /**
  * Текстовый чат. Опционально — с tool-use (agentic-петля): модель запрашивает
  * инструмент → executeTool выполняет → tool_result возвращается → продолжаем,
- * лимит maxToolRounds раундов. На последнем раунде tools убираются, чтобы
- * заставить модель ответить текстом.
+ * лимит maxToolRounds раундов. На последнем раунде ставится
+ * tool_choice: none — модель обязана ответить текстом. Сам параметр tools
+ * при этом остаётся: API отклоняет запросы с tool_use/tool_result блоками
+ * в истории, если tools не переданы.
  *
  * @param {Array<{role: 'user'|'assistant', content: any}>} messages
  * @param {object} [options]
@@ -87,7 +70,7 @@ export async function chat(messages, options = {}) {
 
   // ─── Простой путь: без инструментов (прежнее поведение) ───
   if (!options.tools?.length || typeof options.executeTool !== 'function') {
-    const res = await createWithRetry(
+    const res = await createRequest(
       { model, max_tokens: maxTokens, system: options.system, messages },
       retryOpts,
     )
@@ -100,55 +83,77 @@ export async function chat(messages, options = {}) {
   const convo = [...messages] // не мутируем входной массив
   let totalIn = 0
   let totalOut = 0
+  let totalCacheWrite = 0
+  let totalCacheRead = 0
   let lastModel = model
   let lastText = ''
+  const totalUsage = () => ({
+    input_tokens: totalIn,
+    output_tokens: totalOut,
+    cache_creation_input_tokens: totalCacheWrite,
+    cache_read_input_tokens: totalCacheRead,
+  })
 
-  for (let round = 0; round <= maxRounds; round++) {
-    const useTools = round < maxRounds // последний раунд — без tools, форсируем текст
-    const res = await createWithRetry(
-      {
-        model,
-        max_tokens: maxTokens,
-        system: options.system,
-        messages: convo,
-        ...(useTools ? { tools: options.tools } : {}),
-      },
-      retryOpts,
-    )
+  try {
+    for (let round = 0; round <= maxRounds; round++) {
+      const lastRound = round === maxRounds // на последнем раунде форсируем текст
+      const res = await createRequest(
+        {
+          model,
+          max_tokens: maxTokens,
+          system: options.system,
+          messages: convo,
+          tools: options.tools,
+          ...(lastRound ? { tool_choice: { type: 'none' } } : {}),
+        },
+        retryOpts,
+      )
 
-    totalIn += res.usage?.input_tokens ?? 0
-    totalOut += res.usage?.output_tokens ?? 0
-    lastModel = res.model
-    lastText = extractText(res)
+      totalIn += res.usage?.input_tokens ?? 0
+      totalOut += res.usage?.output_tokens ?? 0
+      totalCacheWrite += res.usage?.cache_creation_input_tokens ?? 0
+      totalCacheRead += res.usage?.cache_read_input_tokens ?? 0
+      lastModel = res.model
+      lastText = extractText(res)
 
-    if (res.stop_reason !== 'tool_use') {
-      const usage = { input_tokens: totalIn, output_tokens: totalOut }
-      maybeRecordUsage(options.meta, lastModel, usage)
-      return { text: lastText, model: lastModel, usage }
-    }
-
-    // Выполняем все запрошенные инструменты, собираем tool_result.
-    const toolUses = res.content.filter((b) => b.type === 'tool_use')
-    convo.push({ role: 'assistant', content: res.content })
-    const toolResults = []
-    for (const tu of toolUses) {
-      let resultStr
-      try {
-        const out = await options.executeTool(tu.name, tu.input)
-        resultStr = typeof out === 'string' ? out : JSON.stringify(out)
-      } catch (err) {
-        console.error(`[llm] tool "${tu.name}" failed:`, err.message)
-        resultStr = `Ошибка получения данных: ${err.message}`
+      if (res.stop_reason !== 'tool_use') {
+        return { text: lastText, model: lastModel, usage: totalUsage() }
       }
-      toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: resultStr })
-    }
-    convo.push({ role: 'user', content: toolResults })
-  }
 
-  // Петля исчерпана — отдаём последний текст (мог быть пустым).
-  const usage = { input_tokens: totalIn, output_tokens: totalOut }
-  maybeRecordUsage(options.meta, lastModel, usage)
-  return { text: lastText, model: lastModel, usage }
+      // Выполняем все запрошенные инструменты, собираем tool_result.
+      const toolUses = res.content.filter((b) => b.type === 'tool_use')
+      convo.push({ role: 'assistant', content: res.content })
+      const toolResults = []
+      for (const tu of toolUses) {
+        let resultStr
+        let isError = false
+        try {
+          const out = await options.executeTool(tu.name, tu.input)
+          resultStr = typeof out === 'string' ? out : JSON.stringify(out)
+        } catch (err) {
+          console.error(`[llm] tool "${tu.name}" failed:`, err.message)
+          resultStr = `Ошибка получения данных: ${err.message}`
+          isError = true // флаг API: модель явно видит, что инструмент упал
+        }
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: tu.id,
+          content: resultStr,
+          ...(isError ? { is_error: true } : {}),
+        })
+      }
+      convo.push({ role: 'user', content: toolResults })
+    }
+
+    // Петля исчерпана — отдаём последний текст (мог быть пустым).
+    return { text: lastText, model: lastModel, usage: totalUsage() }
+  } finally {
+    // Записываем usage и при исключении посреди петли: многораундовые вызовы —
+    // самые дорогие, без finally /cost систематически их недоучитывал.
+    if (totalIn > 0 || totalOut > 0 || totalCacheWrite > 0 || totalCacheRead > 0) {
+      maybeRecordUsage(options.meta, lastModel, totalUsage())
+    }
+  }
 }
 
 /**
@@ -161,9 +166,8 @@ export async function chat(messages, options = {}) {
  */
 export async function vision(imageBase64, prompt, options = {}) {
   const model = options.model ?? DEFAULT_MODEL
-  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
-  const res = await withTimeout(
-    client().messages.create({
+  const res = await createRequest(
+    {
       model,
       max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       messages: [
@@ -182,12 +186,12 @@ export async function vision(imageBase64, prompt, options = {}) {
           ],
         },
       ],
-    }),
-    timeout,
+    },
+    { timeout: options.timeout ?? DEFAULT_TIMEOUT_MS, maxRetries: options.retries ?? 2 },
   )
   maybeRecordUsage(options.meta, res.model, res.usage)
   return {
-    text: res.content?.[0]?.text ?? '',
+    text: extractText(res),
     model: res.model,
     usage: res.usage,
   }

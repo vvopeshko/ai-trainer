@@ -64,6 +64,9 @@ export default function HomePage() {
         body.programDayIndex = dayIndex
       }
       await apiPost('/api/v1/workouts', body)
+      // POST не возвращает план дня — инвалидируем, чтобы Home и WorkoutPage
+      // перечитали активную тренировку с сервера, а не из устаревшего кэша.
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
       navigate('/workout')
     } catch (err) {
       console.error('Failed to start workout:', err)
@@ -77,7 +80,13 @@ export default function HomePage() {
   const handleResume = async () => {
     if (!activeWorkout?.pausedAt) return
     const pauseDuration = Date.now() - new Date(activeWorkout.pausedAt).getTime()
-    resumeWorkoutMutation.mutate({ id: activeWorkout.id, pauseDuration })
+    // Ждём мутацию до navigate: WorkoutPage на маунте читает кэш one-shot и
+    // при мгновенном переходе увидел бы ещё pausedAt != null (двойной resume).
+    try {
+      await resumeWorkoutMutation.mutateAsync({ id: activeWorkout.id, pauseDuration })
+    } catch {
+      // Откат в onError вернул паузу — WorkoutPage покажет паузу, там можно повторить.
+    }
     navigate('/workout')
   }
 

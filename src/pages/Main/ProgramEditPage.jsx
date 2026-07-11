@@ -77,6 +77,24 @@ export default function ProgramEditPage() {
   const isDirty = editedPlan !== null || editedName !== null
   const plan = editedPlan ?? program?.planJson
 
+  // ─── Reset local state on program change ────────────────────────────
+  // Навигация «Другие программы» не ремонтирует компонент (тот же роут):
+  // без сброса экран продолжает показывать программу A, а handleSave
+  // отправил бы её editedPlan PATCH'ем в программу B — перезапись плана.
+  const loadedIdRef = useRef(id)
+  useEffect(() => {
+    if (loadedIdRef.current === id) return
+    loadedIdRef.current = id
+    setProgram(null)
+    setEditedPlan(null)
+    setEditedName(null)
+    setError(null)
+    setLoading(true)
+    setExpandedDays(new Set([0]))
+    setEditingExercise(null)
+    setEditingDayTitle(null)
+  }, [id])
+
   // ─── Sync fetched program into local state ──────────────────────────
 
   useEffect(() => {
@@ -88,7 +106,7 @@ export default function ProgramEditPage() {
       setError(true)
       setLoading(false)
     }
-  }, [fetchedProgram, programError]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchedProgram, programError, program])
 
   // ─── Ensure plan copy for edits ────────────────────────────────────
 

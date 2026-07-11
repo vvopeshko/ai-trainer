@@ -21,7 +21,12 @@ import { estimateCostUsd } from './llmCost.js'
 export function recordLlmUsage({ userId = null, feature, model, usage } = {}) {
   if (!feature || !model) return // неполные данные — нечего писать
 
-  const tokensInput = usage?.input_tokens ?? 0
+  // tokensInput — полный входной объём, включая кэш-токены (input_tokens от API
+  // НЕ включает cache read/write). Деньги считает estimateCostUsd по полному usage.
+  const tokensInput =
+    (usage?.input_tokens ?? 0) +
+    (usage?.cache_creation_input_tokens ?? 0) +
+    (usage?.cache_read_input_tokens ?? 0)
   const tokensOutput = usage?.output_tokens ?? 0
   const costUsd = estimateCostUsd(model, usage ?? {})
 

@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockPrisma = {
   exercise: {
     findUnique: vi.fn(),
-    create: vi.fn(),
+    upsert: vi.fn(),
   },
   $queryRaw: vi.fn(),
 }
 
 vi.mock('../utils/prisma.js', () => ({ default: mockPrisma }))
 
-const { resolveExercise } = await import('./exerciseResolver.js')
+const { resolveExercise, resolveExercisesBatch } = await import('./exerciseResolver.js')
 
 describe('exerciseResolver', () => {
   beforeEach(() => {
@@ -65,7 +65,7 @@ describe('exerciseResolver', () => {
   })
 
   describe('auto-create path', () => {
-    it('creates exercise when not found by slug or alias', async () => {
+    it('creates exercise via upsert when not found by slug or alias', async () => {
       // First findUnique (slug lookup) → null
       mockPrisma.exercise.findUnique
         .mockResolvedValueOnce(null)  // slug miss
@@ -78,7 +78,7 @@ describe('exerciseResolver', () => {
         nameRu: 'New Exercise',
         source: 'ai_generated',
       }
-      mockPrisma.exercise.create.mockResolvedValue(created)
+      mockPrisma.exercise.upsert.mockResolvedValue(created)
 
       const result = await resolveExercise({ slug: 'new-exercise', nameRu: 'New Exercise' })
 
@@ -87,8 +87,12 @@ describe('exerciseResolver', () => {
         exercise: created,
         resolvedBy: 'auto-create',
       })
-      expect(mockPrisma.exercise.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+      // upsert по slug (не check-then-create): гонка параллельных резолвов
+      // одного имени не роняет P2002, а возвращает существующую запись
+      expect(mockPrisma.exercise.upsert).toHaveBeenCalledWith({
+        where: { slug: 'new-exercise' },
+        update: {},
+        create: expect.objectContaining({
           slug: 'new-exercise',
           nameRu: 'New Exercise',
           source: 'ai_generated',
@@ -107,7 +111,71 @@ describe('exerciseResolver', () => {
 
       expect(result.resolvedBy).toBe('slug')
       expect(result.exerciseId).toBe('uuid-existing')
-      expect(mockPrisma.exercise.create).not.toHaveBeenCalled()
+      expect(mockPrisma.exercise.upsert).not.toHaveBeenCalled()
+    })
+
+    it('transliterates cyrillic names into a slug (Жим лёжа → zhim-lezha)', async () => {
+      mockPrisma.exercise.findUnique.mockResolvedValue(null)
+      mockPrisma.$queryRaw.mockResolvedValue([])
+      const created = { id: 'uuid-ru', slug: 'zhim-lezha', nameRu: 'Жим лёжа' }
+      mockPrisma.exercise.upsert.mockResolvedValue(created)
+
+      const result = await resolveExercise({ nameRu: 'Жим лёжа' })
+
+      expect(result.resolvedBy).toBe('auto-create')
+      expect(mockPrisma.exercise.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { slug: 'zhim-lezha' } }),
+      )
+    })
+
+    it('returns null instead of creating exercise with empty slug', async () => {
+      mockPrisma.exercise.findUnique.mockResolvedValue(null)
+      mockPrisma.$queryRaw.mockResolvedValue([])
+
+      // Только пунктуация/эмодзи → slugify даёт '' → защита каталога
+      const result = await resolveExercise({ nameRu: '💪 !!!' })
+
+      expect(result).toBeNull()
+      expect(mockPrisma.exercise.upsert).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('resolveExercisesBatch', () => {
+    it('deduplicates inputs and resolves each unique exercise once', async () => {
+      const exercise = { id: 'uuid-1', slug: 'bench-press', nameRu: 'Жим лёжа' }
+      mockPrisma.exercise.findUnique.mockResolvedValue(exercise)
+
+      const results = await resolveExercisesBatch([
+        { slug: 'bench-press', nameRu: 'Жим лёжа' },
+        { slug: 'bench-press' }, // дубликат — не должен дать второй запрос
+      ])
+
+      expect(results.size).toBe(1)
+      expect(results.get('bench-press').exerciseId).toBe('uuid-1')
+      expect(mockPrisma.exercise.findUnique).toHaveBeenCalledTimes(1)
+    })
+
+    it('maps failed resolves to null without rejecting the whole batch', async () => {
+      const exercise = { id: 'uuid-1', slug: 'bench-press', nameRu: 'Жим лёжа' }
+      mockPrisma.exercise.findUnique
+        .mockResolvedValueOnce(exercise)              // bench-press → ok
+        .mockRejectedValueOnce(new Error('db down'))  // broken → упал
+      mockPrisma.$queryRaw.mockResolvedValue([])
+
+      const results = await resolveExercisesBatch([
+        { slug: 'bench-press' },
+        { slug: 'broken-slug' },
+      ])
+
+      expect(results.get('bench-press').exerciseId).toBe('uuid-1')
+      expect(results.get('broken-slug')).toBeNull()
+    })
+
+    it('skips entries without any usable key', async () => {
+      const results = await resolveExercisesBatch([{}, { slug: '' }])
+
+      expect(results.size).toBe(0)
+      expect(mockPrisma.exercise.findUnique).not.toHaveBeenCalled()
     })
   })
 })

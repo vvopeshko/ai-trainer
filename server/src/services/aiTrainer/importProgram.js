@@ -19,7 +19,7 @@ import llm from '../../utils/llm.js'
 import prisma from '../../utils/prisma.js'
 import { track } from '../../utils/analytics.js'
 import { parseJsonFromLLM } from '../../utils/parseJsonFromLLM.js'
-import { resolveExercise } from '../exerciseResolver.js'
+import { resolveExercisesBatch } from '../exerciseResolver.js'
 
 // ─── Загрузка промптов ───────────────────────────────────────────────
 
@@ -132,25 +132,28 @@ export async function importProgram(userId, markdownText) {
 
   const data = programValidation.data
 
-  // 4. Привязка упражнений к БД через exerciseResolver
+  // 4. Привязка упражнений к БД через exerciseResolver.
+  // Собираем уникальные имена (включая alternatives) и резолвим одним батчем —
+  // последовательные await в цикле давали N+1 запросов к БД.
+  const toResolve = []
+  for (const day of data.days) {
+    for (const ex of day.exercises) {
+      toResolve.push({ slug: ex.slug, nameRu: ex.nameRu })
+      for (const altSlug of ex.alternatives ?? []) toResolve.push({ slug: altSlug })
+    }
+  }
+  const resolvedMap = await resolveExercisesBatch(toResolve)
+
   const resolvedDays = []
   for (const day of data.days) {
     const resolvedExercises = []
     for (const ex of day.exercises) {
-      const resolved = await resolveExercise({
-        slug: ex.slug,
-        nameRu: ex.nameRu,
-      })
-      // Резолвим alternatives slug → exerciseId
-      const resolvedAlts = []
-      if (ex.alternatives?.length > 0) {
-        for (const altSlug of ex.alternatives) {
-          try {
-            const alt = await resolveExercise({ slug: altSlug })
-            resolvedAlts.push(alt.exerciseId)
-          } catch { /* skip unresolved */ }
-        }
-      }
+      const resolved = resolvedMap.get(ex.slug)
+      if (!resolved) continue // мусорное имя от LLM — пропускаем, не создаём
+
+      const resolvedAlts = (ex.alternatives ?? [])
+        .map((altSlug) => resolvedMap.get(altSlug)?.exerciseId)
+        .filter(Boolean)
 
       resolvedExercises.push({
         exerciseId: resolved.exerciseId,
@@ -165,12 +168,18 @@ export async function importProgram(userId, markdownText) {
         alternatives: resolvedAlts,
       })
     }
+    if (resolvedExercises.length === 0) continue // день без единого упражнения не сохраняем
     resolvedDays.push({
       title: day.title,
       ...(day.durationMin && { durationMin: day.durationMin }),
       ...(day.notes && { notes: day.notes }),
       exercises: resolvedExercises,
     })
+  }
+
+  if (resolvedDays.length === 0) {
+    track(userId, 'program_import_failed', { reason: 'no_resolved_exercises' })
+    return { success: false, error: 'Не удалось распознать упражнения программы. Попробуй ещё раз.' }
   }
 
   // 5. Сохранение программы

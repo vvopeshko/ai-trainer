@@ -25,6 +25,10 @@ export function useCancelWorkout() {
         queryClient.setQueryData(queryKeys.workouts.active, context.prev)
       }
     },
+    onSettled: () => {
+      // Ресинк с сервером: optimistic-значение могло разойтись с реальностью.
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
+    },
   })
 }
 
@@ -56,6 +60,11 @@ export function useResumeWorkout() {
       if (context?.prev) {
         queryClient.setQueryData(queryKeys.workouts.active, context.prev)
       }
+    },
+    onSettled: () => {
+      // Optimistic totalPausedMs считается по клиентским часам (clock skew) —
+      // после ответа сервера подтягиваем серверную правду.
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
     },
   })
 }
@@ -113,9 +122,13 @@ export function useDeleteWorkout() {
         queryClient.setQueryData(queryKeys.workouts.recent, context.prev)
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _err, id) => {
       queryClient.invalidateQueries({ queryKey: ['stats'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
+      // Удаление сегодняшней тренировки меняет расчёт следующего дня программы.
+      queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
+      // Детали закэшированы со staleTime: Infinity — убираем мёртвую запись.
+      queryClient.removeQueries({ queryKey: queryKeys.workouts.detail(id) })
     },
   })
 }

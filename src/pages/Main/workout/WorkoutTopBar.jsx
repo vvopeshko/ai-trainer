@@ -1,13 +1,37 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { Glass } from '../../../components/ui/Glass.jsx'
 import { Icon } from '../../../components/ui/Icon.jsx'
 
 // ─── WorkoutTopBar (glass_v3: Glass strong, timer, progress, ГОТОВО) ────
 
-export function WorkoutTopBar({ elapsed, exerciseNum, totalExercises, doneSetCount, totalSetCount, onBack, onFinish, onCancel, hasAnySets, paused, onPause, onResume }) {
+// Чистое время тренировки в секундах (пауза вычитается).
+function calcElapsed(startedAt, totalPausedMs, pausedAt) {
+  const end = pausedAt ?? Date.now()
+  return Math.max(0, Math.floor((end - startedAt - (totalPausedMs || 0)) / 1000))
+}
+
+// Таймер тикает ВНУТРИ топбара (как в HeroBlock): секундный setState в корне
+// WorkoutPage ре-рендерил всю страницу (~1400 строк) каждую секунду тренировки.
+export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum, totalExercises, doneSetCount, totalSetCount, onBack, onFinish, onCancel, hasAnySets, onPause, onResume }) {
   const { t } = useTranslation()
-  const mm = String(Math.floor(elapsed / 60)).padStart(1, '0')
-  const ss = String(elapsed % 60).padStart(2, '0')
+  const paused = pausedAt != null
+
+  const [elapsed, setElapsed] = useState(() =>
+    startedAt ? calcElapsed(startedAt, totalPausedMs, pausedAt) : 0,
+  )
+  useEffect(() => {
+    if (!startedAt || pausedAt) return
+    const tick = () => setElapsed(calcElapsed(startedAt, totalPausedMs, null))
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [startedAt, pausedAt, totalPausedMs])
+
+  // На паузе показываем «замороженное» значение, не последний тик.
+  const displayElapsed = startedAt && pausedAt ? calcElapsed(startedAt, totalPausedMs, pausedAt) : elapsed
+  const mm = String(Math.floor(displayElapsed / 60)).padStart(1, '0')
+  const ss = String(displayElapsed % 60).padStart(2, '0')
 
   return (
     <div style={{ position: 'relative', zIndex: 1, padding: 'calc(12px + var(--safe-top, 0px)) 12px 8px' }}>

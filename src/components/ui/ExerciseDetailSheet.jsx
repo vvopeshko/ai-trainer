@@ -6,7 +6,7 @@
  *
  * Used on WorkoutPage, LibraryPage, ProgramEditPage.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../TelegramProvider.jsx'
 import { openTrainerChat } from '../../utils/askTrainer.js'
@@ -647,23 +647,24 @@ function MusclesTab({ exercise, t }) {
       )}
 
       {/* Characteristics */}
-      {(exercise.difficulty || exercise.category) && (
-        <div>
-          <SectionLabel>{t('exercise.characteristics')}</SectionLabel>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-            {exercise.difficulty && (
-              <Chip variant="meta" icon="activity">
-                {t(`library.diff.${exercise.difficulty}`)}
-              </Chip>
-            )}
-            {exercise.category && (
-              <Chip variant="meta" icon="zap">
-                {t(`library.cat.${exercise.category}`)}
-              </Chip>
-            )}
+      {(() => {
+        // t() возвращает сам ключ, если перевода нет — такие чипы скрываем,
+        // чтобы не светить сырые ключи вида «library.cat.strength»
+        const diffKey = exercise.difficulty ? `library.diff.${exercise.difficulty}` : null
+        const diffLabel = diffKey && t(diffKey) !== diffKey ? t(diffKey) : null
+        const catKey = exercise.category ? `library.cat.${exercise.category}` : null
+        const catLabel = catKey && t(catKey) !== catKey ? t(catKey) : null
+        if (!diffLabel && !catLabel) return null
+        return (
+          <div>
+            <SectionLabel>{t('exercise.characteristics')}</SectionLabel>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {diffLabel && <Chip variant="meta" icon="activity">{diffLabel}</Chip>}
+              {catLabel && <Chip variant="meta" icon="zap">{catLabel}</Chip>}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
     </div>
   )
@@ -959,14 +960,43 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
     }
   }, [exercise?.slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Дебаунс PUT настроек: каждый тик степпера ± дёргал сервер отдельным
+  // запросом. Копим последнее значение и шлём один раз через 500мс,
+  // с гарантированным flush при закрытии шита / анмаунте.
+  const saveTimerRef = useRef(null)
+  const pendingSaveRef = useRef(null) // { slug, settings } — ещё не отправленное на сервер
+
+  const flushPendingSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    if (pendingSaveRef.current) {
+      const { slug, settings: pending } = pendingSaveRef.current
+      pendingSaveRef.current = null
+      saveSettingsToServer(slug, pending)
+    }
+  }, [])
+
   const handleSettingsChange = useCallback((newSettings) => {
     setSettings(newSettings)
     if (exercise?.slug) {
+      // localStorage — сразу (это кэш-источник для тренировки),
+      // сервер — с дебаунсом 500мс
       setExerciseSettings(exercise.slug, newSettings)
-      saveSettingsToServer(exercise.slug, newSettings)
+      pendingSaveRef.current = { slug: exercise.slug, settings: newSettings }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(flushPendingSave, 500)
     }
     onSettingsChange?.(newSettings)
-  }, [exercise?.slug, onSettingsChange])
+  }, [exercise?.slug, onSettingsChange, flushPendingSave])
+
+  // Flush при закрытии шита и при анмаунте — последнее значение гарантированно уходит
+  useEffect(() => {
+    if (!open) flushPendingSave()
+  }, [open, flushPendingSave])
+
+  useEffect(() => flushPendingSave, [flushPendingSave])
 
   const handleSave = useCallback(() => {
     if (exercise?.slug && settings) {

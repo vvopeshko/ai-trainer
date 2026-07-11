@@ -17,41 +17,66 @@ export async function create(req, res) {
     })
     .parse(req.body)
 
-  // Всё в транзакции — защита от race condition при двойном клике
-  const result = await prisma.$transaction(async (tx) => {
-    const existing = await tx.workout.findFirst({
-      where: { userId: req.user.id, finishedAt: null },
-      include: {
-        sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
-      },
-    })
-
-    if (existing) {
-      if (existing.sets.length === 0) {
-        await tx.workout.delete({ where: { id: existing.id } })
-      } else {
-        return { workout: existing, resumed: true }
-      }
-    }
-
-    if (data.programId) {
-      const program = await tx.program.findFirst({
-        where: { id: data.programId, userId: req.user.id },
-        select: { id: true },
+  // Всё в транзакции — защита от race condition при двойном клике.
+  // Serializable: на дефолтном ReadCommitted параллельные findFirst+create
+  // не сериализуются и дают две активные тренировки. При конфликте Postgres
+  // отклоняет одну из транзакций (Prisma → P2034) — повторяем её.
+  // Более сильное решение — partial unique index
+  //   CREATE UNIQUE INDEX ON "Workout"("userId") WHERE "finishedAt" IS NULL
+  // но это ручной SQL на проде (миграций в проекте нет, БД общая с продом).
+  const runTx = () =>
+    prisma.$transaction(async (tx) => {
+      const existing = await tx.workout.findFirst({
+        where: { userId: req.user.id, finishedAt: null },
+        include: {
+          sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+        },
       })
-      if (!program) return { status: 403, error: 'Program not found' }
-    }
 
-    const workout = await tx.workout.create({
-      data: {
-        userId: req.user.id,
-        programId: data.programId ?? null,
-        programDayIndex: data.programDayIndex ?? null,
-      },
-      include: { sets: true },
-    })
-    return { workout, resumed: false, created: true }
-  })
+      if (existing) {
+        if (existing.sets.length === 0) {
+          await tx.workout.delete({ where: { id: existing.id } })
+        } else {
+          return { workout: existing, resumed: true }
+        }
+      }
+
+      if (data.programId) {
+        const program = await tx.program.findFirst({
+          where: { id: data.programId, userId: req.user.id },
+          select: { id: true, planJson: true },
+        })
+        if (!program) return { status: 404, error: 'Program not found' }
+
+        // programDayIndex за пределами дней программы — ошибка клиента
+        const daysCount = program.planJson?.days?.length ?? 0
+        if (data.programDayIndex != null && data.programDayIndex >= daysCount) {
+          return { status: 400, error: 'programDayIndex is out of range' }
+        }
+      }
+
+      const workout = await tx.workout.create({
+        data: {
+          userId: req.user.id,
+          programId: data.programId ?? null,
+          programDayIndex: data.programDayIndex ?? null,
+        },
+        include: { sets: true },
+      })
+      return { workout, resumed: false, created: true }
+    }, { isolationLevel: 'Serializable' })
+
+  // Retry при serialization failure (P2034) — до 2 повторов
+  let result
+  for (let attempt = 0; ; attempt++) {
+    try {
+      result = await runTx()
+      break
+    } catch (err) {
+      if (err?.code === 'P2034' && attempt < 2) continue
+      throw err
+    }
+  }
 
   if (result.error) return res.status(result.status).json({ error: result.error })
   if (result.resumed) return res.json({ workout: result.workout, resumed: true })
@@ -352,10 +377,13 @@ export async function update(req, res) {
     totalPausedMs += Date.now() - new Date(workout.pausedAt).getTime()
   }
 
-  // Если 0 подходов — удаляем вместо завершения (пустая тренировка)
-  const setsCount = await prisma.workoutSet.count({ where: { workoutId: id } })
-  if (setsCount === 0) {
-    await prisma.workout.delete({ where: { id } })
+  // Если 0 подходов — удаляем вместо завершения (пустая тренировка).
+  // Одним атомарным statement (count + delete раздельно = окно гонки:
+  // параллельный logSet между ними терял бы подход при cascade-удалении).
+  const { count: deletedCount } = await prisma.workout.deleteMany({
+    where: { id, sets: { none: {} } },
+  })
+  if (deletedCount > 0) {
     return res.json({ workout: null, deleted: true })
   }
 
@@ -365,7 +393,9 @@ export async function update(req, res) {
       finishedAt: new Date(),
       pausedAt: null,
       totalPausedMs,
-      feltRating: data.feltRating ?? null,
+      // ?? workout.feltRating (не null): finish без рейтинга не должен
+      // затирать ранее сохранённый — симметрично notes ниже
+      feltRating: data.feltRating ?? workout.feltRating,
       notes: data.notes ?? workout.notes,
     },
     include: {

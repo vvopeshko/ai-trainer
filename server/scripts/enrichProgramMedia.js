@@ -201,7 +201,7 @@ async function generateSearchQueries(exercise) {
 ["запрос 1", "query 2", "query 3"]`,
       },
     ],
-    { model: LLM_MODEL, maxTokens: 256 }
+    { model: LLM_MODEL, maxTokens: 256, meta: { feature: 'enrich_media' } }
   )
 
   const queries = parseJsonFromLLM(text)
@@ -268,7 +268,7 @@ ${candidateList}
 [1, 3, 5]`,
       },
     ],
-    { model: LLM_MODEL, maxTokens: 128 }
+    { model: LLM_MODEL, maxTokens: 128, meta: { feature: 'enrich_media' } }
   )
 
   const indices = parseJsonFromLLM(text)

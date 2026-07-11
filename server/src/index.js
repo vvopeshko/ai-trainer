@@ -7,6 +7,7 @@ import { registerJobs } from './scheduler/jobs.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { globalLimiter } from './middleware/rateLimiter.js'
+import prisma from './utils/prisma.js'
 
 // BigInt → JSON monkey-patch.
 //
@@ -20,6 +21,10 @@ BigInt.prototype.toJSON = function () {
 
 const PORT = Number(process.env.PORT) || 3001
 const app = express()
+
+// Railway ставит бэкенд за один прокси-хоп: без trust proxy req.ip — это IP
+// прокси, и глобальный rate limiter лимитировал бы всех юзеров одним бакетом.
+app.set('trust proxy', 1)
 
 app.use(
   cors({
@@ -58,7 +63,13 @@ if (process.env.BOT_TOKEN) {
       console.log(`[bot] launched as @${me.username}`)
     })
     .catch((err) => console.error('[bot] failed to connect:', err.message))
-  bot.launch().catch((err) => console.error('[bot] crashed:', err))
+  // Упавший long polling иначе оставляет процесс жить с мёртвым ботом
+  // (health-check зелёный, бот молчит). exit(1) → Railway перезапустит.
+  // NB: в Telegraf v4 launch() резолвится при ОСТАНОВКЕ бота — exit только в catch.
+  bot.launch().catch((err) => {
+    console.error('[bot] crashed:', err)
+    process.exit(1)
+  })
 
   // Шедулер проактивных сообщений запускается только при наличии бота
   // (без него notify() некуда слать).
@@ -73,7 +84,23 @@ function shutdown(signal) {
   console.log(`[app] ${signal} — shutting down`)
   stopScheduler()
   if (bot) bot.stop(signal)
-  server.close(() => process.exit(0))
+  server.close(() => {
+    // Закрываем пул соединений Prisma после того, как Express дообработал запросы
+    prisma.$disconnect().finally(() => process.exit(0))
+  })
+  // Keep-alive соединения могут держать server.close() бесконечно — force-exit.
+  // unref(): таймер не мешает процессу завершиться раньше штатно.
+  setTimeout(() => {
+    console.error('[app] forced exit: shutdown timed out after 10s')
+    process.exit(1)
+  }, 10_000).unref()
 }
 process.once('SIGINT', () => shutdown('SIGINT'))
 process.once('SIGTERM', () => shutdown('SIGTERM'))
+
+// Незамеченный rejection (fire-and-forget промис без .catch) по умолчанию
+// роняет весь процесс (Node 15+). Логируем вместо падения: единичный забытый
+// .catch в track()/notify() не должен убивать API и бота.
+process.on('unhandledRejection', (reason) => {
+  console.error('[app] unhandled rejection:', reason)
+})
