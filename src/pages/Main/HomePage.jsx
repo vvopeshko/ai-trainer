@@ -330,7 +330,7 @@ export default function HomePage() {
                     color: 'var(--fg-primary)',
                     flex: 1,
                   }}>
-                    {`День ${idx + 1} · ${day.title}`}
+                    {`${t('home.dayN', { n: idx + 1 })} · ${day.title}`}
                   </span>
                   {isPlanned && (
                     <span style={{

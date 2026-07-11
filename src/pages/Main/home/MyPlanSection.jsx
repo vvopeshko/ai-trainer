@@ -21,13 +21,13 @@ export function MyPlanSection({ planAdherence, program, onProgramTap }) {
     const end = new Date(start)
     end.setDate(start.getDate() + 6)
 
-    const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+    const months = t('home.monthsShort').split(',')
     const sD = start.getDate()
     const sM = months[start.getMonth()]
     const eD = end.getDate()
     const eM = months[end.getMonth()]
     return sM === eM ? `${sD}–${eD} ${sM}` : `${sD} ${sM} – ${eD} ${eM}`
-  }, [planAdherence])
+  }, [planAdherence, t])
 
   const remaining = Math.max(0, planned - done)
 

@@ -36,7 +36,7 @@ export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum,
   return (
     <div style={{ position: 'relative', zIndex: 1, padding: 'calc(12px + var(--safe-top, 0px)) 12px 8px' }}>
       <Glass variant="strong" padding="8px 8px 8px 6px" radius={12} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onBack} style={{
+        <button onClick={onBack} aria-label={t('a11y.back')} style={{
           width: 32, height: 32, borderRadius: 9,
           background: 'rgba(255,255,255,0.04)', border: 'none',
           color: '#ECEAEF', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -68,7 +68,7 @@ export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum,
         </div>
 
         {/* Pause / Resume button */}
-        <button onClick={paused ? onResume : onPause} style={{
+        <button onClick={paused ? onResume : onPause} aria-label={paused ? t('a11y.resume') : t('a11y.pause')} style={{
           width: 32, height: 32, borderRadius: 9,
           background: paused ? 'hsla(var(--accent-h,158),55%,55%,0.15)' : 'rgba(255,255,255,0.04)',
           border: 'none',

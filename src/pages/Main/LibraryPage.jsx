@@ -77,6 +77,7 @@ function Chip({ label, active, icon, onClick }) {
 // ─── Search Bar ───────────────────────────────────────────────────────
 
 function SearchBar({ value, onChange, placeholder }) {
+  const { t } = useTranslation()
   const inputRef = useRef(null)
 
   return (
@@ -107,6 +108,7 @@ function SearchBar({ value, onChange, placeholder }) {
       {value && (
         <button
           onClick={() => { onChange(''); inputRef.current?.focus() }}
+          aria-label={t('a11y.clearSearch')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--fg-tertiary)' }}
         >
           <Icon name="x" size={16} strokeWidth={2} />

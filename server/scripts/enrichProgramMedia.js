@@ -66,7 +66,8 @@ const manualSearches = {
 
 function parseArgs() {
   const args = process.argv.slice(2)
-  let telegramId = BigInt(process.env.ADMIN_TELEGRAM_ID || '383934339')
+  // Дефолт — dev-юзер (telegramId=0), либо ADMIN_TELEGRAM_ID из env, либо --telegramId=.
+  let telegramId = BigInt(process.env.ADMIN_TELEGRAM_ID || '0')
   let skipGif = false
   let skipYoutube = false
 
@@ -134,7 +135,12 @@ async function searchOSS(query) {
   if (res.status !== 200) return []
   const text = await res.text()
   if (text.startsWith('<')) return null
-  return JSON.parse(text).data || []
+  try {
+    return JSON.parse(text).data || []
+  } catch (err) {
+    console.warn(`[GIF] Failed to parse OSS response for "${query}": ${err.message}`)
+    return []
+  }
 }
 
 async function enrichGifs(exercises) {
@@ -271,28 +277,38 @@ ${candidateList}
     { model: LLM_MODEL, maxTokens: 128, meta: { feature: 'enrich_media' } }
   )
 
+  const toVideo = (c) => ({
+    url: c.url,
+    title: c.title,
+    channel: c.channel,
+    source: 'youtube',
+    lang: /[а-яА-ЯёЁ]/.test(c.title) ? 'ru' : 'en',
+  })
+  const fallback = () => candidates.slice(0, 3).map(toVideo)
+
   const indices = parseJsonFromLLM(text)
   if (!Array.isArray(indices)) {
     console.warn(`[YT] Failed to parse ranking for "${exercise.nameRu}", taking first 3`)
-    return candidates.slice(0, 3).map(c => ({
-      url: c.url,
-      title: c.title,
-      channel: c.channel,
-      source: 'youtube',
-      lang: /[а-яА-ЯёЁ]/.test(c.title) ? 'ru' : 'en',
-    }))
+    return fallback()
   }
 
-  return indices
-    .map(i => candidates[i - 1])
-    .filter(Boolean)
-    .map(c => ({
-      url: c.url,
-      title: c.title,
-      channel: c.channel,
-      source: 'youtube',
-      lang: /[а-яА-ЯёЁ]/.test(c.title) ? 'ru' : 'en',
-    }))
+  // Индексы 1-based от LLM — валидируем диапазон [1..candidates.length] и целочисленность.
+  // Мусорные (дубли, out-of-range, не числа) отбрасываем; при полном мусоре — первые 3.
+  const seen = new Set()
+  const selected = []
+  for (const raw of indices) {
+    const i = Number(raw)
+    if (!Number.isInteger(i) || i < 1 || i > candidates.length || seen.has(i)) continue
+    seen.add(i)
+    selected.push(candidates[i - 1])
+  }
+
+  if (selected.length === 0) {
+    console.warn(`[YT] No valid indices from LLM for "${exercise.nameRu}", taking first 3`)
+    return fallback()
+  }
+
+  return selected.map(toVideo)
 }
 
 async function enrichYouTube(exercises) {

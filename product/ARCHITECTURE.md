@@ -176,15 +176,21 @@ flowchart TB
   → 200 { program }
 ```
 
-**(E) Еженедельная сводка (шедулер)**
+**(E) Проактивные сообщения (шедулер)**
 
 ```
-node-cron '0 10 * * 1' (понедельник 10:00 UTC — упрощённо на старте)
-  → для каждого активного юзера:
-      - fetch Workouts за последнюю неделю + ключевые метрики (тоннаж, прогресс в базе)
-      - services/aiTrainer/analyzeProgress.js → текст сводки
-      - bot.sendMessage(сводка + кнопка "Открыть мини-апп")
-  → track('weekly_summary_sent', ...)
+node-cron '0 * * * *' (почасовой тик; scheduler/index.js)
+  → для каждого юзера считаем локальное время по User.timezone (fallback Europe/Moscow)
+  → спрашиваем зарегистрированные джобы (scheduler/jobs.js), пора ли слать:
+      • weekly-сводка — воскресенье 19:00 локального времени юзера (weeklySummary.js);
+      • напоминание «Готов вернуться?» — ежедневно 12:00 при 7+ днях тишины (reminder.js);
+  → идемпотентность: claimNotification() пишет NotificationLog, дубль по
+    @@unique([userId, kind, periodKey]) = уже слали, пропуск.
+
+node-cron '0 4 * * *' (суточная чистка; scheduler/retention.js)
+  → deleteMany старых строк AnalyticsEvent/LlmUsage (90 дн),
+    NotificationLog / consumed PendingChatContext (30 дн). ChatMessage не трогаем.
+    Отключается DISABLE_RETENTION=true.
 ```
 
 ### 2.3 Принципы архитектуры

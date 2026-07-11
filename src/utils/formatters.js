@@ -8,7 +8,7 @@
 export function formatDuration(sec, t) {
   if (sec == null) return null
   const mins = Math.round(sec / 60)
-  if (mins < 1) return '< 1 мин'
+  if (mins < 1) return t('home.durationLessMin')
   return t('home.durationMin', { n: mins })
 }
 

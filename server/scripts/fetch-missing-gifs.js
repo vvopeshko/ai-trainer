@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fetch missing GIF URLs from ExerciseDB OSS API.
- * Run when rate limits allow: node server/data/fetch-missing-gifs.js
+ * Run when rate limits allow: node server/scripts/fetch-missing-gifs.js
  *
  * ExerciseDB OSS free tier has aggressive rate limiting (~25-50 requests before 503).
  * Increase DELAY_MS if you're getting rate limited.
@@ -10,7 +10,8 @@ const fs = require('fs');
 const path = require('path');
 
 const DELAY_MS = 4000;
-const DATA_FILE = path.join(__dirname, 'enriched-exercises.json');
+// Скрипт лежит в server/scripts/, а данные — в server/data/.
+const DATA_FILE = path.join(__dirname, '..', 'data', 'enriched-exercises.json');
 
 const manualSearches = {
   'Cable Face Pull': 'face pull',

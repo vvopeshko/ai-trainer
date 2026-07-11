@@ -253,7 +253,7 @@ function WorkoutDetailSheet({ recentItem, workoutDetail, onClose }) {
                       {si + 1}.
                     </span>
                     <span>
-                      {s.weightKg != null ? `${s.weightKg} кг × ${s.reps}` : `× ${s.reps}`}
+                      {s.weightKg != null ? `${s.weightKg} ${t('units.kg')} × ${s.reps}` : `× ${s.reps}`}
                     </span>
                     {s.isWarmup && (
                       <span style={{
@@ -263,7 +263,7 @@ function WorkoutDetailSheet({ recentItem, workoutDetail, onClose }) {
                         borderRadius: 4,
                         padding: '1px 4px',
                       }}>
-                        разм.
+                        {t('units.warmup')}
                       </span>
                     )}
                     {s.rpe != null && (
@@ -534,7 +534,7 @@ export default function ProgressPage() {
         <StatTile label={t('home.workouts')} value={monthStats?.workouts ?? 0} icon="calendar" />
         <StatTile
           label={t('home.tonnage')}
-          value={monthStats?.tonnageKg >= 1000 ? `${(monthStats.tonnageKg / 1000).toFixed(1)}т` : `${monthStats?.tonnageKg ?? 0}кг`}
+          value={monthStats?.tonnageKg >= 1000 ? `${(monthStats.tonnageKg / 1000).toFixed(1)}${t('units.tonnes')}` : `${monthStats?.tonnageKg ?? 0}${t('units.kg')}`}
           icon="trendingUp"
         />
         <StatTile label={t('home.streak')} value={monthStats?.streak ?? 0} icon="flame" />

@@ -1,9 +1,11 @@
+import { useTranslation } from '../../../i18n/useTranslation.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
 import { SwipeRow } from '../../../components/ui/SwipeRow.jsx'
 
 // ─── DoneSetRow (compact done set inside active card) ────────────────────
 
 export function DoneSetRow({ index, weight, reps, onDelete }) {
+  const { t } = useTranslation()
   const content = (
     <div style={{
       padding: '9px 12px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10,
@@ -20,7 +22,7 @@ export function DoneSetRow({ index, weight, reps, onDelete }) {
         fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.4)',
         textTransform: 'uppercase', letterSpacing: '0.04em',
       }}>
-        подход {index + 1}
+        {t('units.set')} {index + 1}
       </div>
       <span style={{
         fontFamily: 'var(--font-mono)', fontSize: 13.5, flex: 1,

@@ -43,3 +43,6 @@ coverage/
 
 # Claude Code local working directory (per-user)
 .claude/
+
+# Бинарные архивы прототипов (распакованная версия рядом в git)
+*.tar.gz

@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
+import { useTranslation } from '../../../i18n/useTranslation.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
 
-const WEEKDAYS_RU = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
+const WEEKDAY_KEYS = ['home.wdMon', 'home.wdTue', 'home.wdWed', 'home.wdThu', 'home.wdFri', 'home.wdSat', 'home.wdSun']
 
 function getWeekDates() {
   const now = new Date()
@@ -41,6 +42,7 @@ function isToday(d) {
  * planned (glass circle + border, faded dumbbell), rest (just date number).
  */
 export function WeekCalendar({ doneDates = [], plannedDayIndices = [] }) {
+  const { t } = useTranslation()
   const weekDates = useMemo(() => getWeekDates(), [])
   const doneSet = useMemo(() => new Set(doneDates), [doneDates])
 
@@ -76,7 +78,7 @@ export function WeekCalendar({ doneDates = [], plannedDayIndices = [] }) {
               color: today ? '#fff' : 'rgba(255,255,255,0.55)',
               whiteSpace: 'nowrap',
             }}>
-              {today ? 'СЕГОДНЯ' : WEEKDAYS_RU[i]}
+              {today ? t('home.todayShort') : t(WEEKDAY_KEYS[i])}
             </span>
 
             {isRest ? (

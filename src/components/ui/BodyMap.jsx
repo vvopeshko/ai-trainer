@@ -122,7 +122,10 @@ export function BodyMap({ muscles, height = 240, onMuscleClick }) {
   useEffect(() => {
     if (!frontRef.current || !backRef.current) return
     const bodyState = buildBodyState(muscles)
-    const clickHandler = onMuscleClick ? (id) => handleClick(id) : undefined
+    // Всегда пробрасываем handler через ref (onClickRef): если onMuscleClick
+    // появится/сменится уже после монтирования, актуальный колбэк подхватится.
+    // handleClick — no-op, когда onClickRef.current пуст.
+    const clickHandler = (id) => handleClick(id)
 
     frontChart.current = new BodyChart(frontRef.current, {
       view: ViewSide.FRONT,

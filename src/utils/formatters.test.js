@@ -5,6 +5,7 @@ import { formatDuration, formatDateLine, WEEKDAYS_RU } from './formatters.js'
 const t = (key, params) => {
   const templates = {
     'home.durationMin': `${params?.n} мин`,
+    'home.durationLessMin': '< 1 мин',
     'home.today': 'Сегодня',
     'home.yesterday': 'Вчера',
     'home.daysAgo': `${params?.n} дн. назад`,

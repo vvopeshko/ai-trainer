@@ -786,6 +786,7 @@ export default function ProgramEditPage() {
                         {/* Info button */}
                         <button
                           onClick={(e) => { e.stopPropagation(); setDetailExerciseId(ex.exerciseId) }}
+                          aria-label={t('a11y.exerciseInfo')}
                           style={{
                             width: 28, height: 28, borderRadius: 7, flexShrink: 0,
                             background: 'rgba(255,255,255,0.04)',
@@ -800,6 +801,7 @@ export default function ProgramEditPage() {
                         {/* Remove button */}
                         <button
                           onClick={() => handleRemoveExercise(dayIdx, exIdx)}
+                          aria-label={t('a11y.removeExercise')}
                           style={{
                             width: 28, height: 28, borderRadius: 7, flexShrink: 0,
                             background: 'rgba(255,255,255,0.04)',

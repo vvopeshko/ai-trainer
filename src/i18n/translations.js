@@ -7,6 +7,30 @@ export const translations = {
     'app.title': 'AI Trainer',
     'app.tagline': 'Твой AI-тренер в Telegram',
 
+    // Единицы (компактные аббревиатуры). По правилу проекта даже технические
+    // сокращения выводятся через t(), а не хардкодятся в JSX.
+    'units.kg': 'кг',
+    'units.kgCaps': 'КГ',
+    'units.lbs': 'lbs',
+    'units.lbsCaps': 'LBS',
+    'units.reps': 'повт',
+    'units.set': 'подход',
+    'units.warmup': 'разм.',
+    'units.tonnes': 'т',
+    'units.hoursShort': 'ч',
+    'units.minsShort': 'м',
+
+    // Доступность (aria-label для иконочных кнопок)
+    'a11y.back': 'Назад',
+    'a11y.pause': 'Пауза',
+    'a11y.resume': 'Продолжить',
+    'a11y.exerciseInfo': 'Информация об упражнении',
+    'a11y.swapExercise': 'Заменить упражнение',
+    'a11y.removeExercise': 'Убрать упражнение',
+    'a11y.notifications': 'Уведомления',
+    'a11y.clearSearch': 'Очистить поиск',
+    'a11y.delete': 'Удалить',
+
     'workout.title': 'Тренировка',
     'workout.empty': 'Пока нет записанных подходов.',
     'workout.helloUser': 'Привет, {{name}}!',
@@ -67,6 +91,7 @@ export const translations = {
     'workout.swapConfirmMessage': 'Сделанные подходы ({{count}}) будут сброшены.',
     'workout.swapConfirmBtn': 'Заменить',
     'workout.undoSet': 'отменить последний',
+    'workout.exerciseShort': 'упр {{n}}',
 
     // Home screen (BRD §12.1)
     'home.yearGoal': '{{done}} / {{target}} тренировок',
@@ -125,6 +150,18 @@ export const translations = {
     'home.statTonnage': 'тоннаж',
     'home.statStreak': 'подряд',
     'home.statRecords': 'рекорд',
+    'home.durationLessMin': '< 1 мин',
+    'home.todayShort': 'СЕГОДНЯ',
+    // Недельный календарь (Пн-первый)
+    'home.wdMon': 'ПН',
+    'home.wdTue': 'ВТ',
+    'home.wdWed': 'СР',
+    'home.wdThu': 'ЧТ',
+    'home.wdFri': 'ПТ',
+    'home.wdSat': 'СБ',
+    'home.wdSun': 'ВС',
+    // Короткие названия месяцев (для диапазона недели) — читаются через split(',')
+    'home.monthsShort': 'янв,фев,мар,апр,май,июн,июл,авг,сен,окт,ноя,дек',
 
     // Confirm dialog
     'confirm.cancel': 'Отмена',
@@ -289,6 +326,8 @@ export const translations = {
     'summary.exercises': 'Упражнений',
     'summary.tonnage': 'Тоннаж',
     'summary.backHome': 'К программе',
+    'summary.timeHm': '{{h}}{{hUnit}} {{m}}{{mUnit}}',
+    'summary.timeMin': '{{m}} мин',
   },
 }
 

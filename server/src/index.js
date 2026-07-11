@@ -3,6 +3,7 @@ import cors from 'cors'
 import { createBot } from './bot/index.js'
 import { setBot, setBotUsername } from './bot/notifier.js'
 import { startScheduler, stopScheduler } from './scheduler/index.js'
+import { startRetention, stopRetention } from './scheduler/retention.js'
 import { registerJobs } from './scheduler/jobs.js'
 import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -79,10 +80,14 @@ if (process.env.BOT_TOKEN) {
   console.warn('[bot] BOT_TOKEN not set — bot is disabled')
 }
 
+// Суточная чистка тех-таблиц — независима от бота (это обслуживание БД).
+startRetention()
+
 // Graceful shutdown.
 function shutdown(signal) {
   console.log(`[app] ${signal} — shutting down`)
   stopScheduler()
+  stopRetention()
   if (bot) bot.stop(signal)
   server.close(() => {
     // Закрываем пул соединений Prisma после того, как Express дообработал запросы

@@ -116,7 +116,10 @@ export async function getAllSettings(req, res) {
  * Upsert exercise settings for a given slug.
  */
 export async function upsertSettings(req, res) {
-  const { slug } = req.params
+  // slug приходит из URL — валидируем как непустую строку разумной длины.
+  const { slug } = z
+    .object({ slug: z.string().min(1).max(200) })
+    .parse(req.params)
 
   const body = z.object({
     preset: z.string().nullable().optional(),
@@ -126,7 +129,12 @@ export async function upsertSettings(req, res) {
     minWeight: z.number().min(0).optional(),
     maxWeight: z.number().positive().optional(),
     type: z.enum(['reps', 'timer']).optional(),
-  }).parse(req.body)
+  })
+    .refine((b) => b.minWeight == null || b.maxWeight == null || b.minWeight <= b.maxWeight, {
+      message: 'minWeight must be <= maxWeight',
+      path: ['minWeight'],
+    })
+    .parse(req.body)
 
   const record = await prisma.userExerciseSettings.upsert({
     where: {

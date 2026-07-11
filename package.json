@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "AI Trainer — Telegram Mini App for self-guided gym training",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

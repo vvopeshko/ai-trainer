@@ -971,7 +971,7 @@ export default function WorkoutPage() {
     : []
 
   return (
-    <div style={{ background: '#08080B', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
       {/* WorkoutTopBar */}
       <WorkoutTopBar
         startedAt={startedAt}
@@ -1062,7 +1062,7 @@ export default function WorkoutPage() {
                 }} />
                 {t('workout.now')} · {hasPlan
                   ? t('workout.exerciseOf', { n: planIndex + 1, total: planExercises.length })
-                  : `упр ${currentExerciseNum}`
+                  : t('workout.exerciseShort', { n: currentExerciseNum })
                 }
               </div>
               <div style={{
@@ -1076,6 +1076,7 @@ export default function WorkoutPage() {
                 </div>
                 <button
                   onClick={() => setDetailExerciseId(currentExercise.id)}
+                  aria-label={t('a11y.exerciseInfo')}
                   style={{
                     width: 28, height: 28, borderRadius: 7, flexShrink: 0,
                     background: 'rgba(255,255,255,0.06)',
@@ -1107,7 +1108,7 @@ export default function WorkoutPage() {
                   color: 'rgba(236,234,239,0.4)',
                   letterSpacing: '0.02em',
                 }}>
-                  {exerciseSettings.unit === 'lbs' ? 'LBS' : 'КГ'}
+                  {exerciseSettings.unit === 'lbs' ? t('units.lbsCaps') : t('units.kgCaps')}
                 </span>
               </div>
             </div>
@@ -1248,7 +1249,7 @@ export default function WorkoutPage() {
                             color: 'rgba(236,234,239,0.2)', textAlign: 'right',
                           }}>
                             {lastSet
-                              ? `${lastSet.weightKg ?? 0} кг × ${lastSet.reps}`
+                              ? `${lastSet.weightKg ?? 0} ${t('units.kg')} × ${lastSet.reps}`
                               : `${repsLabel} ${t('workout.reps').toLowerCase()}`
                             }
                           </span>

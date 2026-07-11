@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-07-11 — Фаза 2.5 (тесты) + Фаза 3 (косметика) + безопасная Фаза 2
+
+Продолжение того же захода по [CODE_REVIEW_PLAN.md](CODE_REVIEW_PLAN.md).
+
+### Фаза 2.5 — тесты (+49, бэкенд 69 → 118)
+
+- `workoutController.test.js` (28): авто-удаление пустой тренировки, Serializable-retry P2034, финиш с 0 сетов → deleted, математика паузы, consume `WorkoutPlanOverride`, `feltRating` не затирается, IDOR, logSet/deleteSet/destroy.
+- `llm.test.js` (7): tool-use цикл — `tool_choice:none` + tools на финальном раунде, `is_error`, usage в finally при ошибке, кэш-токены.
+- `chat.test.js` (4): обрезка assistant-first истории, след write-правок при degraded, peek/commit контекста.
+- `scheduler/index.test.js` (10): `getLocalTime`, `isoWeekKey` (стык года), `claimNotification` (идемпотентность). `isoWeekKey` сделана экспортируемой.
+- `scheduler/retention.test.js` (3): чистка тех-таблиц.
+
+### Фаза 3 — косметика
+
+- **i18n:** хардкоды единиц (кг/КГ/LBS/повт/подход/т/ч/м/мин), «День N», дни недели/месяцы, muscle ID в ExercisePicker → `t()` (+ ключи `units.*`, `a11y.*`, `home.*`).
+- **Токены:** `#08080B` → `var(--bg-app)`; hero-палитра и `hsl(140)` оставлены осознанно (не эквивалентны токенам пиксель-в-пиксель).
+- **Доступность:** `aria-label` на иконочные кнопки; `role=dialog`/`aria-modal`/Escape/фокус в BottomSheet и ConfirmDialog; SwipeRow `div` → `button`.
+- **Мелкие баги:** BottomSheet `setTimeout` cleanup; ExerciseDetailSheet восстанавливает прежний `body.overflow` (вложенные оверлеи); BodyMap click-handler через ref; мёртвый тернарник в ActiveSetInput.
+
+### Фаза 2 — безопасная часть (без прод-SQL)
+
+- **Retention-джоб** `scheduler/retention.js` — суточная чистка `AnalyticsEvent`/`LlmUsage` (>90 дн), `NotificationLog`/consumed `PendingChatContext` (>30 дн); `ChatMessage` не трогает; `DISABLE_RETENTION` для отключения.
+- `yt-search` → devDependencies; `engines.node >=24` в оба package.json; `vercel.json` `rm -rf` → `npm install` (кэш зависимостей).
+- Бэкенд-косметика: Zod-валидация `PUT /exercises/settings/:slug`; matchMovekit — жадный матч по score (было по порядку файла); enrichMedia — try/catch на `JSON.parse`, валидация индексов rankVideos, telegramId из env; `fetch-missing-gifs.js` → `server/scripts/`.
+- Доки: ARCHITECTURE cron-расписание, CLAUDE R2 «планируется» + pre-push порядок.
+- Репо: `prototype/bodymap/*.tar.gz` убран из git (+ `.gitignore`).
+
+**Осталось:** индексы/FK БД (ручной SQL на проде — согласовать), Zod-парс planJson при чтении, окно вместо точного часа в сводках, in-memory-утечки, GIF/backdrop-filter перф, сироты WorkoutPlanOverride.
+
+---
+
 ## 2026-07-11 — Code review + фиксы фаз 0/1/1.5 + перф фронтенда
 
 Свежее многозонное ревью (бэкенд-ядро, AI-слой, фронтенд корректность+перф, схема/инфра) → план в [CODE_REVIEW_PLAN.md](CODE_REVIEW_PLAN.md). Реализованы фазы 0, 1, 1.5 целиком + топ-3 оптимизации фронтенда (51 пункт). Тесты: 135 зелёных (66 фронт + 69 бэк), было 106.

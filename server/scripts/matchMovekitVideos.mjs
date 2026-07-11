@@ -134,46 +134,66 @@ async function main() {
 
   const matched = []
   const unmatched = []
-  const usedOurIds = new Set()
 
-  // For each movekit exercise, find best match in our DB
+  // Глобально-жадный матчинг по score, а не в порядке файла.
+  // Раньше ранний movekit-кандидат со score 0.56 «забирал» наше упражнение,
+  // для которого позже нашёлся бы 0.9. Теперь собираем ВСЕ пары (movekit×наше)
+  // со score >= MIN_SCORE, сортируем по убыванию и назначаем сверху вниз.
+  const pairs = []
+  // Лучший кандидат для каждого movekit (для отчёта по unmatched — даже ниже порога).
+  const bestByMk = new Map()
+
   for (const mk of movekit) {
-    let bestMatch = null
+    let bestOur = null
     let bestScore = 0
-    let bestDetails = null
 
     for (const our of exercises) {
-      if (usedOurIds.has(our.id)) continue
-
       const details = matchScore(mk, our)
       if (details.score > bestScore) {
         bestScore = details.score
-        bestMatch = our
-        bestDetails = details
+        bestOur = our
+      }
+      if (details.score >= MIN_SCORE) {
+        pairs.push({ mk, our, details, score: details.score })
       }
     }
 
-    if (bestMatch && bestScore >= MIN_SCORE) {
-      matched.push({
-        mkSlug: mk.slug,
-        mkName: mk.name,
-        ourSlug: bestMatch.slug,
-        ourName: bestMatch.nameEn,
-        ourNameRu: bestMatch.nameRu,
-        score: bestScore,
-        details: bestDetails,
-        hasGif: !!bestMatch.gifUrl,
-        videoUrl: mk.videoPreviewUrl,
-      })
-      usedOurIds.add(bestMatch.id)
-    } else {
-      unmatched.push({
-        mkSlug: mk.slug,
-        mkName: mk.name,
-        bestCandidate: bestMatch?.nameEn || null,
-        bestScore,
-      })
-    }
+    bestByMk.set(mk.slug, { bestOur, bestScore })
+  }
+
+  // Назначаем сверху вниз по score; каждое movekit- и наше упражнение — не более раза.
+  pairs.sort((a, b) => b.score - a.score)
+  const usedOurIds = new Set()
+  const usedMkSlugs = new Set()
+
+  for (const { mk, our, details, score } of pairs) {
+    if (usedMkSlugs.has(mk.slug) || usedOurIds.has(our.id)) continue
+
+    matched.push({
+      mkSlug: mk.slug,
+      mkName: mk.name,
+      ourSlug: our.slug,
+      ourName: our.nameEn,
+      ourNameRu: our.nameRu,
+      score,
+      details,
+      hasGif: !!our.gifUrl,
+      videoUrl: mk.videoPreviewUrl,
+    })
+    usedMkSlugs.add(mk.slug)
+    usedOurIds.add(our.id)
+  }
+
+  // Unmatched — movekit, которым не досталось пары; показываем их лучший кандидат.
+  for (const mk of movekit) {
+    if (usedMkSlugs.has(mk.slug)) continue
+    const best = bestByMk.get(mk.slug)
+    unmatched.push({
+      mkSlug: mk.slug,
+      mkName: mk.name,
+      bestCandidate: best?.bestOur?.nameEn || null,
+      bestScore: best?.bestScore || 0,
+    })
   }
 
   // Sort by score descending

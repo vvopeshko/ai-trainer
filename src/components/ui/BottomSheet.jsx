@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, useCallback } from 'react'
  */
 export function BottomSheet({ open, onClose, children }) {
   const sheetRef = useRef(null)
+  // Таймеры анимации закрытия храним в ref, чтобы очищать в cleanup эффекта /
+  // при анмаунте — иначе setTimeout мог выстрелить setState на размонтированном
+  // компоненте.
+  const closeTimerRef = useRef(null)
   // visible = рендерим DOM, closing = проигрываем анимацию выхода
   const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -19,10 +23,16 @@ export function BottomSheet({ open, onClose, children }) {
       setVisible(true)
     } else if (visible && !closing) {
       setClosing(true)
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         setVisible(false)
         setClosing(false)
       }, DURATION)
+    }
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -30,7 +40,7 @@ export function BottomSheet({ open, onClose, children }) {
   const handleClose = useCallback(() => {
     if (closing) return
     setClosing(true)
-    setTimeout(() => {
+    closeTimerRef.current = setTimeout(() => {
       setVisible(false)
       setClosing(false)
       onClose()
@@ -52,6 +62,18 @@ export function BottomSheet({ open, onClose, children }) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [visible])
+
+  // Базовый focus trap: при открытии переводим фокус на первый интерактивный
+  // элемент шита (или сам контейнер), чтобы клавиатура/скринридер попали внутрь.
+  useEffect(() => {
+    if (!open || !visible) return
+    const el = sheetRef.current
+    if (!el) return
+    const focusable = el.querySelector(
+      'button, a[href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+    )
+    ;(focusable || el).focus?.()
+  }, [open, visible])
 
   if (!visible) return null
 
@@ -83,8 +105,12 @@ export function BottomSheet({ open, onClose, children }) {
       {/* Sheet */}
       <div
         ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
         style={{
           position: 'relative',
+          outline: 'none',
           background: 'var(--surface-0, rgba(20,30,28,0.92))',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',

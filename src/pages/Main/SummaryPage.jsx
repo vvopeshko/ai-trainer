@@ -77,8 +77,8 @@ export default function SummaryPage() {
   const formatTime = (sec) => {
     const h = Math.floor(sec / 3600)
     const m = Math.floor((sec % 3600) / 60)
-    if (h > 0) return `${h}ч ${m}м`
-    return `${m} мин`
+    if (h > 0) return t('summary.timeHm', { h, hUnit: t('units.hoursShort'), m, mUnit: t('units.minsShort') })
+    return t('summary.timeMin', { m })
   }
 
   // Haptic feedback при монтировании
@@ -178,7 +178,7 @@ export default function SummaryPage() {
           <Glass padding="14px" style={{ textAlign: 'center' }}>
             <div style={statTileLabel}>{t('summary.tonnage')}</div>
             <div style={statTileValue}>
-              {tonnageKg >= 1000 ? `${(tonnageKg / 1000).toFixed(1)}т` : `${tonnageKg}кг`}
+              {tonnageKg >= 1000 ? `${(tonnageKg / 1000).toFixed(1)}${t('units.tonnes')}` : `${tonnageKg}${t('units.kg')}`}
             </div>
           </Glass>
         )}

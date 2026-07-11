@@ -3,11 +3,26 @@
  *
  * Props: open, title, message, confirmLabel, cancelLabel, variant ('danger'|'default'), onConfirm, onCancel
  */
+import { useEffect, useRef } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from './Glass.jsx'
 
 export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel, variant = 'default', onConfirm, onCancel }) {
   const { t } = useTranslation()
+  const confirmRef = useRef(null)
+
+  // Закрытие по Escape
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (e.key === 'Escape') onCancel?.() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, onCancel])
+
+  // Фокус на кнопку подтверждения при открытии (базовый focus trap)
+  useEffect(() => {
+    if (open) confirmRef.current?.focus()
+  }, [open])
 
   if (!open) return null
 
@@ -32,6 +47,8 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
       <Glass
         padding="20px"
         radius={16}
+        role="dialog"
+        aria-modal="true"
         style={{ maxWidth: 320, width: '100%' }}
         onClick={e => e.stopPropagation()}
       >
@@ -69,6 +86,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
             {cancelLabel || t('confirm.cancel')}
           </button>
           <button
+            ref={confirmRef}
             onClick={onConfirm}
             style={{
               flex: 1,

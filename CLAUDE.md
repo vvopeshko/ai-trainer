@@ -32,10 +32,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Frontend:** React 19 + Vite 7 + Tailwind CSS 4 (`@tailwindcss/vite`, не PostCSS; нет `tailwind.config.js` — тема через `@theme {}` в CSS) + React Router 7 + TanStack Query (кэш-слой данных, дедупликация, staleTime, инвалидация по мутациям) + Lucide + Recharts + body-muscles (анатомическая SVG-карта)
 - **Backend:** Express 5 + Prisma 6 + PostgreSQL (Neon) + Zod + Telegraf + node-cron + yt-search
 - **AI:** Claude API (`@anthropic-ai/sdk`, модель `claude-sonnet-4-6`) — и для чата, и для vision
-- **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR) + Cloudflare R2 (фото)
+- **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR). Cloudflare R2 (фото) — **планируется, в коде пока не используется** (фото тренажёров идут через Telegram `file_id`, не хранятся в R2).
 - **Auth:** Telegram initData → HMAC-SHA256 на бэке
 - **Язык:** JavaScript (без TypeScript). ESM everywhere (`"type": "module"` — `import`/`export`, не `require()`).
-- **Тесты:** Vitest (фронт + бэк). Тест-файлы: `src/**/*.test.js` (фронт) и `server/src/**/*.test.js` (бэк). Pre-push хук (Husky) последовательно запускает `build → frontend tests → backend tests` и блокирует push при любом падении.
+- **Тесты:** Vitest (фронт + бэк). Тест-файлы: `src/**/*.test.js` (фронт) и `server/src/**/*.test.js` (бэк). Pre-push хук (Husky) последовательно запускает `lint → build → frontend tests → backend tests` и блокирует push при любом падении.
 
 ## Dev-команды
 
@@ -251,7 +251,7 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 **Фронт:** `VITE_API_URL` (локально `http://localhost:3001`).
 
-**Бэк:** `DATABASE_URL`, `BOT_TOKEN`, `FRONTEND_URL`, `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_ACCESS_KEY`/`R2_SECRET_KEY`/`R2_BUCKET`/`R2_ENDPOINT` (Cloudflare R2 для фото тренажёров), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed).
+**Бэк:** `DATABASE_URL`, `BOT_TOKEN`, `FRONTEND_URL`, `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_ACCESS_KEY`/`R2_SECRET_KEY`/`R2_BUCKET`/`R2_ENDPOINT` (Cloudflare R2 для фото тренажёров — **зарезервировано, в коде пока не используется**), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed).
 
 `postinstall` в server/package.json автоматически запускает `prisma generate`.
 
@@ -261,7 +261,7 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 2. **BigInt.prototype.toJSON monkey-patch.** Prisma возвращает `telegramId` как BigInt, JSON.stringify на нём падает. Патч в `server/src/index.js` конвертирует BigInt → string. Альтернатива (replacer в каждом `res.json()`) менее практична.
 
-3. **Vitest + Husky pre-push.** Тесты покрывают чистые функции и middleware (utils, errorHandler, telegramAuth). Pre-push хук запускает `build + test` перед каждым push — блокирует деплой сломанного кода.
+3. **Vitest + Husky pre-push.** Тесты покрывают чистые функции и middleware (utils, errorHandler, telegramAuth). Pre-push хук запускает `lint + build + test` перед каждым push — блокирует деплой сломанного кода.
 
 4. **DesignSystemDemo (`/demo`)** — dev-утилита, lazy-loaded, не попадает в основной бандл. Оставлена намеренно для визуальной проверки UI-компонентов.
 

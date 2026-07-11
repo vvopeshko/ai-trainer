@@ -15,6 +15,8 @@ function calcElapsed(startedAt, totalPausedMs, pausedAt) {
 }
 
 // ─── Hero gradient background (spec: Home-Hero-styles.md §Фон) ─────
+// Осознанная фирменная палитра героя (зелёные оттенки), не сводится к --accent-h.
+// TODO: свести к --accent-h после дизайн-ревью. Значения менять нельзя — визуал фиксирован.
 const HERO_BG = [
   'linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 24%)',
   'radial-gradient(110% 75% at 82% 4%, rgba(110,240,200,0.30) 0%, transparent 52%)',
@@ -160,7 +162,7 @@ export function HeroBlock({
           )}
 
           {/* Bell button */}
-          <button style={{
+          <button aria-label={t('a11y.notifications')} style={{
             width: 36,
             height: 36,
             borderRadius: 12,
@@ -232,7 +234,7 @@ export function HeroBlock({
                 letterSpacing: '-0.025em',
                 marginBottom: 6,
               }}>
-                {`День ${activeDayNum} · ${activeDay.title}`}
+                {`${t('home.dayN', { n: activeDayNum })} · ${activeDay.title}`}
               </div>
             )}
 

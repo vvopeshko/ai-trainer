@@ -5,6 +5,8 @@
 >
 > **Прогресс 2026-07-11:** Фазы 0, 1 и 1.5 реализованы полностью (отмечены ниже) + graceful shutdown из Фазы 2. **Секция «Оптимизация фронтенда» закрыта целиком** (таймер WorkoutPage, content-visibility Library, статичный Mesh, персист каталога в localStorage, lazy ExerciseDetailSheet + BodyMap, ExercisePicker на кэш, drag через ref, удаление recharts/lucide, кэш TZ, неблокирующие шрифты) — main-чанк 132→118 KB gzip, body-muscles и ExerciseDetailSheet вынесены в async-чанки. Race двух активных тренировок закрыт Serializable-транзакцией (partial unique index остаётся опцией при ручном SQL на проде).
 >
+> **Прогресс 2026-07-11 (продолжение):** Фаза 2.5 (тесты) закрыта — +49 (workoutController, llm/chat tool-цикл, scheduler), бэкенд 69→118. Фаза 3 (косметика) закрыта в основном: i18n-хардкоды → `t()`, безопасные цвета → токены (hero-палитра оставлена до дизайн-ревью), доступность (aria-label, `role=dialog`/Escape/focus в BottomSheet/ConfirmDialog, SwipeRow → button), мелкие баги (BottomSheet cleanup, scroll-lock, BodyMap click, dead ternary), доки. Безопасная часть Фазы 2: retention-джоб (+тест), `yt-search`→dev, `engines.node`, `vercel.json`. **Остаток (прод-действия / вне косметики):** индексы+FK БД (ручной SQL на проде), Zod-парс planJson, окно вместо точного часа в сводках, at-most-once claim, in-memory-утечки, GIF/backdrop-filter перф, сироты WorkoutPlanOverride, `chatTrainer.md` scope:next edge case, кириллический .md (referenced скриптом — оставлен).
+>
 > **Статус прошлого ревью:** фазы 0–1 (безопасность, потеря данных, TanStack Query) закрыты ранее и зафиксированы в NEXT_PLANS. Из фаз 2–3 сделано: `progressController` → services, `timingSafeEqual` для HMAC, программное закрытие BottomSheet, фикс fetch-гонки в ExerciseDetailSheet, «фейковые тесты» переписаны на импорт реального кода. Остальное перенесено сюда и перепроверено по коду.
 
 ---
@@ -136,7 +138,7 @@
 - [ ] **Индекс `Workout(userId, finishedAt)`** — сейчас только `[userId, startedAt]`, а горячие запросы (recent, stats, buildUserContext, reminder) фильтруют/сортируют по finishedAt.
 - [ ] **FK для `WorkoutPlanOverride.programId`** (`onDelete: Cascade`) — сейчас голая строка, сироты при будущем удалении программ.
 - [ ] **`UserExerciseSettings.exerciseSlug` без FK** — при дедупликации slug'ов (скрипт dedupeExercises есть) настройки осиротеют молча. FK или явный комментарий «осознанно денормализовано».
-- [ ] **Retention:** `AnalyticsEvent`, `LlmUsage`, `ChatMessage`, `NotificationLog`, consumed `PendingChatContext` копятся вечно. Cron-джоб чистки (шедулер уже есть).
+- [x] **Retention:** `AnalyticsEvent`, `LlmUsage`, `ChatMessage`, `NotificationLog`, consumed `PendingChatContext` копятся вечно. Cron-джоб чистки (шедулер уже есть).
 - [ ] **Zod-парс `planJson` при чтении** в местах мёржа (`enrichPlanExercises`, оверрайды) — сейчас структуре доверяют слепо.
 
 ### Процесс и шедулер
@@ -149,11 +151,11 @@
 
 ### Зависимости и конфиги
 
-- [ ] `yt-search` → devDependencies (используется только в ручном скрипте, ставится на Railway зря).
-- [ ] `engines.node` в оба package.json — Node 24 закреплён только в railpack.json; Vercel/локалка могут собирать другой версией.
-- [ ] `vercel.json`: `rm -rf node_modules && npm install` отключает кэш зависимостей на каждый деплой — убрать или задокументировать причину.
+- [x] `yt-search` → devDependencies (используется только в ручном скрипте, ставится на Railway зря).
+- [x] `engines.node` в оба package.json — Node 24 закреплён только в railpack.json; Vercel/локалка могут собирать другой версией.
+- [x] `vercel.json`: `rm -rf node_modules && npm install` отключает кэш зависимостей на каждый деплой — убрать или задокументировать причину.
 - [ ] eslint-глобы не покрывают `server/scripts/`, `scripts/*.mjs` — все скрипты вне линта.
-- [ ] Закоммитить `test.include` в vite.config.js + `server/vitest.config.js` (сейчас M/untracked).
+- [x] Закоммитить `test.include` в vite.config.js + `server/vitest.config.js` (сейчас M/untracked).
 
 ---
 
@@ -161,12 +163,12 @@
 
 > Позитив: фейковых тестов больше нет — все 11 покрытых файлов импортируют реальный код.
 
-- [ ] **Закоммитить 4 новых тест-файла** (formatters, muscleMapping, weightUnit, parseJsonFromLLM) — pre-push сейчас защищает только локально.
+- [x] **Закоммитить 4 новых тест-файла** (formatters, muscleMapping, weightUnit, parseJsonFromLLM) — pre-push сейчас защищает только локально.
 - [x] **`workoutController`** — самая хрупкая непокрытая логика: авто-удаление пустой тренировки, математика паузы `totalPausedMs`, consume оверрайда при финише, удаление при 0 сетов. Мок-prisma, в первую очередь.
 - [x] **Chat tool-use цикл** (`chat.js` + `chatTools.js`) с мок-`llm` — многошаговый loop, ошибки видны только в проде (см. Фазу 0).
 - [x] **`scheduler`: `getLocalTime`/`isoWeekKey`/`claimNotification`** — чистые функции с ловушками (hour===24, границы ISO-недель).
 - [ ] **`hooks/mutations.js`** — таблица инвалидаций из FRONTEND_CACHE_PLAN этап 3 = готовый чек-лист кейсов; неверный queryKey = тихо протухший кэш (см. Фазу 0, WorkoutPage).
-- [ ] Тест-инвариант: серверный список muscle ID ↔ `muscleMapping.js` ↔ `BodyMap.MUSCLE_ZONE_MAP` (ловит рассинхрон типа front_delt/front_delts навсегда).
+- [x] Тест-инвариант: серверный список muscle ID ↔ `muscleMapping.js` ↔ `BodyMap.MUSCLE_ZONE_MAP` (ловит рассинхрон типа front_delt/front_delts навсегда).
 
 ---
 
@@ -174,40 +176,40 @@
 
 ### Гигиена репо
 
-- [ ] `.gitignore`: `server/data/free-exercise-db.json` (1MB) и `movekit-*.json` (~480KB) — регенерируемые дампы, в ignore; закоммиченным остаётся только `enriched-exercises.json`. Также `.env*` + `!.env.example`; решить судьбу черновиков `server/scripts/_*.mjs`; убрать `prototype/bodymap/*.tar.gz` из git.
+- [x] `.gitignore`: `server/data/free-exercise-db.json` (1MB) и `movekit-*.json` (~480KB) — регенерируемые дампы, в ignore; закоммиченным остаётся только `enriched-exercises.json`. Также `.env*` + `!.env.example`; решить судьбу черновиков `server/scripts/_*.mjs`; убрать `prototype/bodymap/*.tar.gz` из git.
 - [ ] `product/Программа_тренировок.md` — кириллическое имя ломает часть тулинга + личные данные в репо: переименовать в ASCII или вынести.
-- [ ] `server/data/fetch-missing-gifs.js` → `server/scripts/`.
-- [ ] Хардкод личного telegramId как fallback в `enrichProgramMedia.js:69`.
+- [x] `server/data/fetch-missing-gifs.js` → `server/scripts/`.
+- [x] Хардкод личного telegramId как fallback в `enrichProgramMedia.js:69`.
 
 ### Скрипты (movekit/enrich — до запуска `--apply`)
 
-- [ ] Жадный матчинг в порядке файла, не по score — `matchMovekitVideos.mjs:140-177`: ранний кандидат 0.56 забирает упражнение у позднего 0.9. Сортировать пары по score до назначения.
-- [ ] `scrapeMovekit.mjs:80-90` — хрупкий unescape цепочкой replace (искажает легитимные `\` в инструкциях) + fetch без таймаута.
-- [ ] `enrichProgramMedia.js`: `JSON.parse` без try/catch (:130-138) роняет прогон; `rankVideos` не валидирует диапазон индексов от LLM (:274-295).
+- [x] Жадный матчинг в порядке файла, не по score — `matchMovekitVideos.mjs:140-177`: ранний кандидат 0.56 забирает упражнение у позднего 0.9. Сортировать пары по score до назначения.
+- [x] `scrapeMovekit.mjs:80-90` — хрупкий unescape цепочкой replace (искажает легитимные `\` в инструкциях) + fetch без таймаута.
+- [x] `enrichProgramMedia.js`: `JSON.parse` без try/catch (:130-138) роняет прогон; `rankVideos` не валидирует диапазон индексов от LLM (:274-295).
 
 ### Мелкие баги
 
 - [x] `identifyMachine.js:140-177`: `confidence: 0` («не тренажёр») возвращает `success: true`; при Zod-фейле в БД пишется сырой LLM-JSON (:117-124).
-- [ ] `%`/`_` не экранируются в LIKE/ILIKE — `exerciseController.js:69-80`, `chatTools.js:226-242` («жим 100%» матчится как wildcard → тихий резолв не того упражнения).
-- [ ] `PUT /exercises/settings/:slug` — нет валидации slug и `minWeight <= maxWeight` (`exerciseController.js:118-129`).
+- [x] `%`/`_` не экранируются в LIKE/ILIKE — `exerciseController.js:69-80`, `chatTools.js:226-242` («жим 100%» матчится как wildcard → тихий резолв не того упражнения).
+- [x] `PUT /exercises/settings/:slug` — нет валидации slug и `minWeight <= maxWeight` (`exerciseController.js:118-129`).
 - [x] `workoutController.js:42` — 403 вместо 404 на «Program not found»; `programDayIndex` без проверки границ.
-- [ ] BottomSheet: `setTimeout` без cleanup; вложенные оверлеи ломают body scroll-lock (`ExerciseDetailSheet.jsx:995-1000`); `setExpandedDoneIndex` внутри updater (`WorkoutPage.jsx:464-475`); BodyMap click-хендлер фиксируется на mount; мёртвый тернарник в `ActiveSetInput.jsx:44-48`.
+- [x] BottomSheet: `setTimeout` без cleanup; вложенные оверлеи ломают body scroll-lock (`ExerciseDetailSheet.jsx:995-1000`); `setExpandedDoneIndex` внутри updater (`WorkoutPage.jsx:464-475`); BodyMap click-хендлер фиксируется на mount; мёртвый тернарник в `ActiveSetInput.jsx:44-48`.
 - [ ] `chatTrainer.md` обещает сброс `scope: next` после тренировки, но при финише с 0 сетов оверрайд не consume'ится — выровнять код или промпт.
 
 ### i18n и токены (нарушения правил проекта)
 
-- [ ] Хардкоды мимо `t()`: «кг/КГ/повт/подход/упр» (WorkoutPage, ActiveSetInput, DoneSetRow, ExerciseDetailSheet), «ч/м/мин/т» (SummaryPage, ProgressPage), «День N» (HomePage, HeroBlock), дни недели/«СЕГОДНЯ» (WeekCalendar, formatters.js), месяцы (MyPlanSection), сырые английские muscle ID в ExercisePicker:66.
-- [ ] Цвета мимо токенов: `#08080B` (WorkoutPage:852), **вся hero-палитра HeroBlock:18-24 захардкожена и игнорирует `--accent-h`**, `hsl(140,…)` вместо `--success` (SummaryPage:73-80). Системные `rgba(236,…)` вместо `--fg-*` — решить: узаконить или мигрировать.
+- [x] Хардкоды мимо `t()`: «кг/КГ/повт/подход/упр» (WorkoutPage, ActiveSetInput, DoneSetRow, ExerciseDetailSheet), «ч/м/мин/т» (SummaryPage, ProgressPage), «День N» (HomePage, HeroBlock), дни недели/«СЕГОДНЯ» (WeekCalendar, formatters.js), месяцы (MyPlanSection), сырые английские muscle ID в ExercisePicker:66.
+- [x] Цвета мимо токенов: `#08080B` (WorkoutPage:852), **вся hero-палитра HeroBlock:18-24 захардкожена и игнорирует `--accent-h`**, `hsl(140,…)` вместо `--success` (SummaryPage:73-80). Системные `rgba(236,…)` вместо `--fg-*` — решить: узаконить или мигрировать.
 
 ### Доступность
 
-- [ ] `aria-label` на иконочные кнопки (WorkoutTopBar, info-кнопки, back/swap в ExerciseDetailSheet, bell, крестик поиска); кнопка удаления в SwipeRow — `div` → `button`; `role="dialog"`/`aria-modal`/focus trap/Escape в BottomSheet и ConfirmDialog.
+- [x] `aria-label` на иконочные кнопки (WorkoutTopBar, info-кнопки, back/swap в ExerciseDetailSheet, bell, крестик поиска); кнопка удаления в SwipeRow — `div` → `button`; `role="dialog"`/`aria-modal`/focus trap/Escape в BottomSheet и ConfirmDialog.
 
 ### Доки vs код
 
-- [ ] CLAUDE.md: «шедулер пока не реализован» — реализован; «11 моделей» — 15 (нет NotificationLog, PendingChatContext, Insight, LlmUsage); «server/ excluded из ESLint» — линтуется; Recharts/Lucide в стеке — не используются; pre-push порядок — фактически `lint → build → fe → be`.
-- [ ] R2 заявлен в CLAUDE.md/ARCHITECTURE.md — в коде не используется (фото = Telegram file_id): пометить «планируется».
-- [ ] ARCHITECTURE.md:182 — cron weekly описан как `'0 10 * * 1'`, фактически почасовой тик + вс 19:00 в TZ юзера.
+- [x] CLAUDE.md: «шедулер пока не реализован» — реализован; «11 моделей» — 15 (нет NotificationLog, PendingChatContext, Insight, LlmUsage); «server/ excluded из ESLint» — линтуется; Recharts/Lucide в стеке — не используются; pre-push порядок — фактически `lint → build → fe → be`.
+- [x] R2 заявлен в CLAUDE.md/ARCHITECTURE.md — в коде не используется (фото = Telegram file_id): пометить «планируется».
+- [x] ARCHITECTURE.md:182 — cron weekly описан как `'0 10 * * 1'`, фактически почасовой тик + вс 19:00 в TZ юзера.
 
 ---
 

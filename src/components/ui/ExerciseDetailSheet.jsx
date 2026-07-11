@@ -56,6 +56,7 @@ const KEYFRAMES = `
 // ─── Header ──────────────────────────────────────────────────────────
 
 function Header({ exercise, onClose }) {
+  const { t } = useTranslation()
   const primaryMuscle = exercise?.primaryMuscles?.[0]
   const equipment = exercise?.equipment
   const subtitle = [
@@ -73,6 +74,7 @@ function Header({ exercise, onClose }) {
       {/* Back button */}
       <button
         onClick={onClose}
+        aria-label={t('a11y.back')}
         style={{
           width: 38, height: 38, borderRadius: '50%',
           background: 'rgba(255,255,255,0.06)',
@@ -107,6 +109,7 @@ function Header({ exercise, onClose }) {
 
       {/* Swap button (placeholder) */}
       <button
+        aria-label={t('a11y.swapExercise')}
         style={{
           width: 38, height: 38, borderRadius: '50%',
           background: 'rgba(255,255,255,0.06)',
@@ -751,8 +754,8 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
     onSettingsChange({ ...settings, type })
   }
 
-  const unitLabel = settings.unit === 'lbs' ? 'lbs' : 'кг'
-  const stepUnitLabel = settings.stepUnit === 'lbs' ? 'lbs' : 'кг'
+  const unitLabel = settings.unit === 'lbs' ? t('units.lbs') : t('units.kg')
+  const stepUnitLabel = settings.stepUnit === 'lbs' ? t('units.lbs') : t('units.kg')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -794,8 +797,8 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
               value={settings.unit}
               onChange={handleUnit}
               options={[
-                { value: 'kg', label: 'КГ' },
-                { value: 'lbs', label: 'LBS' },
+                { value: 'kg', label: t('units.kgCaps') },
+                { value: 'lbs', label: t('units.lbsCaps') },
               ]}
             />
           </div>
@@ -807,8 +810,8 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
               value={settings.stepUnit || 'kg'}
               onChange={handleStepUnit}
               options={[
-                { value: 'kg', label: 'КГ' },
-                { value: 'lbs', label: 'LBS' },
+                { value: 'kg', label: t('units.kgCaps') },
+                { value: 'lbs', label: t('units.lbsCaps') },
               ]}
             />
           </div>
@@ -1021,11 +1024,14 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
     }
   }, [exercise?.id, asking, webApp])
 
-  // Prevent body scroll when overlay is open
+  // Prevent body scroll when overlay is open.
+  // Восстанавливаем предыдущее значение, а не '' — при вложенных оверлеях
+  // (BottomSheet под этим шитом) сброс в '' разлочивал бы скролл преждевременно.
   useEffect(() => {
     if (open) {
+      const prev = document.body.style.overflow
       document.body.style.overflow = 'hidden'
-      return () => { document.body.style.overflow = '' }
+      return () => { document.body.style.overflow = prev }
     }
   }, [open])
 

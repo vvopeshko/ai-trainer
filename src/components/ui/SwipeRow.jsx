@@ -3,11 +3,13 @@
  * Используется в WorkoutPage и ProgressPage.
  */
 import { useRef, useCallback } from 'react'
+import { useTranslation } from '../../i18n/useTranslation.js'
 import { Icon } from './Icon.jsx'
 
 const DEFAULT_DELETE_WIDTH = 72
 
 export function SwipeRow({ children, onDelete, deleteWidth = DEFAULT_DELETE_WIDTH }) {
+  const { t } = useTranslation()
   const trackRef = useRef(null)
   const startX = useRef(0)
   const currentX = useRef(0)
@@ -58,11 +60,14 @@ export function SwipeRow({ children, onDelete, deleteWidth = DEFAULT_DELETE_WIDT
         <div style={{ flex: '0 0 100%', minWidth: 0 }}>
           {children}
         </div>
-        <div
+        <button
+          type="button"
           onClick={onDelete}
+          aria-label={t('a11y.delete')}
           style={{
             flex: `0 0 ${deleteWidth}px`,
             background: 'var(--danger, hsl(0,65%,50%))',
+            border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -70,7 +75,7 @@ export function SwipeRow({ children, onDelete, deleteWidth = DEFAULT_DELETE_WIDT
           }}
         >
           <Icon name="trash" size={18} style={{ color: '#fff' }} />
-        </div>
+        </button>
       </div>
     </div>
   )

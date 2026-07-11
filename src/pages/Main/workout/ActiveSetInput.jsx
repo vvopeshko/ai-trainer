@@ -42,9 +42,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
   const displayWeight = weight % 1 === 0 ? weight : weight.toFixed(1)
 
   const targetLabel = plannedReps
-    ? (plannedReps === (lastReps ?? plannedReps)
-      ? t('workout.targetReps', { reps: plannedReps })
-      : t('workout.targetReps', { reps: plannedReps }))
+    ? t('workout.targetReps', { reps: plannedReps })
     : null
 
   return (
@@ -83,7 +81,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
               {displayWeight}
             </div>
             <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {unit === 'lbs' ? 'lbs' : 'кг'}
+              {unit === 'lbs' ? t('units.lbs') : t('units.kg')}
             </div>
           </div>
           <button onClick={() => setWeight(w => Math.min(maxWeight, stepWeight(w, 1, step, stepUnit, unit)))} style={{
@@ -104,7 +102,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 700, color: '#fff' }}>{reps}</div>
             <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              повт
+              {t('units.reps')}
             </div>
           </div>
           <button onClick={() => setReps(r => Math.min(100, r + 1))} style={{

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../../hooks/queries.js'
+import { getMuscleName, getEquipmentName } from '../../../utils/muscleMapping.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
 
 // ─── ExercisePicker ─────────────────────────────────────────────────────
@@ -61,8 +62,8 @@ export function ExercisePicker({ onSelect }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 'var(--weight-medium)' }}>{ex.nameRu}</div>
               <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--fg-tertiary)', marginTop: 2 }}>
-                {(ex.primaryMuscles || []).join(', ')}
-                {ex.equipment?.length > 0 ? ` · ${ex.equipment.join(', ')}` : ''}
+                {(ex.primaryMuscles || []).map(getMuscleName).join(', ')}
+                {ex.equipment?.length > 0 ? ` · ${ex.equipment.map(getEquipmentName).join(', ')}` : ''}
               </div>
             </div>
             <Icon name="chevronRight" size={14} style={{ color: 'var(--fg-disabled)' }} />
