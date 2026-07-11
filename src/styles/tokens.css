@@ -6,6 +6,14 @@
  */
 
 :root {
+  /* --- Safe area --------------------------------------------------
+   * Дефолт для web/PWA (standalone iOS: контент под чёлкой и home-индикатором,
+   * env() отдаёт реальные инсеты благодаря viewport-fit=cover).
+   * В Telegram Mini App значения перезаписывает TelegramProvider (inline style
+   * на <html> из Telegram SDK — он побеждает это правило). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   /* --- Accent ---------------------------------------------------- */
   --accent-h: 158;
   --accent-s: 65%;

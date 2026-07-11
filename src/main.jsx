@@ -11,6 +11,7 @@ import { PlatformProvider, usePlatform } from './contexts/PlatformContext.jsx'
 import { ActiveWorkoutProvider } from './contexts/ActiveWorkoutContext.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
+import './utils/installPrompt.js' // слушатель beforeinstallprompt — до события
 
 // Платформа выбирает auth-провайдера: Mini App → TelegramProvider (initData),
 // браузер → WebProvider (Bearer-сессия Better Auth / dev-мок). Оба поставляют
@@ -60,3 +61,12 @@ requestAnimationFrame(() => {
     setTimeout(() => splash.remove(), 400)
   }
 })
+
+// PWA service worker — только web-платформа: Telegram Mini App живёт без SW,
+// чтобы прекэш index.html не задерживал обновления мини-аппа. autoUpdate:
+// новая версия подхватывается молча при следующем открытии.
+if ('serviceWorker' in navigator && !window.Telegram?.WebApp?.initData) {
+  import('virtual:pwa-register')
+    .then(({ registerSW }) => registerSW({ immediate: true }))
+    .catch(() => {}) // dev без сгенерированного SW — не критично
+}
