@@ -91,7 +91,7 @@ function pad(n) {
 }
 
 /** ISO-неделя по локальной дате юзера → '2026-W24'. */
-function isoWeekKey(year, month, day) {
+export function isoWeekKey(year, month, day) {
   // Считаем по UTC от локальных Y-M-D (без сдвига TZ — нам нужен только номер недели).
   const d = new Date(Date.UTC(year, month - 1, day))
   const dayNum = d.getUTCDay() || 7 // Пн=1..Вс=7

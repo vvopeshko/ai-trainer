@@ -162,9 +162,9 @@
 > Позитив: фейковых тестов больше нет — все 11 покрытых файлов импортируют реальный код.
 
 - [ ] **Закоммитить 4 новых тест-файла** (formatters, muscleMapping, weightUnit, parseJsonFromLLM) — pre-push сейчас защищает только локально.
-- [ ] **`workoutController`** — самая хрупкая непокрытая логика: авто-удаление пустой тренировки, математика паузы `totalPausedMs`, consume оверрайда при финише, удаление при 0 сетов. Мок-prisma, в первую очередь.
-- [ ] **Chat tool-use цикл** (`chat.js` + `chatTools.js`) с мок-`llm` — многошаговый loop, ошибки видны только в проде (см. Фазу 0).
-- [ ] **`scheduler`: `getLocalTime`/`isoWeekKey`/`claimNotification`** — чистые функции с ловушками (hour===24, границы ISO-недель).
+- [x] **`workoutController`** — самая хрупкая непокрытая логика: авто-удаление пустой тренировки, математика паузы `totalPausedMs`, consume оверрайда при финише, удаление при 0 сетов. Мок-prisma, в первую очередь.
+- [x] **Chat tool-use цикл** (`chat.js` + `chatTools.js`) с мок-`llm` — многошаговый loop, ошибки видны только в проде (см. Фазу 0).
+- [x] **`scheduler`: `getLocalTime`/`isoWeekKey`/`claimNotification`** — чистые функции с ловушками (hour===24, границы ISO-недель).
 - [ ] **`hooks/mutations.js`** — таблица инвалидаций из FRONTEND_CACHE_PLAN этап 3 = готовый чек-лист кейсов; неверный queryKey = тихо протухший кэш (см. Фазу 0, WorkoutPage).
 - [ ] Тест-инвариант: серверный список muscle ID ↔ `muscleMapping.js` ↔ `BodyMap.MUSCLE_ZONE_MAP` (ловит рассинхрон типа front_delt/front_delts навсегда).
 
