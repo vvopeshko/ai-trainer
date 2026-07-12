@@ -12,15 +12,10 @@
 
 ## Статус
 
-**Фазы 1 и 2 — код реализован (2026-07-11).** Фаза 1 активирована и на проде
-(https://gymwithai.me, Resend-домен верифицирован). Что сделано — см. [UPDATES.md](UPDATES.md).
-
-Чеклист активации фазы 2 (ручные шаги):
-
-1. **BotFather:** `/setdomain` → выбрать бота → `gymwithai.me` (без него виджет не рисуется).
-2. **Railway:** `AUTH_PROVIDERS=email,telegram_widget` (BOT_TOKEN уже есть).
-3. Проверка: https://gymwithai.me/login — кнопка «Log in with Telegram»; вход существующим
-   TG-юзером → его данные; `/me` на вебе — способы входа, отвязка, «выйти на всех устройствах».
+**Фазы 1 и 2 — реализованы и активированы на проде (2026-07-12):** https://gymwithai.me,
+`AUTH_PROVIDERS=email,telegram_widget`, Resend-домен верифицирован, `/setdomain` настроен.
+Что сделано — см. [UPDATES.md](UPDATES.md). Фаза 3 (веб-паритет фич) — план, см. §12.
+Google/Yandex — код готов, включаются credentials'ами (§13).
 
 Отклонения фазы 2:
 

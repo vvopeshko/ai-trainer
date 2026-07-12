@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-07-12 — Активация на проде: Web Push проверен, виджет включён + актуализация доков
+
+- **Web Push работает end-to-end:** VAPID-ключи на Railway, `NOTIFICATION_QUEUE=shadow`, кнопка «Отправить тестовое» на `/me` (`POST /api/v1/push/test`, мимо очереди) — пуш дошёл до реального iPhone (standalone PWA, web.push.apple.com, 201).
+- **Диагностика по пути:** упавший первый тест = подписка, созданная до правильных ключей (пересоздана тумблером); `BadJwtToken` от Apple = криво вставленный `VAPID_PRIVATE_KEY` на Railway. Добавлено логирование statusCode/body ошибок push-сервиса в `webPushService` (раньше глотались — диагностика вслепую).
+- **Найдена и исправлена опечатка `AUTH_PROVIDERS`** на Railway («telgeram») — Telegram Login Widget теперь реально включён на проде.
+- **Доки актуализированы:** ARCHITECTURE.md (стек, единый auth, env, схема — указатель на schema.prisma как источник правды, decision log №12–14), CLAUDE.md (21 модель, единый middleware, новые env/роуты/структура), статусы в ARCHITECTURE_WEB_AUTH.md (фазы 1–2 активированы) и NOTIFICATIONS.md (shadow на проде), NEXT_PLANS.md (секция следующих шагов web/PWA/уведомлений; `/me` больше не placeholder).
+
+Осталось по выкату: понаблюдать shadow до воскресенья → `NOTIFICATION_QUEUE=on`.
+
 ## 2026-07-12 — Сервис уведомлений: durable-очередь + Web Push
 
 Архитектура из Flamy, адаптированная под AI Trainer — [NOTIFICATIONS.md](NOTIFICATIONS.md). Выкат через `NOTIFICATION_QUEUE=off→shadow→on` (сейчас off — поведение прода не изменилось; таблицы уже в Neon).

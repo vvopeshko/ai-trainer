@@ -2,11 +2,13 @@
 
 Все технические и архитектурные решения. Продуктовая часть — в [BRD.md](BRD.md). Приоритеты разработки и бэклог — в [NEXT_PLANS.md](NEXT_PLANS.md).
 
-**Последнее обновление:** 2026-06-12
+**Последнее обновление:** 2026-07-12
 
 **Документация по фичам:**
 - [Сканирование тренажёра](docs/machine-scanning.md) — техническое описание, архитектура, поток данных
 - [План реализации экранов](docs/implementation-plan.md) — фазы, API-карта, Prisma-изменения
+- [Web-версия и авторизация](ARCHITECTURE_WEB_AUTH.md) — Better Auth, мульти-провайдерный вход, adoption (фазы 1–2 на проде: https://gymwithai.me)
+- [Сервис уведомлений](NOTIFICATIONS.md) — durable-очередь в Postgres, Telegram + Web Push, флаги rollout
 
 ---
 
@@ -22,18 +24,22 @@
 - **Lucide React** — outline-иконки
 - **Recharts** — графики прогресса (тоннаж, 1RM, частота)
 - **body-muscles** — анатомическая SVG-карта (70+ зон, front+back вид, интенсивность 0-10)
-- **Telegram WebApp SDK** — нативная интеграция
+- **Telegram WebApp SDK** — нативная интеграция (только platform='telegram')
+- **better-auth/client** — web-платформа: bearer-сессии, email-вход (lazy-чанк, в бандл мини-аппа не попадает)
+- **vite-plugin-pwa** (injectManifest) — installable PWA: манифест, собственный SW (`src/sw.js`: precache + Web Push); SW регистрируется только на web-платформе
 
 ### Сервер (API + бот в одном процессе)
 - **Node.js + Express 5**
 - **Telegraf** — Telegram-бот (long polling)
 - **Prisma 6** + **PostgreSQL**
 - **Zod** — валидация входов API
-- **node-cron** — отложенные уведомления и напоминания
+- **node-cron** — шедулеры: legacy почасовой (reminder), минутный durable-очереди уведомлений, суточный retention
+- **better-auth** — web-авторизация: email+пароль, DB-сессии (Bearer), account linking; Telegram-идентичность остаётся на `User.telegramId`
+- **web-push** — Web Push доставка (VAPID) для PWA
 - **LLM-клиент**: `@anthropic-ai/sdk` для Claude, за тонкой абстракцией `utils/llm.js`
 
 ### Инфраструктура
-- **Frontend:** Vercel (автодеплой из GitHub, `vercel.json` c SPA-rewrites)
+- **Frontend:** Vercel (автодеплой из GitHub, `vercel.json` c SPA-rewrites); домен **https://gymwithai.me** (web-версия + PWA)
 - **Backend + бот:** Railway (автодеплой из `/server`)
 - **БД:** Neon PostgreSQL с включённой Point-in-Time Recovery (PITR)
 - **Object Storage:** Cloudflare R2 (фото тренажёров; S3-совместимое, без egress)
@@ -278,6 +284,13 @@ node-cron '0 4 * * *' (суточная чистка; scheduler/retention.js)
 
 ## 4. Схема БД
 
+> ⚠️ Ниже — исходный черновик MVP. **Источник правды — `server/prisma/schema.prisma`** (21 модель).
+> После черновика добавлены: `UserExerciseSettings`, `WorkoutPlanOverride`, `NotificationLog`,
+> `PendingChatContext`, `Insight`, `LlmUsage`, а также web-auth (`Session`, `Account`,
+> `Verification`, `RateLimit` — Better Auth; `User.telegramId` стал nullable, добавлены
+> `email`/`emailVerified`) и уведомления (`NotificationJob` — durable-очередь,
+> `PushSubscription` — Web Push устройства). Детали: [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md) §3, [NOTIFICATIONS.md](NOTIFICATIONS.md) §4.
+
 ### 4.1 ER-диаграмма
 
 ```mermaid
@@ -434,7 +447,7 @@ erDiagram
 
 ### 4.2 Prisma-схема (черновик v1)
 
-Для MVP. Итеративно дополняем по мере работы. Файл: `server/prisma/schema.prisma`.
+Исторический черновик MVP (см. предупреждение выше — актуальна `schema.prisma`).
 
 ```prisma
 generator client {
@@ -798,7 +811,14 @@ model WorkoutPlanOverride {
 
 ### 5.1 Авторизация
 
-**Middleware `telegramAuth`** на всех защищённых роутах `/api/v1/*`:
+**Единый middleware `auth`** (`middleware/auth.js`) на всех защищённых роутах `/api/v1/*` — две ветки по префиксу заголовка (детали web-части — [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md)):
+
+- `Authorization: tma <initData>` → **`telegramAuth`** (Mini App, без изменений, ниже);
+- `Authorization: Bearer <token>` → сессия **Better Auth** (web/PWA) → prisma User → `req.user`.
+
+Session-tracking (debounced lastSeen + `X-Timezone` + `user_seen`) общий для обеих веток — `utils/sessionTracking.js`.
+
+**Ветка `telegramAuth`:**
 1. Читает `Authorization: tma <initData>`.
 2. Валидирует initData через HMAC-SHA256 с `BOT_TOKEN`.
 3. Проверяет `auth_date` — отклоняет initData старше 24 часов (replay prevention).
@@ -808,7 +828,7 @@ model WorkoutPlanOverride {
 
 **Dev-bypass:** при `ALLOW_DEV_BYPASS=true` в env заголовок `Authorization: tma dev_bypass` создаёт/использует тестового юзера без Telegram. Fail-closed: без явной переменной bypass отключён (в т.ч. на Railway, где переменная не задана).
 
-Правило: каждый новый роут-модуль начинается с `router.use(telegramAuth)`, иначе `TypeError: Cannot read properties of undefined (reading 'id')` на `req.user.id`.
+Правило: каждый новый роут-модуль начинается с `router.use(auth)` (единый middleware), иначе `TypeError: Cannot read properties of undefined (reading 'id')` на `req.user.id`.
 
 ### 5.1.1 Rate Limiting
 
@@ -1140,10 +1160,24 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
   R2_ENDPOINT=https://<account>.r2.cloudflarestorage.com
   NODE_ENV=production
   PORT=8080
-  FRONTEND_URL=https://<vercel-url>
-  WEBAPP_URL=https://<vercel-url>
+  # Несколько origin'ов через запятую; первый — канонический (письма, OAuth-редиректы)
+  FRONTEND_URL=https://gymwithai.me,https://<vercel-url>
+  WEBAPP_URL=https://gymwithai.me
   ANALYTICS_SECRET=<random>
   ADMIN_TELEGRAM_ID=<my id>
+
+  # Web-auth (Better Auth) — см. ARCHITECTURE_WEB_AUTH.md
+  BETTER_AUTH_SECRET=<64+ случайных символов>
+  AUTH_PROVIDERS=email,telegram_widget
+  API_URL=https://<railway-домен>
+  RESEND_API_KEY=<resend>
+  EMAIL_FROM=AI Trainer <noreply@gymwithai.me>
+
+  # Уведомления (durable-очередь + Web Push) — см. NOTIFICATIONS.md
+  NOTIFICATION_QUEUE=shadow            # off | shadow | on
+  VAPID_PUBLIC_KEY=<web-push generate-vapid-keys>
+  VAPID_PRIVATE_KEY=<...>
+  VAPID_SUBJECT=mailto:noreply@gymwithai.me
   ```
 
 ### БД (Neon)
@@ -1156,7 +1190,8 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
 
 1. `/newbot` → получить `BOT_TOKEN`, положить в Railway env.
 2. `/setcommands` → вставить содержимое `server/src/bot/commands.txt`.
-3. `/setmenubutton` → ввести URL Vercel + текст "Открыть".
+3. `/setmenubutton` → ввести https://gymwithai.me + текст "Открыть".
+4. `/setdomain` → gymwithai.me — обязателен для Telegram Login Widget на /login (web-версия).
 
 ### Локальная разработка (dev-first workflow)
 
@@ -1237,6 +1272,9 @@ curl https://<railway-url>/api/health
 | 9 | Видео | Ссылки на YouTube | Бесплатно, большой выбор |
 | 10 | Аналитика | Самописная `AnalyticsEvent` + fire-and-forget `track()` | Ноль внешних зависимостей, паттерн из daily balancer |
 | 11 | Railway install | `npm install` вместо `npm ci` через `railpack.json` | macOS lock file не содержит Linux optional deps (`@emnapi/*` от lightningcss). `npm ci` падает, `npm install` резолвит на месте. `.npmrc os[]=linux` — неполное решение (неполные/некорректные версии transitive deps) |
+| 12 | Web-авторизация | Better Auth (email + Login Widget; Google/Yandex код готов) поверх нашей таблицы User; канон Telegram-идентичности — `User.telegramId`, adoption пустых аккаунтов | Проверено в проде LPT; DB-сессии заменяют JWT/refresh целиком. См. [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md) |
+| 13 | PWA | vite-plugin-pwa (injectManifest, свой `src/sw.js`); SW только на web-платформе | Установка на iOS/Android без сторов; Mini App живёт без SW — кэш не задерживает его обновления |
+| 14 | Очередь уведомлений | PostgreSQL как durable-очередь (`NotificationJob`), без Redis/BullMQ; каналы telegram + web_push; сохранённый LLM-рендер | Архитектура из Flamy: меньше инфраструктуры, транзакционный аудит, retry не жжёт токены. См. [NOTIFICATIONS.md](NOTIFICATIONS.md) |
 
 ---
 

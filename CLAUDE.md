@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/NEXT_PLANS.md](product/NEXT_PLANS.md)** | Живой бэклог: приоритеты, фичи, баги, техдолг |
 | **[product/UPDATES.md](product/UPDATES.md)** | Changelog по датам |
 | **[product/machine-scanning.md](product/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
-| **[product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)** | План web-версии: Better Auth, мульти-провайдерная авторизация, фазы 1–3 |
+| **[product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)** | Web-версия: Better Auth, мульти-провайдерная авторизация. Фазы 1–2 на проде (gymwithai.me); фаза 3 — план |
 | **[product/NOTIFICATIONS.md](product/NOTIFICATIONS.md)** | Сервис уведомлений: durable-очередь в Postgres, Telegram + Web Push, флаги rollout |
 | **[product/implementation-plan.md](product/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
 | **[product/CODESTYLE.md](product/CODESTYLE.md)** | Code style guide: именование, компоненты, стили, паттерны |
@@ -35,7 +35,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Backend:** Express 5 + Prisma 6 + PostgreSQL (Neon) + Zod + Telegraf + node-cron + yt-search
 - **AI:** Claude API (`@anthropic-ai/sdk`, модель `claude-sonnet-4-6`) — и для чата, и для vision
 - **Хостинг:** Vercel (фронт) + Railway (бэк + бот) + Neon PostgreSQL (с PITR). Cloudflare R2 (фото) — **планируется, в коде пока не используется** (фото тренажёров идут через Telegram `file_id`, не хранятся в R2).
-- **Auth:** Telegram initData → HMAC-SHA256 на бэке
+- **Auth:** единый middleware `auth` (`server/src/middleware/auth.js`): Mini App — Telegram initData (HMAC-SHA256), web/PWA — Better Auth bearer-сессии (email + Telegram Login Widget). Детали — [product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)
+- **Web-версия/PWA:** https://gymwithai.me — те же URL, платформа определяется по непустоте `initData`; PWA устанавливается на iOS/Android, уведомления через durable-очередь + Web Push ([product/NOTIFICATIONS.md](product/NOTIFICATIONS.md))
 - **Язык:** JavaScript (без TypeScript). ESM everywhere (`"type": "module"` — `import`/`export`, не `require()`).
 - **Тесты:** Vitest (фронт + бэк). Тест-файлы: `src/**/*.test.js` (фронт) и `server/src/**/*.test.js` (бэк). Pre-push хук (Husky) последовательно запускает `lint → build → frontend tests → backend tests` и блокирует push при любом падении.
 
@@ -105,11 +106,14 @@ cd server && npx prisma generate       # регенерация клиента (
 ├── src/
 │   ├── main.jsx             # entry: BrowserRouter > ... > QueryClientProvider > ActiveWorkoutProvider > App
 │   ├── App.jsx              # маршруты
-│   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage, ProgressPage, LibraryPage, ProgramEditPage
+│   ├── pages/Main/          # HomePage, WorkoutPage, SummaryPage, ProgressPage, LibraryPage, ProgramEditPage, MePage
+│   ├── pages/Auth/          # web: LoginPage, Reset/Verify, AuthCallback (lazy, вне бандла мини-аппа)
 │   ├── pages/Demo/          # DesignSystemDemo
 │   ├── components/ui/       # Glass, Button, Icon, TopBar, BigStepper и др.
 │   ├── components/layout/   # TabLayout, GlassNav
+│   ├── components/web/      # WebProvider (auth-гейт), WebLayout (десктоп-сайдбар), TelegramLoginWidget
 │   ├── components/TelegramProvider.jsx
+│   ├── sw.js                # service worker PWA (precache + Web Push), injectManifest
 │   ├── lib/                 # queryClient.js, queryKeys.js (TanStack Query)
 │   ├── hooks/               # queries.js, mutations.js (TanStack Query hooks)
 │   ├── contexts/            # ActiveWorkoutContext (ephemeral workout state)
@@ -119,9 +123,9 @@ cd server && npx prisma generate       # регенерация клиента (
 └── server/                  # Express + Telegraf + Prisma (Railway)
     ├── src/
     │   ├── index.js         # entry: Express + bot.launch() + scheduler (один процесс)
-    │   ├── routes/          # /api/v1/{auth,exercises,workouts,stats,programs,progress}
+    │   ├── routes/          # /api/v1/{auth,exercises,workouts,stats,programs,progress,chat,insights,push,admin}
     │   ├── controllers/     # auth, exercise, workout, program, stats, progress
-    │   ├── middleware/       # telegramAuth.js, rateLimiter.js, errorHandler.js
+    │   ├── middleware/       # auth.js (единый: tma|Bearer), telegramAuth.js, rateLimiter.js, errorHandler.js
     │   ├── bot/             # Telegraf bot (long polling) + scenes (WizardScene для /program)
     │   ├── services/aiTrainer/  # LLM-логика: chat (tool-use), chatTools, programEditor, identifyMachine, generateProgram, importProgram, weekly/dailyInsight
     │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js, dateUtils.js
@@ -155,10 +159,10 @@ cd server && npx prisma generate       # регенерация клиента (
 
 ### Бэкенд: архитектура
 
-Монолит в одном процессе: Express API + Telegraf бот + node-cron шедулер (`server/src/scheduler/` — weekly-сводка, напоминания; идемпотентность через `NotificationLog`). `BigInt.prototype.toJSON` monkey-patch в `server/src/index.js` — Prisma возвращает `telegramId` как BigInt, без патча `JSON.stringify` падает. JSON body limit — 1MB (`express.json({ limit: '1mb' })`). Rate limiting через `express-rate-limit`: глобальный 100 req/мин + LLM 5 req/мин.
+Монолит в одном процессе: Express API + Telegraf бот + шедулеры (`server/src/scheduler/`): legacy почасовой (reminder; идемпотентность через `NotificationLog`), минутная durable-очередь уведомлений (planner/worker, `NotificationJob`, флаг `NOTIFICATION_QUEUE`), суточный retention. `BOT_DISABLED=1` — сервер без Telegraf-поллинга (локальные смоуки не конфликтуют с прод-ботом; getMe/notify работают). `BigInt.prototype.toJSON` monkey-patch в `server/src/index.js` — Prisma возвращает `telegramId` как BigInt, без патча `JSON.stringify` падает. JSON body limit — 1MB (`express.json({ limit: '1mb' })`). Rate limiting через `express-rate-limit`: глобальный 100 req/мин + LLM 5 req/мин.
 
-- Все роуты под `/api/v1/*`, защищены `telegramAuth` middleware.
-- Health-check: `GET /api/health` (без авторизации).
+- Все роуты под `/api/v1/*`, защищены единым `auth` middleware (tma → telegramAuth | Bearer → Better Auth).
+- Health-check: `GET /api/health`; Better Auth: `/api/auth/*` (монтаж до `express.json()`); admin-диагностика очереди: `GET /api/v1/admin/notifications?key=ANALYTICS_SECRET`.
 - **Контроллеры тонкие, сервисы толстые.** LLM-логика — в `services/aiTrainer/`, промпты — в git как `.md`-файлы.
 - `services/exerciseResolver.js` — резолвит названия упражнений от LLM в ID (slug → alias → auto-create). Использует raw SQL (`unnest(aliases)`) для поиска по массиву алиасов.
 - `utils/parseJsonFromLLM.js` — извлечение JSON из LLM-ответов (markdown code fences, etc.).
@@ -200,7 +204,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Prisma / БД
 
-15 моделей: `User`, `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише), `NotificationLog` (идемпотентность проактивных рассылок), `PendingChatContext` (handoff из мини-аппа в чат, peek/commit), `Insight` (кэш дневного инсайта), `LlmUsage` (учёт токенов LLM с денежной оценкой для `/cost`). Полная схема — `server/prisma/schema.prisma`.
+21 модель: `User` (`telegramId` — **nullable**: web-only юзеры; `email`/`emailVerified` — Better Auth), `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише), `NotificationLog` (идемпотентность проактивных рассылок), `PendingChatContext` (handoff из мини-аппа в чат, peek/commit), `Insight` (кэш дневного инсайта), `LlmUsage` (учёт токенов LLM с денежной оценкой для `/cost`), web-auth: `Session`/`Account`/`Verification`/`RateLimit` (таблицы Better Auth; Telegram-идентичность — канонически на `User.telegramId`, в `Account` НЕ дублируется), уведомления: `NotificationJob` (durable-очередь: state machine, CAS-claim, сохранённый LLM-рендер), `PushSubscription` (Web Push устройства, 404/410 → автоудаление). Полная схема — `server/prisma/schema.prisma`.
 
 **Миграций НЕТ, только `prisma db push`.** В референсном проекте `db push` однажды дропнул все таблицы (2026-03-08) при добавлении NOT NULL колонки. Спасла Neon PITR.
 
@@ -213,7 +217,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Telegram auth
 
-Все защищённые роуты под `/api/v1/*` используют middleware `telegramAuth` (HMAC-SHA256 валидация initData + проверка `auth_date` < 24h). Без него — `TypeError: Cannot read properties of undefined (reading 'id')`.
+Все защищённые роуты под `/api/v1/*` используют единый middleware `auth`: `tma <initData>` → telegramAuth (HMAC-SHA256 + `auth_date` < 24h), `Bearer <token>` → сессия Better Auth. Без него — `TypeError: Cannot read properties of undefined (reading 'id')`. ⚠️ Код не должен предполагать non-null `telegramId` (web-only юзеры): рассылки фильтруют `telegramId != null`, сериализация — `?.toString() ?? null`.
 
 Dev-bypass: при `ALLOW_DEV_BYPASS=true` в env заголовок `Authorization: tma dev_bypass` разрешает тестирование без Telegram WebApp. Fail-closed: без переменной bypass отключён.
 
@@ -253,7 +257,7 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 **Фронт:** `VITE_API_URL` (локально `http://localhost:3001`).
 
-**Бэк:** `DATABASE_URL`, `BOT_TOKEN`, `FRONTEND_URL`, `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_ACCESS_KEY`/`R2_SECRET_KEY`/`R2_BUCKET`/`R2_ENDPOINT` (Cloudflare R2 для фото тренажёров — **зарезервировано, в коде пока не используется**), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed).
+**Бэк:** `DATABASE_URL`, `BOT_TOKEN` (+`BOT_DISABLED=1` для локальных смоуков), `FRONTEND_URL` (список origin'ов через запятую, первый — канонический), `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_*` (**зарезервировано, в коде пока не используется**), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed); web-auth: `BETTER_AUTH_SECRET` (без него web-вход выключен целиком), `AUTH_PROVIDERS` (email,telegram_widget; google/yandex — по credentials), `API_URL`, `RESEND_API_KEY`/`EMAIL_FROM`; уведомления: `NOTIFICATION_QUEUE` (off/shadow/on), `NOTIFICATION_WORKER`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`.
 
 `postinstall` в server/package.json автоматически запускает `prisma generate`.
 

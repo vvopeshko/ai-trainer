@@ -1,6 +1,8 @@
 # Сервис уведомлений AI Trainer (durable-очередь + Web Push)
 
-**Статус:** реализовано (2026-07-12), выкатывается через feature-флаг `NOTIFICATION_QUEUE`.
+**Статус (2026-07-12):** реализовано; на проде `NOTIFICATION_QUEUE=shadow` (наблюдение),
+VAPID настроен, Web Push до реального iPhone проверен (кнопка «Отправить тестовое» на /me).
+Следующий шаг — `NOTIFICATION_QUEUE=on` после проверки shadow-планирования (§11 п.3).
 
 Архитектура адаптирована из проверенного в проде сервиса уведомлений Flamy
 (`../daily balancer/life-progress-tracker/CDX_NOTIFICATION_SERVICE_ARCHITECTURE.md`).

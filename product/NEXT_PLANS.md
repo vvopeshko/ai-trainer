@@ -3,7 +3,7 @@
 Живой бэклог приоритетов, фич, техдолга. Обновляется на каждой итерации.
 Продукт — в [BRD.md](BRD.md). Техника — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Последнее обновление:** 2026-07-11
+**Последнее обновление:** 2026-07-12
 
 ---
 
@@ -15,6 +15,19 @@
 - **Фаза 2.5 (тесты):** `workoutController` (пауза/финиш/consume оверрайда), chat tool-use цикл, чистые функции шедулера.
 - **Оптимизация фронтенда (остаток):** персист каталога в localStorage, lazy `ExerciseDetailSheet` + динамический `BodyMap` (−46 KB из main), drag-reorder через ref, вынос Google Fonts из блокирующего пути.
 - **Фаза 3 (косметика):** i18n-хардкоды мимо `t()`, цвета мимо токенов (hero-палитра HeroBlock), доступность (aria-label, focus trap), доки vs код (CLAUDE.md: шедулер реализован, 15 моделей, R2 «планируется»).
+
+---
+
+## 🌐 Web-версия / PWA / уведомления — следующие шаги (2026-07-12)
+
+Фазы 1–2 web-auth, PWA и очередь уведомлений — на проде (см. [UPDATES.md](UPDATES.md), [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md), [NOTIFICATIONS.md](NOTIFICATIONS.md)).
+
+- [ ] **`NOTIFICATION_QUEUE=on`** после наблюдения shadow (первое воскресенье: убедиться, что planner создаёт weekly-jobs корректно — admin endpoint)
+- [ ] Мигрировать `reminder` в durable-очередь (сейчас legacy, telegram-only)
+- [ ] Google/Yandex OAuth: завести credentials → добавить в `AUTH_PROVIDERS` (код готов) → проверить handoff на реальных доменах
+- [ ] **Фаза 3 web-паритета** ([ARCHITECTURE_WEB_AUTH.md §12](ARCHITECTURE_WEB_AUTH.md)): веб-чат с тренером (бэкенд готов, нужен UI+endpoint), генерация программы с веба — без этого web-only регистрация неполноценна
+- [ ] Алерты по очереди (oldest queued job, failed rate) — сейчас только логи + admin endpoint
+- [ ] Email-канал уведомлений (mailer уже есть, `channel` в схеме предусмотрен)
 
 ---
 
@@ -39,7 +52,7 @@
 
 ### Фаза 6 — Cross-cutting + polish
 
-- [ ] Профиль-экран (`/me`) — сейчас placeholder
+- [x] Профиль-экран (`/me`) — профиль, способы входа, web-доступ, push, установка PWA ✅ (2026-07-12, в рамках web-версии)
 - [ ] Deep-links из бота в мини-апп
 - [ ] Offline-очередь pending-подходов
 
