@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI-тренер — тренер, который всегда рядом</title>
+<style>
+/* ============================================================
+   AI Trainer · Liquid Glass — Colors & Type
+   ============================================================
+   Single source of truth for color + typography tokens, plus
+   semantic CSS aliases (h1, h2, body, caps, mono, code).
+   Import once at the root of any HTML artifact.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ── Accent (single tunable hue) ───────────────────────── */
+  --accent-h: 158;
+  --accent-s: 65%;
+  --accent-l: 56%;
+  --accent:        hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --accent-strong: hsl(var(--accent-h), 70%, 60%);
+  --accent-soft:   hsla(var(--accent-h), 55%, 50%, 0.18);
+  --accent-fg:     hsl(var(--accent-h), 50%, 22%);
+  --accent-text:   hsl(var(--accent-h), 55%, 75%);
+
+  /* ── Surface (dark only) ───────────────────────────────── */
+  --bg-base:      #050507;
+  --bg-app:       #08080B;
+  --surface-0:    rgba(22, 22, 28, 0.55);
+  --surface-1:    rgba(28, 28, 34, 0.70);
+  --surface-tint: linear-gradient(180deg,
+                    hsla(var(--accent-h),70%,22%,0.55) 0%,
+                    rgba(22,22,28,0.6) 100%);
+
+  /* ── Borders ───────────────────────────────────────────── */
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-medium: rgba(255,255,255,0.08);
+  --border-accent: hsla(var(--accent-h),70%,50%,0.20);
+
+  /* ── Foreground ────────────────────────────────────────── */
+  --fg-1: #ECEAEF;                       /* primary */
+  --fg-2: rgba(236,234,239,0.70);        /* secondary */
+  --fg-3: rgba(236,234,239,0.50);        /* tertiary */
+  --fg-4: rgba(236,234,239,0.30);        /* disabled */
+  --fg-on-accent: #0a1815;
+
+  /* ── Semantic ──────────────────────────────────────────── */
+  --success:      hsl(140, 55%, 55%);
+  --success-soft: hsla(140, 55%, 55%, 0.15);
+  --warning:      hsl(38, 90%, 60%);
+  --warning-soft: hsla(38, 90%, 60%, 0.18);
+  --danger:       hsl(0, 70%, 62%);
+  --danger-soft:  hsla(0, 70%, 62%, 0.18);
+  --info:         hsl(210, 70%, 65%);
+
+  /* ── Glass tuning ──────────────────────────────────────── */
+  --glass-blur: 16px;
+  --glass-sat:  1.25;
+
+  /* ── Typography families ───────────────────────────────── */
+  --font-sans:    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Type scale ────────────────────────────────────────── */
+  --text-xs:      9.5px;
+  --text-sm:      11px;
+  --text-base:    12.5px;
+  --text-md:      13.5px;
+  --text-lg:      15px;
+  --text-xl:      18px;
+  --text-2xl:     21px;
+  --text-3xl:     28px;
+  --text-display: 46px;
+
+  /* ── Weights ───────────────────────────────────────────── */
+  --w-regular: 400;
+  --w-medium:  500;
+  --w-semi:    600;
+  --w-bold:    700;
+
+  /* ── Tracking & leading ────────────────────────────────── */
+  --tracking-tight: -0.022em;
+  --tracking-caps:  0.16em;
+  --leading-tight:  1.15;
+  --leading-snug:   1.35;
+  --leading-normal: 1.5;
+}
+
+/* ── Body default ─────────────────────────────────────────── */
+html, body {
+  background: var(--bg-base);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Semantic aliases ─────────────────────────────────────── */
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: var(--w-semi);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  color: var(--fg-1);
+}
+
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--w-semi);
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+  margin: 0;
+  color: var(--fg-1);
+}
+
+h3, .h3 {
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  font-weight: var(--w-semi);
+  letter-spacing: -0.01em;
+  line-height: var(--leading-snug);
+  margin: 0;
+  color: var(--fg-1);
+}
+
+h4, .h4 {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--w-semi);
+  margin: 0;
+  color: var(--fg-1);
+}
+
+p, .body {
+  font-size: var(--text-md);
+  font-weight: var(--w-medium);
+  line-height: var(--leading-snug);
+  color: var(--fg-2);
+  margin: 0;
+}
+
+.small {
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+  line-height: var(--leading-snug);
+}
+
+.caps, .eyebrow {
+  font-size: var(--text-xs);
+  font-weight: var(--w-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--accent-text);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-tight);
+}
+
+.numeric-hero {
+  font-family: var(--font-mono);
+  font-size: var(--text-display);
+  font-weight: var(--w-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--fg-1);
+}
+
+code, pre, .code {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--fg-1);
+}
+
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* ── Page baseline ─────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-base);
+    color: var(--fg-1);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+  body, p, span, div, a, button, h1, h2, h3, h4 { font-feature-settings: "ss01" on, "cv11" on; }
+  .num, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  ::selection { background: hsla(var(--accent-h), 60%, 45%, 0.4); }
+
+  /* ── Page container ────────────────────────────────────── */
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  @media (min-width: 768px) { .wrap { padding: 0 40px; } }
+
+  /* ── Mesh — the brand background ───────────────────────── */
+  .mesh-bg {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+  }
+  .mesh-bg .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.85;
+    will-change: transform;
+  }
+  .mesh-bg .b1 {
+    width: 680px; height: 540px;
+    top: -160px; left: -120px;
+    background: radial-gradient(circle, hsla(var(--accent-h), 65%, 38%, 0.8), transparent 65%);
+    animation: blobA 26s ease-in-out infinite;
+  }
+  .mesh-bg .b2 {
+    width: 720px; height: 600px;
+    top: 80px; right: -180px;
+    background: radial-gradient(circle, hsla(calc(var(--accent-h) + 14), 60%, 32%, 0.7), transparent 65%);
+    animation: blobB 32s ease-in-out infinite;
+  }
+  .mesh-bg .b3 {
+    width: 500px; height: 400px;
+    bottom: -160px; left: 30%;
+    background: radial-gradient(circle, hsla(calc(var(--accent-h) - 30), 55%, 30%, 0.55), transparent 70%);
+    animation: blobC 38s ease-in-out infinite;
+  }
+  @keyframes blobA {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(40px, -30px, 0) scale(1.08); }
+    66%      { transform: translate3d(-20px, 40px, 0) scale(0.95); }
+  }
+  @keyframes blobB {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(-60px, 30px, 0) scale(1.05); }
+  }
+  @keyframes blobC {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(40px, -20px, 0) scale(1.1); }
+  }
+  .mesh-bg::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(5,5,7,0.55), rgba(5,5,7,0.85));
+  }
+
+  /* SVG film grain overlay (fixed across page) */
+  .grain {
+    position: fixed; inset: 0; z-index: 100;
+    pointer-events: none;
+    opacity: 0.32;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.93  0 0 0 0 0.92  0 0 0 0 0.94  0 0 0 0.5 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+    background-size: 240px 240px;
+  }
+
+  /* Aurora bands at section transitions */
+  .aurora {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: min(90%, 1100px); height: 1px;
+    background: linear-gradient(90deg, transparent, hsla(var(--accent-h), 65%, 60%, 0.55), transparent);
+  }
+  .aurora::before {
+    content: ""; position: absolute; inset: -80px 0;
+    background: radial-gradient(ellipse 60% 100% at 50% 50%, hsla(var(--accent-h), 65%, 45%, 0.18), transparent 60%);
+    pointer-events: none;
+  }
+  .aurora.top { top: 0; }
+  .aurora.bot { bottom: 0; }
+
+  .grid-bg {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+  }
+
+  /* ── Glass primitives (matched to DS) ──────────────────── */
+  .glass {
+    background: rgba(22,22,28,0.55);
+    backdrop-filter: blur(16px) saturate(1.25);
+    -webkit-backdrop-filter: blur(16px) saturate(1.25);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 14px rgba(0,0,0,0.35);
+  }
+  .glass-strong {
+    background: rgba(28,28,34,0.7);
+    backdrop-filter: blur(22px) saturate(1.25);
+    -webkit-backdrop-filter: blur(22px) saturate(1.25);
+    border: 1px solid var(--border-medium);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 22px rgba(0,0,0,0.4);
+  }
+  .glass-tint {
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,22%,0.55), rgba(22,22,28,0.6));
+    backdrop-filter: blur(16px) saturate(1.3);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    border: 1px solid var(--border-accent);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 22px rgba(0,0,0,0.4);
+    position: relative; overflow: hidden;
+  }
+  .glass-tint::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 36%);
+  }
+
+  /* ── Eyebrow ───────────────────────────────────────────── */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 600;
+    text-transform: lowercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--accent-text);
+  }
+  .eyebrow::before {
+    content: ""; width: 22px; height: 1px;
+    background: hsla(var(--accent-h), 55%, 70%, 0.55);
+  }
+  .eyebrow.mute { color: var(--fg-3); }
+  .eyebrow.mute::before { background: rgba(255,255,255,0.18); }
+  .eyebrow.center { justify-content: center; }
+
+  /* ── Type ──────────────────────────────────────────────── */
+  h1.display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(40px, 6vw, 76px);
+    letter-spacing: -0.034em;
+    line-height: 0.98;
+    color: var(--fg-1);
+  }
+  h2.section {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(32px, 4.4vw, 54px);
+    letter-spacing: -0.028em;
+    line-height: 1.04;
+    color: var(--fg-1);
+  }
+  h3.card {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+    color: var(--fg-1);
+  }
+  p.lead {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--fg-2);
+    font-weight: 500;
+  }
+  p.body {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--fg-2);
+    font-weight: 500;
+  }
+  .accent-text {
+    color: hsl(var(--accent-h), 60%, 72%);
+  }
+  .strike {
+    color: var(--fg-3);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgba(236,234,239,0.35);
+  }
+  .text-balance { text-wrap: balance; }
+
+  /* ── Buttons ───────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 52px; padding: 0 22px;
+    border-radius: 12px;
+    font-size: 15px; font-weight: 600;
+    letter-spacing: -0.005em;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform .15s var(--ease-out, cubic-bezier(.22,1,.36,1)),
+                background .15s, filter .15s, box-shadow .25s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.985); }
+  .btn-accent {
+    background: hsl(var(--accent-h), 55%, 55%);
+    color: hsl(var(--accent-h), 50%, 12%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.28),
+      0 10px 28px hsla(var(--accent-h), 60%, 40%, 0.5);
+  }
+  .btn-accent:hover { background: hsl(var(--accent-h), 58%, 60%); filter: brightness(1.04); }
+  .btn-ghost {
+    background: rgba(255,255,255,0.05);
+    color: var(--fg-1);
+    border: 1px solid var(--border-medium);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.10); }
+  .btn-sm { height: 40px; padding: 0 14px; font-size: 13px; border-radius: 10px; }
+
+  /* ── Chip ──────────────────────────────────────────────── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 32px; padding: 0 13px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-subtle);
+    font-size: 12.5px; font-weight: 500;
+    color: var(--fg-2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .chip.accent {
+    background: hsla(var(--accent-h), 60%, 50%, 0.10);
+    border-color: hsla(var(--accent-h), 60%, 55%, 0.32);
+    color: hsl(var(--accent-h), 55%, 80%);
+  }
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: hsl(var(--accent-h), 70%, 60%);
+    box-shadow: 0 0 0 0 hsla(var(--accent-h), 70%, 55%, 0.6);
+    animation: pulseDot 2.4s ease-in-out infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { box-shadow: 0 0 0 0 hsla(var(--accent-h), 70%, 55%, 0); }
+    50%      { box-shadow: 0 0 0 6px hsla(var(--accent-h), 70%, 55%, 0.18); }
+  }
+
+  /* ── Top nav ───────────────────────────────────────────── */
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(5,5,7,0.6);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .brand-mark {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, hsla(var(--accent-h),70%,32%,0.85), hsla(var(--accent-h),70%,22%,0.85));
+    border: 1px solid hsla(var(--accent-h),70%,55%,0.4);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h), 55%, 82%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      0 0 14px hsla(var(--accent-h), 60%, 45%, 0.4);
+  }
+  .brand-mark svg { width: 16px; height: 16px; }
+
+  /* ── Hero phone frame (380×wrapper, scaled) ────────────── */
+  .phone-frame {
+    position: relative;
+    width: 360px;
+    height: 720px;
+    border-radius: 38px;
+    background: var(--bg-app);
+    overflow: hidden;
+    isolation: isolate;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.08) inset,
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 0 0 10px rgba(255,255,255,0.025),
+      0 0 0 11px rgba(255,255,255,0.04),
+      0 60px 120px rgba(0,0,0,0.6),
+      0 30px 60px rgba(0,0,0,0.4);
+    transform: rotate(-1.5deg);
+  }
+  .phone-frame .pf-mesh {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(420px 320px at 10% -8%, hsla(var(--accent-h),65%,38%,0.7), transparent 65%),
+      radial-gradient(360px 280px at 110% 40%, hsla(calc(var(--accent-h) - 60),60%,30%,0.55), transparent 65%),
+      radial-gradient(320px 240px at 50% 110%, hsla(calc(var(--accent-h) + 20),50%,28%,0.45), transparent 65%);
+  }
+  .phone-frame .pf-mesh::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(5,5,7,0.55), rgba(5,5,7,0.85));
+  }
+  .phone-frame .pf-content {
+    position: absolute; inset: 0; z-index: 1;
+    padding: 56px 14px 76px;
+    display: flex; flex-direction: column;
+    gap: 12px;
+  }
+  .pf-topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 52px; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 18px 0;
+    background: rgba(28,28,34,0.72);
+    backdrop-filter: blur(22px) saturate(1.25);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .pf-topbar .title { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: -0.018em; }
+  .pf-topbar .sub   { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); margin-top: 1px; }
+  .pf-topbar .ic-btn {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-2);
+  }
+  .pf-dock {
+    position: absolute; left: 8px; right: 8px; bottom: 8px; height: 56px; z-index: 5;
+    display: flex; padding: 0 4px;
+    border-radius: 16px;
+    background: rgba(28,28,34,0.7);
+    backdrop-filter: blur(22px) saturate(1.25);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 22px rgba(0,0,0,0.4);
+  }
+  .pf-dock .tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    color: rgba(236,234,239,0.42); position: relative;
+  }
+  .pf-dock .tab.active { color: var(--fg-1); }
+  .pf-dock .tab.active::before {
+    content: ""; position: absolute; top: 4px;
+    height: 2px; width: 20px; border-radius: 1px;
+    background: hsl(var(--accent-h),70%,65%);
+  }
+  .pf-dock .tab .lab { font-size: 9px; font-weight: 600; letter-spacing: 0.2px; }
+
+  /* In-phone Active pill */
+  .ap-pill {
+    position: relative;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,22%,0.55), rgba(22,22,28,0.6));
+    border: 1px solid hsla(var(--accent-h),70%,50%,0.3);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    margin-top: 6px;
+  }
+  .ap-pill::before {
+    content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
+    width: 3px; background: hsl(var(--accent-h),70%,60%);
+    border-radius: 2px;
+  }
+  .ap-pill .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: hsl(var(--accent-h),70%,68%);
+    box-shadow: 0 0 8px hsla(var(--accent-h),70%,55%,0.7);
+    margin-left: 4px;
+    animation: pulseDot 3.4s ease-in-out infinite;
+  }
+  .ap-pill .lbl { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(236,234,239,0.55); }
+  .ap-pill .name { font-size: 13.5px; font-weight: 600; margin-top: 1px; }
+  .ap-pill .time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 17px; font-weight: 600; color: #fff; }
+
+  /* In-phone Coach hero */
+  .coach {
+    padding: 14px;
+    display: flex; gap: 12px;
+    align-items: flex-start;
+  }
+  .coach .ico {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),60%,80%);
+    flex-shrink: 0;
+  }
+  .coach .lbl { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: hsl(var(--accent-h),55%,75%); }
+  .coach .ttl { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -0.018em; margin-top: 3px; }
+  .coach .cp  { font-size: 12.5px; color: rgba(255,255,255,0.78); margin-top: 5px; line-height: 1.45; }
+  .coach .ev  {
+    margin-top: 8px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 9px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: 10.5px; color: #fff;
+  }
+
+  /* In-phone Stat grid */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-tile {
+    padding: 12px 13px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+  }
+  .stat-tile .l { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(236,234,239,0.5); }
+  .stat-tile .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 21px; font-weight: 600; margin-top: 4px; }
+  .stat-tile .s { font-size: 10.5px; color: rgba(236,234,239,0.55); margin-top: 1px; }
+  .stat-tile .ico {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),55%,72%);
+  }
+
+  /* AI note in phone */
+  .ai-note {
+    padding: 11px 12px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .ai-note .ic {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .ai-note .tx { font-size: 12px; line-height: 1.4; color: rgba(255,255,255,0.78); }
+
+  /* ── Chat floating card (TG bubble overlay) ──────────── */
+  .tg-card {
+    position: absolute;
+    right: -36px;
+    bottom: 80px;
+    width: 280px;
+    padding: 14px;
+    z-index: 6;
+    transform: rotate(2.5deg);
+  }
+  .tg-card .head {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 10px;
+  }
+  .tg-card .av {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(180deg, hsl(var(--accent-h),65%,55%), hsl(var(--accent-h),65%,38%));
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),50%,12%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .tg-card .av svg { width: 14px; height: 14px; }
+  .tg-card .nm { font-size: 12.5px; font-weight: 600; }
+  .tg-card .st { font-size: 10px; color: hsl(var(--accent-h),55%,75%); margin-top: 1px; display: flex; align-items: center; gap: 4px; }
+  .bubble {
+    max-width: 88%;
+    padding: 9px 12px;
+    border-radius: 14px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .bubble.bot {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-subtle);
+    border-bottom-left-radius: 4px;
+    color: var(--fg-1);
+  }
+  .bubble.bot b { color: hsl(var(--accent-h),55%,80%); font-weight: 600; }
+  .bubble.user {
+    background: hsl(var(--accent-h),55%,55%);
+    color: hsl(var(--accent-h),50%,12%);
+    font-weight: 500;
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .bubble.row { display: flex; }
+  .bubble.user.row { justify-content: flex-end; }
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .typing span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--fg-3);
+    animation: typing 1.4s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+
+  /* ── Sections ──────────────────────────────────────────── */
+  section { position: relative; padding: 96px 0; }
+  @media (min-width: 768px) { section { padding: 128px 0; } }
+
+  /* ── Pain narrative cards: rejected attempts ──────────── */
+  .tried-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) { .tried-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .tried {
+    position: relative;
+    padding: 22px 22px 20px;
+    background: rgba(22,22,28,0.5);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    transition: border-color .2s, background .2s, transform .2s;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .tried:hover { border-color: var(--border-medium); background: rgba(28,28,34,0.62); transform: translateY(-2px); }
+  .tried::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.10), transparent);
+  }
+  .tried .verdict {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-3);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tried .verdict svg { width: 11px; height: 11px; color: var(--fg-3); }
+  .tried .name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.022em;
+    margin-top: 14px;
+    color: var(--fg-2);
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: hsla(0, 60%, 60%, 0.55);
+  }
+  .tried .reason {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+  .tried .tag {
+    margin-top: auto;
+    padding-top: 18px;
+    display: flex; align-items: baseline; gap: 8px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    margin-top: 18px;
+  }
+  .tried .tag .k { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+  .tried .tag .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--fg-1); font-weight: 600; }
+
+  /* Pull quote display */
+  .pull-block {
+    position: relative;
+    padding: 24px 0 0;
+  }
+  .pull-block .quote {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 3.4vw, 44px);
+    letter-spacing: -0.024em;
+    line-height: 1.08;
+    color: var(--fg-1);
+  }
+  .pull-block .quote em {
+    font-style: normal;
+    background: linear-gradient(180deg, hsl(var(--accent-h), 60%, 72%), hsl(var(--accent-h), 55%, 58%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .pull-block .meta {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--fg-3);
+  }
+
+  /* ── Chasm illustration (SVG-based) ─────────────────────── */
+  .chasm {
+    position: relative;
+    margin-top: 36px;
+    min-height: 420px;
+    border-radius: 18px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(0,0,0,0.9), transparent 70%),
+      linear-gradient(180deg, rgba(8,8,11,0.4) 0%, #020205 100%);
+    border: 1px solid var(--border-subtle);
+  }
+  .chasm > svg.canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* Labels on cliff tops (HTML overlays) */
+  .cliff-card {
+    position: absolute;
+    top: 28px;
+    width: 30%;
+    max-width: 280px;
+    padding: 16px 18px;
+    z-index: 3;
+  }
+  .cliff-card.left  { left: 4%; text-align: left; }
+  .cliff-card.right { right: 4%; text-align: right; }
+  .cliff-card .verdict {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 8px;
+  }
+  .cliff-card.right .verdict { color: hsl(var(--accent-h), 55%, 75%); }
+  .cliff-card .name {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 2.8vw, 36px);
+    font-weight: 700;
+    letter-spacing: -0.024em;
+    line-height: 1;
+  }
+  .cliff-card.left  .name { color: var(--fg-2); }
+  .cliff-card.right .name { color: hsl(var(--accent-h), 55%, 82%); }
+  .cliff-card ul {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .cliff-card.right ul { align-items: flex-end; }
+  .cliff-card li {
+    font-size: 13px;
+    color: var(--fg-2);
+    display: inline-flex; align-items: center; gap: 8px;
+    line-height: 1.35;
+  }
+  .cliff-card.right li { flex-direction: row-reverse; }
+  .cliff-card li svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .cliff-card.left  li svg { color: rgba(236,234,239,0.4); }
+  .cliff-card.right li svg { color: hsl(var(--accent-h), 55%, 72%); }
+
+  /* Bridge pill */
+  .chasm .bridge-pill {
+    position: absolute;
+    top: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),65%,32%,0.95), hsla(var(--accent-h),65%,18%,0.95));
+    border: 1px solid hsla(var(--accent-h), 65%, 55%, 0.55);
+    box-shadow:
+      0 0 0 5px rgba(2,2,5,0.7),
+      0 8px 28px hsla(var(--accent-h),65%,40%,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--accent-h), 55%, 88%);
+    white-space: nowrap;
+  }
+  .chasm .bridge-pill svg { width: 11px; height: 11px; }
+
+  /* Centered word & debris (text overlays) */
+  .chasm .word {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 3.4vw, 46px);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    color: transparent;
+    background: linear-gradient(180deg,
+      hsla(var(--accent-h), 35%, 80%, 0.70) 0%,
+      hsla(var(--accent-h), 30%, 60%, 0.32) 55%,
+      hsla(var(--accent-h), 25%, 40%, 0.10) 90%,
+      transparent 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    pointer-events: none;
+    white-space: nowrap;
+    filter: drop-shadow(0 2px 14px hsla(var(--accent-h), 60%, 35%, 0.45));
+  }
+  .chasm .debris {
+    position: absolute;
+    bottom: 22px; left: 0; right: 0;
+    z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    pointer-events: none;
+  }
+  .chasm .debris span {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    color: rgba(236,234,239,0.34);
+    text-align: center;
+  }
+  .chasm .debris span:nth-child(2) { color: rgba(236,234,239,0.22); }
+  .chasm .debris span:nth-child(3) { color: rgba(236,234,239,0.12); }
+
+  /* Mobile: stack cliffs vertically, hide cliff illustration drama */
+  @media (max-width: 767px) {
+    .chasm { min-height: 0; padding: 0; }
+    .chasm > svg.canvas { position: relative; height: 200px; }
+    .cliff-card { position: relative; width: 100%; max-width: none; top: auto; left: auto; right: auto; padding: 18px 20px; text-align: left; }
+    .cliff-card.right { text-align: left; }
+    .cliff-card.right ul { align-items: flex-start; }
+    .cliff-card.right li { flex-direction: row; }
+    .chasm .bridge-pill { position: relative; top: auto; left: auto; transform: none; margin: 12px auto; display: flex; width: max-content; }
+    .chasm .word, .chasm .debris { display: none; }
+  }
+
+  /* Narrative head split (eyebrow + h2 + lead next to each other) */
+  .narr-head {
+    display: grid; gap: 32px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 900px) { .narr-head { grid-template-columns: 1.15fr 0.85fr; align-items: end; gap: 56px; } }
+  .narr-head .lead {
+    padding-bottom: 6px;
+  }
+
+  /* ── Pain cards ────────────────────────────────────────── */
+  .pain {
+    padding: 24px;
+    display: flex; flex-direction: column;
+    transition: border-color .2s, background .2s, transform .2s;
+  }
+  .pain:hover {
+    border-color: var(--border-medium);
+    background: rgba(28,28,34,0.65);
+    transform: translateY(-2px);
+  }
+  .pain .ic-wrap {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: hsla(var(--accent-h), 60%, 50%, 0.10);
+    border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.25);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h), 55%, 78%);
+    margin-bottom: 18px;
+  }
+  .pain h3 { margin-bottom: 8px; }
+
+  /* ── Benefit cards (richer w/ demo) ────────────────────── */
+  .benefit {
+    padding: 24px;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .benefit::before {
+    content: ""; position: absolute; top: -1px; left: 18px; right: 18px; height: 1px;
+    background: linear-gradient(90deg, transparent, hsla(var(--accent-h),70%,65%,0.45), transparent);
+  }
+  .benefit .ttl-row { display: flex; align-items: center; gap: 12px; }
+  .benefit .ic {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h), 55%, 80%);
+  }
+  .benefit .demo {
+    margin-top: 4px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ── How-it-works steps ────────────────────────────────── */
+  .step {
+    display: flex; gap: 16px;
+    padding: 22px;
+    border-radius: 14px;
+    background: rgba(22,22,28,0.5);
+    border: 1px solid var(--border-subtle);
+    transition: border-color .2s;
+  }
+  .step:hover { border-color: var(--border-medium); }
+  .step-num {
+    width: 38px; height: 38px; flex-shrink: 0;
+    border-radius: 11px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,28%,0.7), hsla(var(--accent-h),70%,18%,0.7));
+    border: 1px solid hsla(var(--accent-h),70%,55%,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 700;
+    color: hsl(var(--accent-h), 55%, 88%);
+  }
+
+  /* ── Extras strip ──────────────────────────────────────── */
+  .extras {
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 32px;
+  }
+  @media (min-width: 768px) { .extras { grid-template-columns: 1fr 1fr 1fr; } }
+  .extras .row { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--fg-2); }
+  .extras .row svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; color: hsl(var(--accent-h), 55%, 70%); }
+
+  /* ── Pricing ───────────────────────────────────────────── */
+  .price {
+    position: relative;
+    padding: 30px 26px;
+    border-radius: 16px;
+    background: rgba(22,22,28,0.5);
+    border: 1px solid var(--border-subtle);
+    transition: transform .2s, border-color .2s;
+    display: flex; flex-direction: column;
+  }
+  .price:hover { transform: translateY(-3px); border-color: var(--border-medium); }
+  .price.featured {
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,22%,0.45), rgba(22,22,28,0.6));
+    border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.4);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      0 24px 60px hsla(var(--accent-h), 70%, 30%, 0.35);
+  }
+  .price.featured::before {
+    content: ""; position: absolute; top: -1px; left: 24px; right: 24px; height: 1px;
+    background: linear-gradient(90deg, transparent, hsla(var(--accent-h),70%,75%,0.7), transparent);
+  }
+  .price .tier {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .price.featured .tier { color: hsl(var(--accent-h), 55%, 80%); }
+  .price .amount {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 52px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--fg-1);
+    margin-top: 14px;
+  }
+  .price .unit {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 17px;
+    color: var(--fg-3);
+    letter-spacing: -0.005em;
+  }
+  .price .why {
+    font-size: 14px;
+    color: var(--fg-2);
+    line-height: 1.5;
+    margin-top: 16px;
+  }
+  .price .features {
+    margin-top: 22px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .price .features .f {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13.5px;
+    color: var(--fg-2);
+  }
+  .price .features .f svg {
+    width: 14px; height: 14px; flex-shrink: 0; margin-top: 3px;
+    color: hsl(var(--accent-h),55%,75%);
+  }
+  .price .badge {
+    position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+    height: 22px; padding: 0 10px;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: hsl(var(--accent-h),55%,55%);
+    color: hsl(var(--accent-h),50%,12%);
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px hsla(var(--accent-h),60%,40%,0.5);
+  }
+  .price .cta { margin-top: 22px; }
+
+  /* ── Final CTA band ────────────────────────────────────── */
+  .final {
+    position: relative;
+    padding: 72px 28px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,22%,0.5), rgba(22,22,28,0.7));
+    border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 60px rgba(0,0,0,0.4);
+    overflow: hidden;
+    text-align: center;
+  }
+  .final::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 60% 80% at 50% 0%, hsla(var(--accent-h), 70%, 55%, 0.25), transparent 60%);
+  }
+  .final > * { position: relative; z-index: 1; }
+
+  /* ── Footer ────────────────────────────────────────────── */
+  footer { border-top: 1px solid var(--border-subtle); padding: 36px 0 48px; }
+
+  /* Subtle vertical line separators on section dividers */
+  .vline {
+    position: absolute; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--border-subtle), transparent);
+  }
+
+  /* Hero responsive */
+  @media (max-width: 767px) {
+    .phone-frame { transform: rotate(0); margin: 0 auto; }
+    .tg-card { display: none; }
+  }
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .phone-frame { transform: rotate(-1deg) scale(0.85); transform-origin: top right; }
+    .tg-card { right: -10px; bottom: 110px; }
+  }
+
+  /* ── Scroll reveal ─────────────────────────────────────── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1);
+    transition-delay: var(--rd, 0ms);
+  }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal.fade-only { transform: none; }
+  .reveal.fade-only.in { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* Hero entrance choreography — transform only, content stays visible if animation never plays */
+  .hero-rise {
+    animation: heroRise 1s cubic-bezier(.22,1,.36,1);
+    animation-delay: var(--rd, 0ms);
+    animation-fill-mode: backwards;
+  }
+  @keyframes heroRise {
+    from { transform: translateY(14px); }
+    to   { transform: none; }
+  }
+  .phone-rise {
+    animation: phoneRise 1.2s cubic-bezier(.22,1,.36,1);
+    animation-delay: 200ms;
+    animation-fill-mode: backwards;
+  }
+  @keyframes phoneRise {
+    from { transform: translateY(28px) rotate(-3deg) scale(0.97); }
+    to   { transform: rotate(-1.5deg); }
+  }
+  .tg-rise {
+    animation: tgRise 1s cubic-bezier(.22,1,.36,1);
+    animation-delay: 700ms;
+    animation-fill-mode: backwards;
+  }
+  @keyframes tgRise {
+    from { transform: translateY(20px) rotate(6deg) scale(0.94); }
+    to   { transform: rotate(2.5deg); }
+  }
+
+  /* Float for phone + chat after entrance */
+  .float-y {
+    animation: floatY 9s ease-in-out infinite;
+    animation-delay: 1.5s;
+  }
+  @keyframes floatY {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -8px; }
+  }
+  .float-y-slow {
+    animation: floatY 12s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+
+  /* Progression demo week sweep */
+  .week-cell {
+    position: relative;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    display: flex; flex-direction: column; gap: 4px;
+    transition: background .5s, border-color .5s, color .5s;
+  }
+  .week-cell .wk { color: var(--fg-3); font-weight: 500; font-size: 11.5px; }
+  .week-cell .val { color: var(--fg-2); font-weight: 600; font-size: 13px; }
+  .week-cell.on {
+    background: hsla(var(--accent-h), 60%, 30%, 0.22);
+    border-color: hsla(var(--accent-h), 70%, 50%, 0.4);
+  }
+  .week-cell.on .wk { color: hsl(var(--accent-h), 55%, 82%); }
+  .week-cell.on .val { color: #fff; }
+
+  /* Accent CTA shimmer */
+  .btn-accent {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-accent::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
+    transform: translateX(-120%);
+    animation: shimmer 4.5s ease-in-out infinite;
+    animation-delay: 1.5s;
+    pointer-events: none;
+  }
+  @keyframes shimmer {
+    0%, 60%, 100% { transform: translateX(-120%); }
+    20%, 40%      { transform: translateX(120%); }
+  }
+
+  /* Pulse halo around hero phone */
+  .phone-halo {
+    position: absolute; inset: -40px;
+    border-radius: 60px;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, hsla(var(--accent-h), 60%, 45%, 0.18), transparent 65%);
+    animation: phoneHalo 6s ease-in-out infinite;
+  }
+  @keyframes phoneHalo {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.04); }
+  }
+
+  /* Step number glow */
+  .step:hover .step-num {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.2),
+      0 0 24px hsla(var(--accent-h), 60%, 45%, 0.5);
+  }
+
+  /* Chip drift */
+  .chip-drift {
+    animation: chipDrift 8s ease-in-out infinite;
+    animation-delay: var(--cd, 0ms);
+  }
+  @keyframes chipDrift {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+
+  /* ── Product tour ────────────────────────────────────────── */
+  .tour { display: flex; flex-direction: column; gap: 96px; }
+  @media (min-width: 768px) { .tour { gap: 130px; } }
+  .tour-row { display: grid; gap: 40px; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 900px) {
+    .tour-row { grid-template-columns: 1fr 1fr; gap: 72px; }
+    .tour-row.flip .tour-copy  { order: 2; }
+    .tour-row.flip .tour-stage { order: 1; }
+  }
+  .tour-copy .step-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: 12px; letter-spacing: 0.04em;
+    color: hsl(var(--accent-h), 55%, 75%);
+    margin-bottom: 18px;
+  }
+  .tour-copy .step-tag .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: hsl(var(--accent-h), 65%, 60%);
+    box-shadow: 0 0 10px hsla(var(--accent-h), 65%, 55%, 0.7);
+  }
+  .tour-copy h3 {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 3vw, 38px);
+    font-weight: 700; letter-spacing: -0.026em; line-height: 1.05;
+    color: var(--fg-1);
+  }
+  .tour-copy .desc {
+    margin-top: 18px; font-size: 16px; line-height: 1.6; color: var(--fg-2);
+    max-width: 460px;
+  }
+  .tour-copy .feats {
+    margin-top: 24px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .tour-copy .feats .f {
+    display: flex; align-items: flex-start; gap: 11px;
+    font-size: 14.5px; color: var(--fg-2); line-height: 1.45;
+  }
+  .tour-copy .feats .f .fi {
+    width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
+    background: hsla(var(--accent-h), 60%, 50%, 0.12);
+    border: 1px solid hsla(var(--accent-h), 60%, 55%, 0.25);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h), 55%, 78%);
+  }
+  .tour-copy .feats .f .fi svg { width: 12px; height: 12px; }
+  .tour-copy .feats .f b { color: var(--fg-1); font-weight: 600; }
+  .tour-stage {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px 0;
+  }
+  .tour-stage::before {
+    content: ""; position: absolute; width: 78%; height: 70%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, hsla(var(--accent-h),60%,42%,0.22), transparent 70%);
+    filter: blur(30px); z-index: 0;
+  }
+
+  /* ── Device mockup ───────────────────────────────────────── */
+  .device {
+    position: relative; z-index: 1;
+    width: 320px; border-radius: 40px;
+    background: var(--bg-app); overflow: hidden; isolation: isolate;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.08) inset,
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 0 0 9px rgba(255,255,255,0.022),
+      0 0 0 10px rgba(255,255,255,0.04),
+      0 50px 100px rgba(0,0,0,0.55),
+      0 24px 48px rgba(0,0,0,0.4);
+  }
+  .device .dv-mesh {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(380px 300px at 8% -6%, hsla(var(--accent-h),65%,38%,0.65), transparent 65%),
+      radial-gradient(320px 260px at 112% 38%, hsla(calc(var(--accent-h) - 60),60%,30%,0.5), transparent 65%),
+      radial-gradient(300px 220px at 50% 112%, hsla(calc(var(--accent-h) + 20),50%,28%,0.42), transparent 65%);
+  }
+  .device .dv-mesh::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(5,5,7,0.55), rgba(5,5,7,0.85));
+  }
+  .device .dv-notch {
+    position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 92px; height: 26px; border-radius: 14px;
+    background: #000; z-index: 6;
+  }
+  .device .dv-top {
+    position: relative; z-index: 5;
+    height: 64px; padding: 22px 18px 0;
+    display: flex; align-items: center; gap: 11px;
+    background: rgba(28,28,34,0.72);
+    backdrop-filter: blur(22px) saturate(1.25);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .device .dv-top .title { font-family: var(--font-display); font-size: 15.5px; font-weight: 600; letter-spacing: -0.018em; }
+  .device .dv-top .sub { font-size: 9.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); margin-top: 2px; }
+  .device .dv-top .av {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(180deg, hsl(var(--accent-h),65%,55%), hsl(var(--accent-h),65%,38%));
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),50%,12%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .device .dv-top .av svg { width: 16px; height: 16px; }
+  .device .dv-top .ic-btn {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-2); flex-shrink: 0;
+  }
+  .device .dv-screen {
+    position: relative; z-index: 1;
+    padding: 14px 13px 18px;
+    display: flex; flex-direction: column; gap: 9px;
+    min-height: 540px;
+  }
+  .device .dv-screen.chat { justify-content: flex-end; }
+
+  /* Device inner elements */
+  .dv-sec { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 2px 2px; }
+  .dv-sec .h { font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.014em; }
+  .dv-sec .e { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+
+  .photo-msg {
+    width: 70%; margin-left: auto; border-radius: 14px; overflow: hidden;
+    border: 1px solid hsla(var(--accent-h),60%,55%,0.3);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  }
+  .photo-msg .img {
+    height: 116px;
+    position: relative; display: flex; align-items: flex-end; padding: 8px;
+    overflow: hidden;
+  }
+  .photo-msg .img img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .photo-msg .img::before {
+    content: ""; position: absolute; top: 10px; right: 10px;
+    width: 26px; height: 26px; border-radius: 7px;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
+    background-image:
+      linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)),
+      linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55));
+    background-size: 11px 2px, 2px 11px;
+    background-position: center, center;
+    background-repeat: no-repeat;
+  }
+  .photo-msg .cap {
+    padding: 7px 11px; font-size: 11px; color: hsl(var(--accent-h),50%,14%); font-weight: 600;
+    background: hsl(var(--accent-h),55%,55%);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .photo-msg .cap svg { width: 12px; height: 12px; }
+
+  .ex-card {
+    border-radius: 14px; border-bottom-left-radius: 4px;
+    background: rgba(255,255,255,0.055);
+    border: 1px solid var(--border-subtle);
+    padding: 12px; max-width: 90%;
+  }
+  .ex-card .reco { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: hsl(var(--accent-h),55%,75%); display: flex; align-items: center; gap: 6px; }
+  .ex-card .reco svg { width: 11px; height: 11px; }
+  .ex-card .nm { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -0.016em; margin-top: 7px; }
+  .ex-card .prescr { margin-top: 9px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .ex-card .prescr .p {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: 11px; font-weight: 600; color: var(--fg-1);
+    padding: 4px 8px; border-radius: 7px;
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle);
+  }
+  .ex-card .tech { font-size: 11.5px; line-height: 1.45; color: var(--fg-2); margin-top: 9px; }
+  .ex-card .alt {
+    margin-top: 9px; padding-top: 9px; border-top: 1px dashed rgba(255,255,255,0.1);
+    font-size: 11px; color: var(--fg-3); display: flex; align-items: center; gap: 6px;
+  }
+  .ex-card .alt svg { width: 12px; height: 12px; color: hsl(var(--accent-h),55%,70%); }
+  .ex-card .alt b { color: var(--fg-2); font-weight: 600; }
+
+  /* Set ladder */
+  .set-ladder { display: flex; flex-direction: column; gap: 6px; margin-top: 11px; }
+  .set-row {
+    display: grid; grid-template-columns: 24px 1fr auto auto 26px;
+    align-items: center; gap: 9px;
+    padding: 9px 11px; border-radius: 10px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+  }
+  .set-row.done { background: hsla(140,55%,30%,0.12); border-color: hsla(140,55%,55%,0.2); }
+  .set-row.current { background: hsla(var(--accent-h),60%,30%,0.18); border-color: hsla(var(--accent-h),70%,50%,0.3); }
+  .set-row .idx { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; color: var(--fg-3); }
+  .set-row .lab { font-size: 11px; color: var(--fg-2); }
+  .set-row .fld { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 600; color: var(--fg-1); text-align: right; }
+  .set-row .chk {
+    width: 24px; height: 24px; border-radius: 7px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; color: var(--fg-3);
+  }
+  .set-row .chk svg { width: 13px; height: 13px; }
+  .set-row.done .chk { background: hsla(140,55%,40%,0.3); border-color: hsla(140,55%,55%,0.5); color: hsl(140,55%,80%); }
+  .dv-btn-accent {
+    margin-top: 12px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: hsl(var(--accent-h),55%,55%); color: hsl(var(--accent-h),50%,12%);
+    font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    box-shadow: 0 8px 22px hsla(var(--accent-h),60%,40%,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .dv-btn-accent svg { width: 15px; height: 15px; }
+
+  /* Exercise queue */
+  .ex-row2 { padding: 10px 12px; display: flex; align-items: center; gap: 11px; }
+  .ex-row2 .ni {
+    width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+    background: rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--fg-2);
+  }
+  .ex-row2 .nm { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--fg-1); }
+  .ex-row2 .st { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--fg-3); }
+  .ex-row2.done .ni { color: hsl(140,55%,70%); }
+  .ex-row2.done .nm { color: var(--fg-3); text-decoration: line-through; }
+
+  /* Muscle rings grid */
+  .muscle-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  .muscle-card { padding: 11px 6px; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .muscle-card .ring { position: relative; width: 56px; height: 56px; }
+  .muscle-card .ring svg { transform: rotate(-90deg); display: block; }
+  .muscle-card .ring .ico-c { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: hsl(var(--accent-h),55%,78%); }
+  .muscle-card .ring .ico-c svg { width: 18px; height: 18px; }
+  .muscle-card .nm { font-size: 10.5px; font-weight: 600; color: var(--fg-2); }
+  .muscle-card .pct { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 10px; color: var(--fg-3); }
+
+  /* Coach hero inside device */
+  .dv-coach {
+    border-radius: 14px; padding: 13px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,22%,0.55), rgba(22,22,28,0.6));
+    border: 1px solid hsla(var(--accent-h),70%,50%,0.20);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    display: flex; gap: 11px; align-items: flex-start;
+  }
+  .dv-coach .ico {
+    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),60%,80%);
+  }
+  .dv-coach .ico svg { width: 16px; height: 16px; }
+  .dv-coach .e { font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: hsl(var(--accent-h),55%,78%); }
+  .dv-coach .h { font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.014em; margin-top: 3px; }
+  .dv-coach .c { font-size: 11.5px; color: rgba(255,255,255,0.82); margin-top: 5px; line-height: 1.45; }
+
+  .device .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .device .stat-tile { padding: 10px 11px; display: flex; align-items: flex-start; justify-content: space-between; }
+  .device .stat-tile .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 700; color: var(--fg-1); margin-top: 3px; }
+  .device .stat-tile .l { font-size: 8.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+  .device .stat-tile .s { font-size: 9.5px; color: var(--fg-3); margin-top: 2px; }
+  .device .stat-tile .ico { width: 24px; height: 24px; border-radius: 7px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; color: hsl(var(--accent-h),55%,72%); }
+  .device .ai-note {
+    padding: 10px 12px; display: flex; align-items: flex-start; gap: 9px;
+  }
+  .device .ai-note .ic { width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; background: hsla(38,90%,60%,0.12); border: 1px solid hsla(38,90%,60%,0.25); display: flex; align-items: center; justify-content: center; }
+  .device .ai-note .tx { font-size: 11px; color: var(--fg-2); line-height: 1.45; }
+
+  /* Device chat bubbles */
+  .device .bubble { max-width: 85%; padding: 10px 13px; border-radius: 14px; font-size: 12.5px; line-height: 1.4; }
+  .device .bubble.bot {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle);
+    color: var(--fg-1); border-bottom-left-radius: 4px;
+  }
+  .device .bubble.typing {
+    display: inline-flex; gap: 4px; padding: 12px 16px; width: max-content;
+  }
+  .device .bubble.typing span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--fg-3);
+    animation: typing 1.4s infinite ease-in-out;
+  }
+  .device .bubble.typing span:nth-child(2) { animation-delay: 0.15s; }
+  .device .bubble.typing span:nth-child(3) { animation-delay: 0.3s; }
+
+  /* ── How-it-works flow ───────────────────────────────────── */
+  .flow { position: relative; display: flex; flex-direction: column; gap: 0; }
+  .flow-step {
+    position: relative;
+    display: grid; grid-template-columns: 56px 1fr; gap: 22px;
+    padding-bottom: 44px;
+  }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-step::before {
+    content: ""; position: absolute;
+    left: 27px; top: 52px; bottom: -4px; width: 2px;
+    background: linear-gradient(180deg, hsla(var(--accent-h),60%,50%,0.5), hsla(var(--accent-h),60%,50%,0.08));
+  }
+  .flow-step:last-child::before { display: none; }
+  .flow-num {
+    width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 1;
+    background: linear-gradient(180deg, hsla(var(--accent-h),70%,28%,0.7), hsla(var(--accent-h),70%,16%,0.7));
+    border: 1px solid hsla(var(--accent-h),70%,55%,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),55%,85%);
+  }
+  .flow-num svg { width: 22px; height: 22px; }
+  .flow-body { padding-top: 4px; display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .flow-body { grid-template-columns: 1fr auto; align-items: center; gap: 28px; } }
+  .flow-body .txt h3 { font-family: var(--font-display); font-size: 20px; font-weight: 600; letter-spacing: -0.018em; }
+  .flow-body .txt .e { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: hsl(var(--accent-h),55%,72%); margin-bottom: 8px; }
+  .flow-body .txt p { font-size: 14.5px; line-height: 1.55; color: var(--fg-2); margin-top: 8px; max-width: 440px; }
+
+  .flow-vis {
+    flex-shrink: 0; width: 100%; max-width: 320px;
+    border-radius: 14px; padding: 13px;
+    background: rgba(0,0,0,0.28); border: 1px solid var(--border-subtle);
+  }
+  @media (min-width: 720px) { .flow-vis { width: 320px; } }
+  .flow-vis .mini-bubble {
+    font-size: 12px; line-height: 1.4; padding: 8px 11px; border-radius: 12px;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle);
+    color: var(--fg-1); margin-bottom: 6px; max-width: 92%;
+  }
+  .flow-vis .mini-bubble.u {
+    background: hsl(var(--accent-h),55%,55%); color: hsl(var(--accent-h),50%,12%);
+    font-weight: 500; margin-left: auto; border-bottom-right-radius: 4px;
+  }
+  .flow-vis .mini-bubble b { color: hsl(var(--accent-h),55%,80%); font-weight: 600; }
+  .flow-vis .mini-row {
+    display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+    border-radius: 9px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05); margin-bottom: 5px;
+  }
+  .flow-vis .mini-row .mi { width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; color: hsl(var(--accent-h),55%,72%); }
+  .flow-vis .mini-row .mi svg { width: 12px; height: 12px; }
+  .flow-vis .mini-row .ml { flex: 1; font-size: 12px; font-weight: 600; color: var(--fg-1); }
+  .flow-vis .mini-row .mn { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--fg-3); }
+
+  /* ── Program device mockup ──────────────────────────────── */
+  .prog-header {
+    padding: 12px; border-radius: 12px;
+    background: linear-gradient(160deg, hsla(var(--accent-h),40%,28%,0.5) 0%, transparent 50%), rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .prog-header .prog-ico {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    background: hsla(var(--accent-h),40%,30%,0.5);
+    border: 1px solid hsla(var(--accent-h),60%,50%,0.2);
+    display: flex; align-items: center; justify-content: center;
+    color: hsl(var(--accent-h),55%,72%);
+  }
+  .prog-header .prog-ico svg { width: 16px; height: 16px; }
+  .prog-header .prog-nm { font-family: var(--font-display); font-size: 13.5px; font-weight: 600; letter-spacing: -0.014em; }
+  .prog-header .prog-st { font-size: 9.5px; color: var(--fg-3); margin-top: 3px; }
+  .prog-header .prog-st b { color: var(--fg-2); font-weight: 600; }
+
+  .bodymap-card {
+    padding: 12px; border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+  }
+  .bodymap-card .bm-label {
+    font-size: 8.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--fg-3); margin-bottom: 10px;
+  }
+  .bodymap-card .bm-wrap {
+    display: flex; justify-content: center; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .muscle-chips {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .muscle-chips .mc {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 8px; border-radius: 7px;
+    background: rgba(255,255,255,0.06);
+    font-size: 10px;
+  }
+  .muscle-chips .mc .mn { font-weight: 500; color: var(--fg-1); }
+  .muscle-chips .mc .mv { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg-3); font-size: 9.5px; }
+
+  .guide-row {
+    padding: 11px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .guide-row .gl { font-size: 8.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+  .guide-row svg { width: 12px; height: 12px; color: var(--fg-3); }
+
+  .active-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 10px; border-radius: 8px;
+    background: hsla(var(--accent-h),40%,20%,0.25);
+    font-size: 10px; font-weight: 600;
+    color: hsl(var(--accent-h),55%,72%);
+  }
+  .active-badge svg { width: 12px; height: 12px; }
+
+  .day-card {
+    padding: 12px; border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .day-card .day-num {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  }
+  .day-card .day-nm { font-size: 11.5px; font-weight: 600; color: var(--fg-1); }
+  .day-card .day-st { font-size: 9.5px; color: var(--fg-3); margin-top: 2px; }
+  .day-card .day-ch { width: 16px; height: 16px; color: var(--fg-3); margin-left: auto; flex-shrink: 0; }
+  .day-card .day-ch svg { width: 14px; height: 14px; }
+
+  /* Body-muscles SVG zone coloring */
+  .bm-svg path { fill: #94a3b8; opacity: 0.12; transition: fill .3s, opacity .3s; }
+  .bm-svg .z7 { fill: #ef4444; opacity: 1; }
+  .bm-svg .z6 { fill: #ea580c; opacity: 1; }
+  .bm-svg .z5 { fill: #f97316; opacity: 1; }
+  .bm-svg .z4 { fill: #fb923c; opacity: 1; }
+  .bm-svg .z3 { fill: #eab308; opacity: 1; }
+  .bm-svg .z2 { fill: #facc15; opacity: 1; }
+</style>
+
+<meta name="description" content="AI-тренер для самостоятельных тренировок в зале: персональная программа, трекинг подходов и аналитика прогресса. В 10 раз дешевле живого тренера, 24/7." />
+<link rel="canonical" href="https://gymwithai.me/" />
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/icons/favicon-64.png" type="image/png" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="theme-color" content="#050507" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="AI-тренер — тренер, который всегда рядом" />
+<meta property="og:description" content="Персональная программа, трекинг подходов и аналитика прогресса. В 10 раз дешевле живого тренера." />
+<meta property="og:url" content="https://gymwithai.me/" />
+<meta property="og:image" content="https://gymwithai.me/gym-machine.jpg" />
+<meta property="og:locale" content="ru_RU" />
+<meta name="twitter:card" content="summary_large_image" />
+<script>
+// Установленная PWA со старого origin (gymwithai.me): корень теперь сайт —
+// standalone-окно сразу уводим в приложение на новом домене.
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+  window.location.replace('https://app.gymwithai.me/')
+}
+</script>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- ─── Icon defs (custom outline set) ─── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3l1.9 5.8L20 11l-6.1 1.9L12 19l-1.9-6.1L4 11l6.1-2.2z"/>
+    </symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </symbol>
+    <symbol id="i-trendingUp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+    </symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    </symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+    </symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="i-arrowRight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+    </symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+    </symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 4H4v3a3 3 0 0 0 3 3"/><path d="M17 4h3v3a3 3 0 0 1-3 3"/>
+    </symbol>
+    <symbol id="i-messageCircle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+    </symbol>
+    <symbol id="i-dumbbell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.4 14.4L9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"/>
+    </symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </symbol>
+    <symbol id="i-radio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
+    </symbol>
+    <symbol id="i-moreHorizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+    </symbol>
+    <symbol id="i-chevronLeft" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </symbol>
+    <symbol id="i-chevronRight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </symbol>
+    <symbol id="i-chest" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7c2-2 5-3 9-3s7 1 9 3"/><path d="M3 7c0 5 3 11 9 13 6-2 9-8 9-13"/><path d="M12 4v16"/>
+    </symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v18"/><path d="M3 8c3 0 6 2 9 6"/><path d="M21 8c-3 0-6 2-9 6"/><path d="M5 14c2 0 5 2 7 5"/><path d="M19 14c-2 0-5 2-7 5"/>
+    </symbol>
+    <symbol id="i-shoulder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 17c0-5 3.5-9 8-9s8 4 8 9"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
+    </symbol>
+    <symbol id="i-arm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 20l3-8 4 2 3-10"/><circle cx="17" cy="4" r="2"/>
+    </symbol>
+    <symbol id="i-leg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4v6l-3 8 1 4"/><path d="M12 10l3 8-1 4"/>
+    </symbol>
+    <symbol id="i-abs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="3" width="12" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="6" y1="9" x2="18" y2="9"/><line x1="6" y1="15" x2="18" y2="15"/>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ─── Top Nav ─── -->
+<nav class="topnav">
+  <div class="wrap flex items-center justify-between py-4">
+    <div class="flex items-center gap-3">
+      <div class="brand-mark"><svg><use href="#i-dumbbell"/></svg></div>
+      <span style="font-family: var(--font-display); font-weight: 600; letter-spacing: -0.012em; font-size: 16px;">AI-тренер</span>
+      <span class="chip" style="margin-left: 8px;">
+        <span class="pulse-dot"></span>
+        в&nbsp;telegram
+      </span>
+    </div>
+    <a href="#pricing" class="btn btn-ghost btn-sm hidden sm:inline-flex">
+      открыть&nbsp;в&nbsp;telegram
+      <svg style="width:14px;height:14px"><use href="#i-arrowRight"/></svg>
+    </a>
+  </div>
+</nav>
+
+<!-- ─── Hero ─── -->
+<section style="padding-top: 64px; padding-bottom: 96px;">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+  <div class="grid-bg"></div>
+  <div class="wrap relative" style="z-index: 1;">
+    <div class="grid md:grid-cols-[1.05fr_0.95fr] gap-12 md:gap-10 lg:gap-16 items-center">
+      <!-- Copy column -->
+      <div>
+        <div class="eyebrow hero-rise" style="margin-bottom: 22px; --rd: 0ms;">тренер · ai · telegram</div>
+
+        <h1 class="display text-balance hero-rise" style="--rd: 80ms;">
+          Твой AI&#8209;тренер<br/>
+          в&nbsp;Telegram<br/>
+          <span class="accent-text">Всегда рядом и&nbsp;в&nbsp;10× дешевле</span>
+        </h1>
+
+        <p class="lead text-balance hero-rise" style="margin-top: 28px; max-width: 540px; --rd: 200ms;">
+          Не программа упражнений и не блокнот для подходов. <span style="color: var(--fg-1); font-weight: 600;">Персональный ИИ-тренер</span>, который помнит твою историю, видит, что ты делаешь в зале, объясняет зачем и не даёт забить.
+        </p>
+
+        <div class="flex flex-wrap gap-2 hero-rise" style="margin-top: 28px; --rd: 320ms;">
+          <span class="chip chip-drift" style="--cd: 0ms;"><svg style="width:13px;height:13px;color:hsl(var(--accent-h),55%,72%)"><use href="#i-trendingUp"/></svg>в&nbsp;10× дешевле тренера</span>
+          <span class="chip chip-drift" style="--cd: 400ms;"><svg style="width:13px;height:13px;color:hsl(var(--accent-h),55%,72%)"><use href="#i-clock"/></svg>24/7 без чужого графика</span>
+          <span class="chip chip-drift" style="--cd: 800ms;"><svg style="width:13px;height:13px;color:hsl(var(--accent-h),55%,72%)"><use href="#i-book"/></svg>на свежих исследованиях</span>
+          <span class="chip chip-drift" style="--cd: 1200ms;"><svg style="width:13px;height:13px;color:hsl(var(--accent-h),55%,72%)"><use href="#i-sparkles"/></svg>ведёт, а не считает</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 hero-rise" style="margin-top: 40px; --rd: 440ms;">
+          <a href="#pricing" class="btn btn-accent">
+            Открыть в Telegram
+            <svg style="width:16px;height:16px"><use href="#i-arrowRight"/></svg>
+          </a>
+          <span class="mono" style="font-size: 12.5px; color: var(--fg-3); letter-spacing: 0.04em;">
+            <span style="color: hsl(var(--accent-h),55%,72%); font-weight: 600;">30 сек</span> · и программа собрана
+          </span>
+        </div>
+      </div>
+
+      <!-- Phone + TG card column -->
+      <div class="relative" style="min-height: 720px;">
+        <div class="phone-halo"></div>
+        <div class="phone-frame phone-rise float-y">
+          <div class="pf-mesh"></div>
+
+          <div class="pf-topbar">
+            <div>
+              <div class="sub">среда · 27 апреля</div>
+              <div class="title">Сегодня</div>
+            </div>
+            <div class="ic-btn"><svg style="width:16px;height:16px"><use href="#i-bell"/></svg></div>
+          </div>
+
+          <div class="pf-content">
+            <!-- Active pill -->
+            <div class="ap-pill">
+              <span class="pulse"></span>
+              <div style="flex:1;min-width:0">
+                <div class="lbl">идёт</div>
+                <div class="name">День 4 · Грудь, трицепс</div>
+              </div>
+              <div class="time">22:14</div>
+            </div>
+
+            <!-- Coach hero (glass-tint) -->
+            <div class="glass-tint coach" style="margin-top: 4px;">
+              <div class="ico"><svg style="width:18px;height:18px"><use href="#i-sparkles"/></svg></div>
+              <div style="flex:1; position: relative; z-index: 1;">
+                <div class="lbl">тренер заметил</div>
+                <div class="ttl">Объём груди опережает план</div>
+                <div class="cp">За 2 недели ты сделал на 18% больше, чем планировал. Поднимаю целевой вес на жиме.</div>
+                <div class="ev">bench · +12.5%</div>
+              </div>
+            </div>
+
+            <!-- Stat grid -->
+            <div class="stat-grid" style="margin-top: 4px;">
+              <div class="glass stat-tile">
+                <div>
+                  <div class="l">тренировок</div>
+                  <div class="v">3</div>
+                  <div class="s">из 4</div>
+                </div>
+                <div class="ico"><svg style="width:14px;height:14px"><use href="#i-activity"/></svg></div>
+              </div>
+              <div class="glass stat-tile">
+                <div>
+                  <div class="l">тоннаж</div>
+                  <div class="v">9.2т</div>
+                  <div class="s">+1.1 vs прошл.</div>
+                </div>
+                <div class="ico"><svg style="width:14px;height:14px"><use href="#i-trendingUp"/></svg></div>
+              </div>
+              <div class="glass stat-tile">
+                <div>
+                  <div class="l">время</div>
+                  <div class="v">2:18</div>
+                  <div class="s">часов</div>
+                </div>
+                <div class="ico"><svg style="width:14px;height:14px"><use href="#i-clock"/></svg></div>
+              </div>
+              <div class="glass stat-tile">
+                <div>
+                  <div class="l">streak</div>
+                  <div class="v">11</div>
+                  <div class="s">дней подряд</div>
+                </div>
+                <div class="ico"><svg style="width:14px;height:14px"><use href="#i-flame"/></svg></div>
+              </div>
+            </div>
+
+            <!-- AI note -->
+            <div class="glass ai-note" style="margin-top: 4px;">
+              <div class="ic" style="color: hsl(38,90%,70%)"><svg style="width:13px;height:13px"><use href="#i-bell"/></svg></div>
+              <div class="tx">Грудь 3-ю неделю выше лимита. Сократи 2 подхода в&nbsp;пятницу.</div>
+            </div>
+          </div>
+
+          <!-- Dock -->
+          <div class="pf-dock">
+            <div class="tab active"><svg style="width:18px;height:18px"><use href="#i-home"/></svg><div class="lab">Сегодня</div></div>
+            <div class="tab"><svg style="width:18px;height:18px"><use href="#i-activity"/></svg><div class="lab">Прогресс</div></div>
+            <div class="tab"><svg style="width:18px;height:18px"><use href="#i-book"/></svg><div class="lab">Упр.</div></div>
+            <div class="tab"><svg style="width:18px;height:18px"><use href="#i-user"/></svg><div class="lab">Я</div></div>
+          </div>
+        </div>
+
+        <!-- Floating TG chat -->
+        <div class="glass-strong tg-card tg-rise float-y-slow">
+          <div class="head">
+            <div class="av"><svg><use href="#i-sparkles"/></svg></div>
+            <div style="flex:1; min-width: 0;">
+              <div class="nm">AI-тренер</div>
+              <div class="st"><span class="pulse-dot" style="width:5px;height:5px"></span> онлайн</div>
+            </div>
+          </div>
+          <div>
+            <div class="bubble row"><div class="bubble bot">В прошлый раз ты жал <b>80×8</b>. Берём <b>82,5×8</b>?</div></div>
+            <div class="bubble row user"><div class="bubble user">Готов. А плечо?</div></div>
+            <div class="bubble row"><div class="bubble bot">Разминаем 5 мин. Первый подход — 70, посмотрим.</div></div>
+            <div class="bubble row"><div class="bubble bot typing"><span></span><span></span><span></span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Pain narrative ─── -->
+<section style="padding-top: 32px; padding-bottom: 80px;">
+  <div class="aurora top"></div>
+  <div class="wrap" style="max-width: 1080px;">
+    <div class="narr-head">
+      <div>
+        <div class="eyebrow mute reveal" style="margin-bottom: 20px;">знакомо?</div>
+        <h2 class="section text-balance reveal" style="--rd: 80ms;">
+          Зал есть.<br/>
+          А что там делать —<br/>
+          <span style="color: var(--fg-3);">непонятно</span>
+        </h2>
+      </div>
+      <p class="lead reveal" style="--rd: 160ms;">
+        Купил абонемент, ходишь раз в неделю, иногда два. Месяц-другой — результата нет, и сам толком не понимаешь, всё ли делаешь правильно.
+      </p>
+    </div>
+
+    <div class="reveal" style="margin-top: 56px; --rd: 200ms;">
+      <div class="flex items-center justify-between flex-wrap gap-3" style="margin-bottom: 18px;">
+        <div class="eyebrow mute">что пробовал · не сложилось</div>
+        <div class="mono" style="font-size: 11.5px; color: var(--fg-3); letter-spacing: 0.04em;">03 · попытки</div>
+      </div>
+
+      <div class="tried-grid">
+        <div class="tried">
+          <div class="verdict">
+            <svg style="width:11px;height:11px"><use href="#i-x"/></svg>
+            не подошло
+          </div>
+          <div class="name">тренер</div>
+          <p class="reason">Тридцать тысяч в&nbsp;месяц, плюс его расписание, плюс в&nbsp;выходной всё равно сам. Это как ещё одна ипотека.</p>
+          <div class="tag">
+            <span class="k">цена</span>
+            <span class="v">30&nbsp;000&nbsp;₽/мес</span>
+          </div>
+        </div>
+
+        <div class="tried">
+          <div class="verdict">
+            <svg style="width:11px;height:11px"><use href="#i-x"/></svg>
+            не подошло
+          </div>
+          <div class="name">приложения</div>
+          <p class="reason">Считают подходы и&nbsp;калории, но&nbsp;нет обратной связи — никто не&nbsp;подсказывает, не&nbsp;спрашивает, не&nbsp;реагирует на&nbsp;тебя.</p>
+          <div class="tag">
+            <span class="k">режим</span>
+            <span class="v">ты&nbsp;вводишь · оно&nbsp;молчит</span>
+          </div>
+        </div>
+
+        <div class="tried">
+          <div class="verdict">
+            <svg style="width:11px;height:11px"><use href="#i-x"/></svg>
+            не подошло
+          </div>
+          <div class="name">блогеры</div>
+          <p class="reason">Копишь шортсы, но чтобы из&nbsp;них сложилась система, уходят месяцы. И&nbsp;всё равно на&nbsp;тебе не&nbsp;проверено.</p>
+          <div class="tag">
+            <span class="k">время</span>
+            <span class="v">месяцы на сборку</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pull-block reveal" style="margin-top: 56px; --rd: 280ms;">
+      <div class="quote text-balance">
+        Зал становится <em>чемоданом без&nbsp;ручек</em>:<br/>
+        и бросить жалко, и тащить тяжело.
+      </div>
+      <div class="meta">— знакомое каждому, кто ходит дольше двух месяцев</div>
+    </div>
+
+    <p class="lead reveal text-balance" style="margin-top: 48px; --rd: 320ms; color: var(--fg-1); font-weight: 500;">
+      Так получается, потому что между «трекером» и «тренером» — пропасть.
+    </p>
+
+    <div class="chasm reveal" style="--rd: 400ms;">
+      <svg class="canvas" viewBox="0 0 1080 420" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="rgba(28,28,34,0.85)"/>
+            <stop offset="60%" stop-color="rgba(18,18,22,0.55)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </linearGradient>
+          <linearGradient id="bridgeGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="hsla(158,65%,55%,0)"/>
+            <stop offset="15%"  stop-color="hsla(158,65%,60%,0.7)"/>
+            <stop offset="50%"  stop-color="hsla(158,65%,75%,1)"/>
+            <stop offset="85%"  stop-color="hsla(158,65%,60%,0.7)"/>
+            <stop offset="100%" stop-color="hsla(158,65%,55%,0)"/>
+          </linearGradient>
+          <filter id="bridgeGlow" x="-20%" y="-200%" width="140%" height="500%">
+            <feGaussianBlur stdDeviation="3"/>
+          </filter>
+        </defs>
+
+        <!-- Left cliff cross-section -->
+        <path d="M 0 420 L 0 162 L 30 159 L 72 163 L 120 156 L 178 161 L 232 156 L 274 160 L 305 164 L 315 180 L 308 208 L 320 240 L 312 280 L 322 322 L 314 360 L 326 396 L 320 420 Z"
+              fill="url(#rock)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <!-- Left cliff rock striations -->
+        <g stroke="rgba(255,255,255,0.05)" stroke-width="1" fill="none">
+          <path d="M 12 200 L 300 200" stroke-dasharray="2 4"/>
+          <path d="M 14 248 L 298 248" stroke-dasharray="2 6"/>
+          <path d="M 18 300 L 304 300" stroke-dasharray="2 5"/>
+          <path d="M 22 354 L 296 354" stroke-dasharray="2 7"/>
+        </g>
+
+        <!-- Right cliff cross-section -->
+        <path d="M 1080 420 L 1080 162 L 1050 159 L 1008 164 L 956 156 L 902 162 L 848 158 L 800 161 L 778 165 L 768 182 L 776 210 L 766 244 L 774 282 L 764 322 L 772 360 L 762 396 L 768 420 Z"
+              fill="url(#rock)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <g stroke="rgba(255,255,255,0.05)" stroke-width="1" fill="none">
+          <path d="M 782 200 L 1066 200" stroke-dasharray="2 4"/>
+          <path d="M 786 248 L 1062 248" stroke-dasharray="2 6"/>
+          <path d="M 776 300 L 1058 300" stroke-dasharray="2 5"/>
+          <path d="M 778 354 L 1056 354" stroke-dasharray="2 7"/>
+        </g>
+
+        <!-- Depth stripes inside the void — getting fainter as they go down -->
+        <g stroke-linecap="round">
+          <line x1="350" y1="220" x2="730" y2="222" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+          <line x1="370" y1="260" x2="710" y2="262" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="390" y1="298" x2="690" y2="300" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="412" y1="334" x2="668" y2="336" stroke="rgba(255,255,255,0.025)" stroke-width="1"/>
+          <line x1="436" y1="368" x2="644" y2="370" stroke="rgba(255,255,255,0.015)" stroke-width="1"/>
+        </g>
+
+        <!-- Falling debris dots -->
+        <g fill="rgba(255,255,255,0.18)">
+          <circle cx="430" cy="232" r="1.2"/>
+          <circle cx="510" cy="218" r="1"/>
+          <circle cx="606" cy="240" r="1.4"/>
+          <circle cx="558" cy="276" r="0.9"/>
+          <circle cx="478" cy="310" r="1.1"/>
+          <circle cx="640" cy="294" r="0.8"/>
+          <circle cx="540" cy="350" r="1"/>
+        </g>
+
+        <!-- Bridge glow underlay -->
+        <path d="M 305 164 Q 540 96 778 165"
+              fill="none" stroke="hsla(158,65%,55%,0.5)" stroke-width="3" filter="url(#bridgeGlow)"/>
+        <!-- Bridge line -->
+        <path d="M 305 164 Q 540 96 778 165"
+              fill="none" stroke="url(#bridgeGrad)" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Bridge anchor circles -->
+        <circle cx="305" cy="164" r="4" fill="hsl(158, 65%, 72%)"/>
+        <circle cx="305" cy="164" r="9" fill="none" stroke="hsla(158,65%,55%,0.4)" stroke-width="1"/>
+        <circle cx="778" cy="165" r="4" fill="hsl(158, 65%, 72%)"/>
+        <circle cx="778" cy="165" r="9" fill="none" stroke="hsla(158,65%,55%,0.4)" stroke-width="1"/>
+      </svg>
+
+      <!-- HTML overlays positioned on top of cliff tops -->
+      <div class="cliff-card left">
+        <div class="verdict">был</div>
+        <div class="name">«трекер»</div>
+        <ul>
+          <li><svg><use href="#i-x"/></svg>считает подходы</li>
+          <li><svg><use href="#i-x"/></svg>хранит числа</li>
+          <li><svg><use href="#i-x"/></svg>молчит и ждёт</li>
+        </ul>
+      </div>
+
+      <div class="cliff-card right">
+        <div class="verdict">стало</div>
+        <div class="name">«тренер»</div>
+        <ul>
+          <li><svg><use href="#i-check"/></svg>помнит контекст</li>
+          <li><svg><use href="#i-check"/></svg>реагирует первым</li>
+          <li><svg><use href="#i-check"/></svg>объясняет, зачем</li>
+        </ul>
+      </div>
+
+      <!-- Pill on the bridge -->
+      <div class="bridge-pill">
+        <svg><use href="#i-sparkles"/></svg>
+        мы её закрываем
+      </div>
+
+      <!-- Falling word + debris labels -->
+      <div class="word">пропасть</div>
+      <div class="debris">
+        <span>3 тренера · 9 приложений · 12 шортсов</span>
+        <span>годы попыток собрать систему</span>
+        <span>0 результата</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Pain cards ─── -->
+<section>
+  <div class="wrap">
+    <div class="flex items-end justify-between flex-wrap gap-6 reveal" style="margin-bottom: 48px;">
+      <div>
+        <div class="eyebrow" style="margin-bottom: 18px;">если хоть одно про тебя</div>
+        <h2 class="section text-balance" style="max-width: 720px;">Узнаёшь хоть одно?</h2>
+      </div>
+      <div class="mono" style="font-size: 12.5px; color: var(--fg-3); letter-spacing: 0.04em;">
+        04 · симптомов
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="glass pain reveal" style="--rd: 0ms;">
+        <div class="ic-wrap"><svg style="width:20px;height:20px"><use href="#i-target"/></svg></div>
+        <h3 class="card">Не уверен, что делаешь правильно</h3>
+        <p class="body">Форму подсказать некому. Видео блогеров на тебе не проверяются.</p>
+      </div>
+      <div class="glass pain reveal" style="--rd: 90ms;">
+        <div class="ic-wrap"><svg style="width:20px;height:20px"><use href="#i-trendingUp"/></svg></div>
+        <h3 class="card">Прогресс встал</h3>
+        <p class="body">Веса не растут уже месяцами, а почему — непонятно: то ли программа не та, то ли восстановления мало.</p>
+      </div>
+      <div class="glass pain reveal" style="--rd: 180ms;">
+        <div class="ic-wrap"><svg style="width:20px;height:20px"><use href="#i-x"/></svg></div>
+        <h3 class="card">Тренажёр занят или незнакомый</h3>
+        <p class="body">Стоишь у плана и не знаешь, чем заменить. Уходишь раздражённый, половина тренировки слита.</p>
+      </div>
+      <div class="glass pain reveal" style="--rd: 270ms;">
+        <div class="ic-wrap"><svg style="width:20px;height:20px"><use href="#i-zap"/></svg></div>
+        <h3 class="card">Тренер — это ипотека</h3>
+        <p class="body">Тридцать тысяч в месяц, плюс его график, плюс в выходной снова сам. Эти деньги нужны на семью.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── What changes · product tour ─── -->
+<section style="padding-top: 96px; padding-bottom: 96px;">
+  <div class="wrap">
+    <div style="margin-bottom: 72px; max-width: 820px;">
+      <div class="eyebrow" style="margin-bottom: 18px;">что меняется</div>
+      <h2 class="section text-balance">
+        Ощущение как от персонального тренера —
+        <span class="accent-text">в&nbsp;десять раз дешевле</span> и без чужого графика
+      </h2>
+      <p class="lead" style="margin-top: 22px; max-width: 640px;">
+        Личный контакт, твой контекст, твоя история. Доступен 24/7 и работает на свежих исследованиях.
+      </p>
+    </div>
+
+    <div class="tour">
+
+      <!-- 1 · Camera → exercise -->
+      <div class="tour-row">
+        <div class="tour-copy">
+          <div class="step-tag"><span class="dot"></span>сфоткал — получил упражнение</div>
+          <h3 class="text-balance">Фото тренажёра вместо вопроса «а это что?»</h3>
+          <p class="desc">
+            Стоишь у незнакомого тренажёра — снимаешь его и отправляешь в чат. Через секунду приходит не ссылка на гугл, а готовая карточка: что это, на какую группу, сколько подходов и как встать.
+          </p>
+          <div class="feats">
+            <div class="f"><span class="fi"><svg><use href="#i-camera"/></svg></span><div>Распознаёт <b>конкретное железо</b> в твоём зале, а не абстрактный план из учебника</div></div>
+            <div class="f"><span class="fi"><svg><use href="#i-swap"/></svg></span><div>Тренажёр занят — <b>предложит замену</b> на ту же группу в один тап</div></div>
+            <div class="f"><span class="fi"><svg><use href="#i-radio"/></svg></span><div>К каждому — короткое объяснение техники, чтобы не делать «на глаз»</div></div>
+          </div>
+        </div>
+        <div class="tour-stage">
+          <div class="device">
+            <div class="dv-mesh"></div>
+            <div class="dv-notch"></div>
+            <div class="dv-top">
+              <div class="av"><svg><use href="#i-sparkles"/></svg></div>
+              <div style="flex:1; min-width:0;">
+                <div class="title">AI-тренер</div>
+                <div class="sub">онлайн</div>
+              </div>
+              <div class="ic-btn"><svg style="width:16px;height:16px"><use href="#i-moreHorizontal"/></svg></div>
+            </div>
+            <div class="dv-screen chat">
+              <div class="bubble bot" style="font-size:12.5px;">Что за тренажёр? Скинь фото — подскажу.</div>
+              <div class="photo-msg">
+                <div class="img"><img src="/gym-machine.jpg" alt="Тренажёр в зале" loading="lazy"></div>
+                <div class="cap"><svg><use href="#i-camera"/></svg> фото из зала</div>
+              </div>
+              <div class="bubble bot typing" style="width:max-content;"><span></span><span></span><span></span></div>
+              <div class="ex-card">
+                <div class="reco"><svg><use href="#i-camera"/></svg> распознано</div>
+                <div class="nm">Hammer Strength · жим от груди</div>
+                <div class="prescr">
+                  <span class="p">грудь</span>
+                  <span class="p">3 × 10</span>
+                  <span class="p">⌀ 40 кг</span>
+                </div>
+                <div class="tech">Спина прижата, локти под 45°. Веди до лёгкого касания, без паузы вверху.</div>
+                <div class="alt"><svg><use href="#i-swap"/></svg> <span>занят? <b>замена:</b> жим гантелей лёжа</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 · Program view -->
+      <div class="tour-row flip">
+        <div class="tour-copy">
+          <div class="step-tag"><span class="dot"></span>программа под тебя</div>
+          <h3 class="text-balance">Не шаблон из интернета, а&nbsp;программа под твои цели и&nbsp;зал</h3>
+          <p class="desc">
+            AI собирает программу по твоим целям, опыту и ограничениям. Видишь карту мышц, объём по группам, методические указания — и понимаешь, почему именно так. Не нравится — правишь прямо на экране.
+          </p>
+          <div class="feats">
+            <div class="f"><span class="fi"><svg><use href="#i-activity"/></svg></span><div><b>Карта мышц за цикл</b> — сразу видно, что прорабатывается и что пропущено</div></div>
+            <div class="f"><span class="fi"><svg><use href="#i-sparkles"/></svg></span><div>Объясняет логику: <b>почему такой сплит</b>, объём и порядок</div></div>
+            <div class="f"><span class="fi"><svg><use href="#i-swap"/></svg></span><div>Не подходит упражнение — <b>заменишь в один тап</b> из базы на 924</div></div>
+          </div>
+        </div>
+        <div class="tour-stage">
+          <div class="device">
+            <div class="dv-mesh"></div>
+            <div class="dv-notch"></div>
+            <div class="dv-top">
+              <div class="ic-btn"><svg style="width:16px;height:16px"><use href="#i-chevronLeft"/></svg></div>
+              <div style="flex:1; min-width:0; text-align:center;">
+                <div class="title" style="margin-top:0;">Программа</div>
+              </div>
+              <div class="ic-btn"><svg style="width:16px;height:16px"><use href="#i-moreHorizontal"/></svg></div>
+            </div>
+            <div class="dv-screen" style="gap:8px; min-height:auto;">
+
+              <!-- Program header -->
+              <div class="prog-header">
+                <div class="prog-ico"><svg><use href="#i-zap"/></svg></div>
+                <div style="flex:1; min-width:0;">
+                  <div class="prog-nm">V-Build: грудь и спина</div>
+                  <div class="prog-st">4 дн. · 34 упр. · ~9 упр/день</div>
+                </div>
+              </div>
+
+              <!-- Body map card -->
+              <div class="bodymap-card">
+                <div class="bm-label">подходы по мышцам за цикл</div>
+                <div class="bm-wrap">
+                  <!-- Front view (body-muscles library paths) -->
+                  <svg class="bm-svg" viewBox="-1 -1 34 96" style="height:280px; width:auto; display:block;">
+                    <path d="m 11.671635,6.3585449 -0.0482,-2.59085 4.20648,-2.46806 4.42769,2.95361 -0.0405,1.94408 0.24197,-3.34467 -2.03129,-2.31103004 -2.84508,-0.51629 -2.20423,0.52915 -1.9363,2.63077004 z"/>
+                    <path d="m 19.748825,6.7034949 0.0203,-2.20747 -3.96689,-2.7637 -3.74099,2.23559 -0.006,2.63528 -0.60741,0.0403 0.27408,1.82447 0.97635,0.33932 0.44244,2.1802901 1.82222,2.06556 2.03518,-0.0607 1.79223,-1.94408 0.35957,-2.2406601 0.97616,-0.33932 0.25159,-1.78416 z"/>
+                    <path d="m 13.304665,11.910505 1.64975,2.35202 0.74426,2.62159 -1.73486,-1.38354 -0.86649,-2.97104 z"/>
+                    <path d="m 18.385135,11.910505 -1.64975,2.35202 -0.74538,2.62234 1.73486,-1.38354 0.86649,-2.97104 z"/>
+                    <path class="z5" d="m 19.047795,13.248365 3.55748,1.97916 0.72653,-0.35074 z m -0.107,0.43288 -0.37119,1.73073 2.1846,0.53561 1.40116,-0.49436 z"/>
+                    <path class="z5" d="m 22.922305,15.657195 0.75814,-0.41 2.40806,1.66799 1.17364,1.50707 0.62662,1.5626 -0.0464,3.70194 -1.3284,-1.72153 0.0407,-2.59376 -0.48842,-0.50049 c 0,0 -3.09778,-3.19058 -3.14371,-3.21401 z m -0.2409,0.10873 c -0.001,0.0525 3.32987,3.54733 3.32987,3.54733 l 0.10067,3.10396 -1.15426,-1.97782 -2.22547,-0.94804 -1.56576,-2.88481 z"/>
+                    <path class="z5" d="m 12.624785,13.248365 -3.5574599,1.97916 -0.72653,-0.35074 z m 0.107,0.43288 0.37119,1.73073 -2.18459,0.53561 -1.4011499,-0.49436 z"/>
+                    <path class="z5" d="m 8.7502951,15.657195 -0.75814,-0.41 -2.40806,1.66799 -1.17364,1.50707 -0.62662,1.56259 0.0464,3.70195 1.3284,-1.72153 -0.0407,-2.59376 0.48843,-0.5005 c 0,0 3.09777,-3.19057 3.1437,-3.214 z m 0.2409,0.10873 c 0.002,0.0525 -3.32987,3.54733 -3.32987,3.54733 l -0.10067,3.10396 1.15426,-1.97782 2.22547,-0.94804 1.5657499,-2.88481 z"/>
+                    <path class="z3" d="m 27.621665,30.814715 -0.33838,1.70499 -1.81932,-2.54418 -0.6629,-1.26895 z m -2.85271,-2.6096 c -0.0259,-0.0144 -0.0536,-0.0254 -0.0824,-0.0324 l -1.48333,-4.95503 1.00456,-2.08428 1.65511,1.74532 2.23034,6.67667 0.0415,0.93739 c -1.06528,-0.84215 -2.18962,-1.60679 -3.36434,-2.28803 z m 1.6945,-5.75654 1.64893,6.43421 -0.36469,-4.92266 z"/>
+                    <path class="z2" d="m 26.955425,32.969125 1.30083,10.28927 -1.10778,0.01 -1.89387,-7.99609 0.19174,-4.53719 z m 1.21978,-1.94971 -0.58729,2.58635 1.11876,9.15614 0.55849,-0.21663 0.2304,-6.77018 z"/>
+                    <path class="z3" d="m 4.0746451,30.814715 0.33838,1.70499 1.81931,-2.54418 0.66289,-1.26895 z m 2.8527,-2.6096 c 0.0259,-0.0144 0.0536,-0.0254 0.0824,-0.0324 l 1.48332,-4.95503 -1.00455,-2.08428 -1.65509,1.74532 -2.23034,6.67667 -0.0415,0.93739 c 1.06528,-0.84215 2.18961,-1.60679 3.36433,-2.28803 z m -1.6945,-5.75654 -1.64891,6.43421 0.36468,-4.92266 z"/>
+                    <path class="z2" d="m 4.5752651,32.969125 -1.30083,10.28927 1.10778,0.01 1.89387,-7.99609 -0.19174,-4.53719 z m -1.21978,-1.94971 0.58728,2.58635 -1.11875,9.15614 -0.55849,-0.21663 -0.2304,-6.77018 z"/>
+                    <path class="z7" d="m 20.337455,17.085495 1.72942,3.09103 1.890,0.94 -0.5,0.3 -6.8, -2.1 z"/>
+                    <path class="z7" d="m 16.66,19.72 6.8,2.1 -0.65,0.5 -0.90604,2.63773 -2.09968,0.86537 -3.34524,-1.655 0.2,-3.8 z"/>
+                    <path class="z7" d="m 11.351215,17.085495 -1.7294199,3.09103 -1.890,0.94 0.5,0.3 6.8,-2.1 z"/>
+                    <path class="z7" d="m 15.03,19.72 -6.8,2.1 0.65,0.5 0.90586,2.63773 2.0996699,0.86537 3.34636,-1.655 -0.2,-3.8 z"/>
+                    <path class="z2" d="m 19.641935,34.707615 1.81341,-1.36479 0.15748,1.83347 1.28642,2.37338 -1.98044,2.73652 -1.03109,0.16554 -0.37026,-3.88816 z"/>
+                    <path d="M 19.289,26.152 l -3.11202 -1.40604 0.0937 2.27965 2.80119 1.43603 z M 21.224,27.820 l -1.29355 0.7212 0.14997 -1.70898 z M 20.171,26.183 l 2.47968 -1.03241 -0.9336 2.52093 z M 21.702,27.921 l -1.69005 1.03372 -0.28871 2.0678 1.64975 -1.07533 z"/>
+                    <path d="M 18.791,29.025 l -0.0622 1.62387 -2.30308 -0.49961 -0.12448 -2.21722 z M 18.635,31.429 l 0.0311 1.99844 -2.20953 0.59391 -0.0311 -3.1227 z M 21.290,30.444 l -1.48383 1.03372 -0.20622 2.10905 1.64862 -1.32355 z"/>
+                    <path class="z2" d="m 12.045985,34.707615 -1.81341,-1.36479 -0.15748,1.83347 -1.2856799,2.37432 1.9804499,2.73595 1.03109,0.16554 0.37119,-3.88721 z"/>
+                    <path class="z2" d="m 15.636055,44.919735 -0.60647,-5.91209 -0.015,-3.84879 -2.18479,-1.07533 -0.24746,7.03017 z"/>
+                    <path class="z2" d="m 16.051865,44.919165 0.60628,-5.91209 0.0154,-3.84915 2.18404,-1.07515 0.24746,7.03017 z"/>
+                    <path d="m 12.399365,26.152365 3.11202,-1.40603 -0.0937,2.27965 -2.80138,1.4364 z m -1.93508,1.6685 1.29355,0.72139 -0.14997,-1.70899 z m 1.05303,-1.637 -2.4793099,-1.03259 0.93361,2.52148 z m -1.5316399,1.73729 1.6900499,1.03372 0.28871,2.06743 -1.64881,-1.07515 z"/>
+                    <path d="M 12.897,29.025 l 0.0623 1.62387 2.30327 -0.49961 0.12448 -2.21703 z M 13.053,31.430 l -0.0309 1.99844 2.20973 0.59353 0.0311 -3.1227 z M 10.398,30.445 l 1.48384 1.0339 0.20622 2.10905 -1.64975 -1.32355 z"/>
+                    <path d="m 14.404465,45.040075 0.0221,-0.0277 -0.14866,-0.37945 -3.10172,-3.40449 -0.23283,-0.0825 2.05918,5.32009 z m -1.17263,2.01833 1.27705,3.29948 0.42631,-4.04862 -0.25196,-0.64303 z"/>
+                    <path d="m 17.284025,45.040455 -0.0221,-0.0281 0.14867,-0.37926 3.10171,-3.40449 0.23246,-0.0825 -2.05843,5.3199 z m 1.17263,2.01795 -1.27706,3.29948 -0.42631,-4.04843 0.25197,-0.64303 z"/>
+                    <path class="z5" d="m 23.419015,50.399125 -0.15504,4.75091 -2.40263,6.60949 0.7362,1.90021 2.36401,-8.34435 z m -0.58154,-11.60825 -0.15485,4.00722 1.31793,7.93154 0.61977,-6.40308 z m -0.38731,5.12268 -2.75152,6.07258 -0.62015,4.87425 1.16232,6.85771 2.51886,-6.98144 0.15504,-7.18764 z"/>
+                    <path d="m 22.063225,39.369605 v 4.21363 l -2.94574,5.82511 -1.86027,5.78349 0.19365,-4.0072 z m -3.24944,13.42596 -0.0649,0.15467 -1.21294,2.90207 0.78325,7.18803 1.23619,-0.66122 -1.0714,-6.69272 z"/>
+                    <path d="m 17.255895,87.868445 0.1243,3.45228 0.28983,1.20638 h 0.87136 l 0.24897,-0.83181 0.29058,-0.0416 -0.0624,0.83181 1.09914,-0.33332 0.29058,-0.16629 1.24444,-0.27033 0.0416,-0.97748 -1.20319,-2.03743 -0.82974,-1.0399 -2.03294,-0.83181 z"/>
+                    <path d="m 18.251375,70.441125 0.29058,0.91486 0.6224,3.8681 0.0829,5.15733 -0.87136,5.03304 0.0412,-6.44714 -0.91242,-2.57848 -0.12561,-2.82837 z m 1.9915,2.32915 -0.20753,7.73637 -1.65949,6.23904 1.80478,-0.853 3.00816,-10.83583 -1.03727,-6.82095 z"/>
+                    <path d="m 21.404635,64.784375 0.1243,1.12295 -0.87118,1.08171 -0.29058,1.70599 -0.58116,0.24933 -0.49774,-2.57866 -0.33182,-0.91486 0.29058,-0.58247 z m -3.85853,0.0832 0.6224,1.74685 1.3273,2.57867 -0.33182,2.37095 -0.95423,-2.66209 -0.78738,-1.49734 z m 4.97811,-2.37039 -0.95423,5.11609 0.62241,-0.33295 0.49773,1.66381 z"/>
+                    <path class="z5" d="m 8.2694651,50.399125 0.15504,4.75053 2.4026299,6.60968 -0.73638,1.90021 -2.3640099,-8.34435 z m 0.58117,-11.60768 0.15503,4.00684 -1.31754,7.93154 -0.61978,-6.40308 z m 0.38769,5.1223 2.7515099,6.07239 0.61997,4.87425 -1.16232,6.85771 -2.5190499,-6.98163 -0.15504,-7.18801 z"/>
+                    <path d="m 9.6258251,39.369415 v 4.21363 l 2.9451699,5.8253 1.86028,5.78349 -0.19366,-4.0072 z m 3.2488699,13.42559 0.0647,0.15485 1.21294,2.90207 -0.78307,7.18803 -1.23618,-0.66102 1.0714,-6.69273 z"/>
+                    <path d="m 14.433335,87.868265 -0.12448,3.45228 -0.29058,1.20637 h -0.87118 l -0.24877,-0.83181 -0.29059,-0.0416 0.0623,0.83181 -1.09934,-0.33333 -0.29058,-0.16629 -1.2448,-0.27033 -0.0412,-0.97747 1.2031899,-2.03781 0.82975,-1.04009 2.03294,-0.83181 z"/>
+                    <path d="m 13.437675,70.440945 -0.29058,0.91486 -0.62241,3.86828 -0.0829,5.15733 0.87174,5.03304 -0.0418,-6.44714 0.91298,-2.57848 0.1243,-2.82837 z m -1.99151,2.32914 0.20735,7.73637 1.65968,6.23904 -1.80497,-0.85299 -3.0079799,-10.83584 1.03728,-6.82095 z"/>
+                    <path d="m 10.284405,64.784375 -0.12448,1.12295 0.87118,1.08171 0.29058,1.70599 0.58116,0.24933 0.49774,-2.57866 0.33182,-0.91486 -0.29058,-0.58247 z m 3.85854,0.0832 -0.62241,1.74685 -1.32767,2.57867 0.33182,2.37095 0.95423,-2.66209 0.78832,-1.4964 z m -4.9786799,-2.37058 0.9542299,5.11609 -0.6223999,-0.33313 -0.49793,1.6638 z"/>
+                    <path d="m 3.2054751,27.370125 0.005,3.09419 -0.57959,1.91184 -0.54539,-2.41185 z"/>
+                    <path d="m 4.3904451,43.563145 -1.5198,0.0506 -0.76631,-0.67112 -1.21261996,2.15767 -0.86245,3.32873 0.49386,0.22113 0.59814996,-2.20238 0.50016,0.25356 -0.35639,2.49422 0.62382,0.24345 0.41402,-2.49194 0.55839,0.17851 -0.2262,2.76603 0.76938,0.32268 0.25788,-2.86764 0.4578,-0.0181 0.16611,2.65239 0.65997,0.2633 0.0712,-4.56643 0.34158,-0.19428 1.35316,1.68367 0.32832,-0.34354 -0.72644,-2.0551 z"/>
+                    <path d="m 28.325215,27.370125 -0.005,3.09419 0.57959,1.91184 0.54538,-2.41185 z"/>
+                    <path d="m 27.140245,43.563145 1.5198,0.0506 0.76631,-0.67111 1.21262,2.15766 0.86245,3.32873 -0.49386,0.22113 -0.59815,-2.20238 -0.50016,0.25356 0.35639,2.49422 -0.62382,0.24345 -0.41402,-2.49194 -0.55839,0.17851 0.2262,2.76603 -0.76938,0.32268 -0.25788,-2.86764 -0.4578,-0.0181 -0.16611,2.6524 -0.65997,0.26329 -0.0712,-4.56643 -0.34158,-0.19428 -1.35316,1.68368 -0.32832,-0.34355 0.72644,-2.0551 z"/>
+                  </svg>
+                  <!-- Back view (body-muscles library paths) -->
+                  <svg class="bm-svg" viewBox="36 -1 34 96" style="height:280px; width:auto; display:block;">
+                    <path d="m 48.157455,6.3585449 0.44208,-0.14964 0.16111,0.16427 1.48163,4.0475101 2.32401,1.45118 2.39971,-1.52387 0.97577,-3.6896901 0.52752,-0.55908 0.23367,0.0981 0.24198,-3.34467 -2.03129,-2.31103004 -2.84509,-0.51629 -2.20422,0.52915 -1.93631,2.63077004 z"/>
+                    <path d="m 52.369695,12.105075 -2.35767,-1.55045 -1.47119,-3.9514301 -0.60741,0.0403 0.27409,1.82447 0.97635,0.33932 0.7613,2.2157201 0.33017,1.06849 0.0895,2.14894 1.16448,0.008 0.10563,-0.70833 0.54716,-0.0606 z m 1.01793,1.47595 0.23768,0.64982 1.38107,-0.004 0.01,-2.38784 0.25971,-0.79061 0.57215,-2.1698001 0.76359,-0.41018 0.25158,-1.78416 -0.62859,0.0193 -1.08488,3.8998101 -2.39725,1.46684 0.2768,1.48507 z"/>
+                    <path class="z4" d="M 49.625,14.629 L 49.688,12.005 L 48.974,13.157 L 44.594,14.654 L 45.945,16.925 L 51.222,16.925 L 51.183,14.550 Z"/>
+                    <path class="z4" d="M 46.034,17.075 L 48.920,21.925 L 51.303,21.925 L 51.224,17.075 Z"/>
+                    <path class="z4" d="M 49.009,22.075 L 49.572,23.022 L 51.403,28.104 L 51.305,22.075 Z"/>
+                    <path class="z4" d="M 55.439,14.729 L 55.376,12.104 L 56.090,13.256 L 60.470,14.754 L 59.179,16.925 L 53.844,16.925 L 53.881,14.649 Z"/>
+                    <path class="z4" d="M 59.089,17.075 L 56.204,21.925 L 53.763,21.925 L 53.842,17.075 Z"/>
+                    <path class="z4" d="M 56.114,22.075 L 55.492,23.121 L 53.661,28.203 L 53.761,22.075 Z"/>
+                    <path class="z6" d="M 44.144,15.285 L 39.888,20.286 L 39.426,22.749 L 41.263,21.510 L 44.025,20.355 L 45.663,23.400 L 49.103,23.400 Z"/>
+                    <path class="z5" d="M 42.201,16.586 L 40.626,18.152 L 39.736,20.156 L 43.992,15.155 Z"/>
+                    <path class="z6" d="M 45.771,23.600 L 45.872,23.789 L 47.009,29.286 L 47.023,30.400 L 51.080,30.400 L 51.053,28.314 L 49.185,23.600 Z"/>
+                    <path class="z6" d="M 47.026,30.600 L 47.086,35.145 L 51.156,36.255 L 51.082,30.600 Z"/>
+                    <path class="z5" d="M 62.863,16.686 L 64.438,18.251 L 65.328,20.255 L 61.073,15.254 Z"/>
+                    <path class="z6" d="M 60.921,15.384 L 65.176,20.385 L 65.290,22.849 L 63.801,21.609 L 61.039,20.454 L 59.455,23.400 L 56.022,23.400 Z"/>
+                    <path class="z6" d="M 59.347,23.600 L 59.192,23.888 L 58.055,29.385 L 58.042,30.400 L 53.986,30.400 L 54.012,28.413 L 55.918,23.600 Z"/>
+                    <path class="z6" d="M 58.039,30.600 L 57.979,35.245 L 53.908,36.354 L 53.983,30.600 Z"/>
+                    <path class="z4" d="M 43.593,21.039 L 44.920,23.967 L 43.615,25.653 L 43.186,27.069 L 39.209,29.802 Z"/>
+                    <path class="z4" d="M 43.459,20.972 L 39.075,29.735 L 38.871,25.461 L 39.407,23.674 L 41.242,21.927 Z"/>
+                    <path d="M 40.716955,42.424835 l -1.5182,0.0863 -0.78184,-0.65295 -1.16168,2.1855 -0.78414,3.34805 0.49892,0.20949 0.54632,-2.2158 0.50597,0.24175 -0.29779,2.5019 0.62936,0.22875 0.35546,-2.50096 0.56242,0.16536 -0.16126,2.77057 0.77674,0.30455 0.19056,-2.87291 0.45724,-0.0289 0.22827,2.64778 0.66597,0.24774 -0.0359,-4.56685 0.33693,-0.20224 1.39227,1.65147 0.32017,-0.35115 -0.77444,-2.03749 z"/>
+                    <path class="z2" d="M 40.775,29.006 L 42.870,27.644 L 42.187,29.635 L 42.603,34.383 L 40.799,42.081 L 39.814,42.253 Z"/>
+                    <path class="z2" d="M 39.665,42.242 L 38.305,41.501 L 37.998,34.491 L 38.635,31.429 L 39.245,30.209 L 40.625,28.994 Z"/>
+                    <path class="z4" d="M 61.376,21.213 L 60.056,24.145 L 61.330,26.199 L 61.657,27.251 L 65.780,29.966 Z"/>
+                    <path class="z4" d="M 61.510,21.146 L 65.914,29.899 L 66.108,25.624 L 65.568,23.839 L 63.729,22.096 Z"/>
+                    <path d="M 64.301385,42.592325 l 1.51839,0.0828 0.78033,-0.65476 1.16673,2.18281 0.79187,3.34623 -0.49843,0.21064 -0.55144,-2.21453 -0.50541,0.24292 0.30356,2.5012 -0.62882,0.23021 -0.36124,-2.50014 -0.56203,0.16666 0.16765,2.77019 -0.77603,0.30634 -0.19719,-2.87245 -0.45732,-0.0278 -0.22215,2.64829 -0.66539,0.24928 0.0254,-4.56692 -0.3374,-0.20146 -1.38845,1.65469 -0.32098,-0.35041 0.76973,-2.03928 z"/>
+                    <path class="z2" d="M 65.204,42.420 L 63.925,29.007 L 61.764,27.798 L 62.786,29.733 L 62.397,34.555 L 64.219,42.248 Z"/>
+                    <path class="z2" d="M 64.075,28.993 L 65.353,42.405 L 66.712,41.663 L 67.002,34.653 L 66.358,31.591 L 65.745,30.373 Z"/>
+                    <path d="m 51.733705,14.788555 0.53876,25.33066 0.48967,-0.0297 0.65658,-25.3387 -0.28147,-0.84188 -1.25059,-4.9e-4 z"/>
+                    <path d="M 52.100,37.310 L 49.537,36.465 L 50.244,40.788 L 52.200,42.030 L 52.200,40.270 L 52.150,40.280 Z"/>
+                    <path d="M 49.389,36.490 L 46.240,35.460 L 44.720,39.420 L 50.096,40.812 Z"/>
+                    <path d="M 52.800,42.030 L 52.800,40.270 L 52.850,40.260 L 52.900,37.290 L 55.289,36.625 L 54.805,40.801 Z"/>
+                    <path d="M 55.439,36.643 L 55.980,36.470 L 58.320,35.720 L 59.660,39.450 L 54.955,40.819 Z"/>
+                    <path class="z3" d="M 50.191,41.481 L 44.740,39.690 L 43.830,41.580 L 43.431,44.301 Z"/>
+                    <path class="z3" d="M 50.249,41.619 L 43.489,44.439 L 44.410,50.520 L 47.180,51.030 L 51.620,49.090 L 52.200,49.480 L 52.200,42.880 Z"/>
+                    <path class="z3" d="M 55.274,41.079 L 61.354,45.519 L 60.640,42.150 L 59.740,39.860 Z"/>
+                    <path class="z3" d="M 55.186,41.201 L 52.800,42.880 L 52.800,49.480 L 53.570,49.090 L 57.680,50.760 L 60.500,50.600 L 61.266,45.641 Z"/>
+                    <path d="m 51.176145,64.073985 -1.20605,3.01461 0.70738,0.26558 0.89754,3.51771 -0.55801,-4.01191 z m -5.08496,-3.15003 0.63355,1.8609 0.16813,2.03261 0.61314,1.93117 -0.90585,-0.0851 -0.28534,2.15982 z"/>
+                    <path d="m 54.019305,64.073985 1.20605,3.01461 -0.70737,0.26558 -0.89755,3.51771 0.55802,-4.01191 z m 5.08496,-3.15003 -0.63355,1.8609 -0.16813,2.03261 -0.61313,1.93117 0.90584,-0.0851 0.28534,2.15982 z"/>
+                    <path class="z3" d="M 50.568,67.512 L 51.669,72.509 L 51.379,75.532 L 51.292,76.825 L 48.983,76.825 Z"/>
+                    <path class="z3" d="M 50.218,67.512 L 48.633,76.825 L 46.283,76.825 L 45.533,74.263 L 46.783,67.088 Z"/>
+                    <path class="z3" d="M 46.386,77.175 L 51.269,77.175 L 50.701,85.598 L 49.037,86.233 Z"/>
+                    <path class="z3" d="M 54.628,67.512 L 53.526,72.509 L 53.816,75.532 L 53.903,76.825 L 56.213,76.825 Z"/>
+                    <path class="z3" d="M 54.978,67.512 L 56.563,76.825 L 58.912,76.825 L 59.662,74.263 L 58.412,67.088 Z"/>
+                    <path class="z3" d="M 53.927,77.175 L 58.810,77.175 L 56.158,86.233 L 54.495,85.598 Z"/>
+                    <path d="M 50.933115,88.340995 l 0.85194,1.3581 0.37189,0.79238 -0.15588,1.21774 -0.76984,0.74446 -1.51185,0.12543 -1.1299,-0.29192 -0.24225,-0.95894 0.80765,-1.30405 -0.22562,-0.85987 0.29679,-0.84153 -0.0194,-1.81524 1.53568,-0.54817 z m -1.19598,0.4675 0.15943,1.25776 -0.6023,0.97431 m -0.54436,0.29544 1.06474,0.40084 1.55326,-0.65137 z"/>
+                    <path class="z4" d="M 49.550,50.504 L 51.751,49.461 L 52.389,49.692 L 52.424,51.499 L 52.499,56.145 L 50.521,62.188 L 50.997,63.602 L 49.569,66.897 L 48.755,66.754 Z"/>
+                    <path class="z4" d="M 49.400,50.496 L 48.605,66.746 L 47.803,66.596 L 47.302,64.480 L 47.133,62.723 L 44.712,54.565 L 44.369,50.918 L 47.200,51.500 Z"/>
+                    <path d="M 54.262335,88.340995 l -0.85194,1.3581 -0.37189,0.79238 0.15589,1.21774 0.76983,0.74446 1.51186,0.12543 1.12989,-0.29192 0.24225,-0.95894 -0.80765,-1.30405 0.22563,-0.85987 -0.29679,-0.84153 0.0194,-1.81524 -1.53568,-0.54817 z m 1.19598,0.4675 -0.15943,1.25776 0.6023,0.97431 m 0.54436,0.29544 -1.06474,0.40084 -1.55326,-0.65137 z"/>
+                    <path class="z4" d="M 57.425,51.196 L 56.565,66.806 L 55.759,66.965 L 54.331,63.670 L 54.807,62.256 L 52.829,56.213 L 52.904,51.567 L 52.956,49.769 L 53.520,49.498 Z"/>
+                    <path class="z4" d="M 57.575,51.204 L 60.625,50.950 L 60.616,54.633 L 58.195,62.791 L 58.026,64.547 L 57.525,66.663 L 56.715,66.814 Z"/>
+                  </svg>
+                </div>
+                <!-- Muscle chips -->
+                <div class="muscle-chips">
+                  <span class="mc"><span class="mn">Ноги</span><span class="mv">20</span></span>
+                  <span class="mc"><span class="mn">Грудь</span><span class="mv">19</span></span>
+                  <span class="mc"><span class="mn">Плечи</span><span class="mv">14</span></span>
+                  <span class="mc"><span class="mn">Спина</span><span class="mv">13</span></span>
+                  <span class="mc"><span class="mn">Трицепс</span><span class="mv">9</span></span>
+                  <span class="mc"><span class="mn">Бицепс</span><span class="mv">8</span></span>
+                </div>
+              </div>
+
+              <!-- Day card -->
+              <div class="day-card">
+                <div class="day-num" style="background:hsla(158,40%,30%,0.35); color:hsl(158,55%,72%);">1</div>
+                <div style="flex:1; min-width:0;">
+                  <div class="day-nm">Грудь + Трицепс + Дельты</div>
+                  <div class="day-st">7 упр. · ~63 мин</div>
+                </div>
+                <div class="day-ch"><svg><use href="#i-chevronRight"/></svg></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 · Workout / exercise display -->
+      <div class="tour-row">
+        <div class="tour-copy">
+          <div class="step-tag"><span class="dot"></span>как показывает упражнения</div>
+          <h3 class="text-balance">Тренировка дня — не список текстом, а пульт под рукой</h3>
+          <p class="desc">
+            В зале открываешь мини-апп: текущее упражнение, лесенка подходов с весами и повторами, кнопка «сделал». Отметил подход — пошёл таймер отдыха. Ничего не нужно держать в голове.
+          </p>
+          <div class="feats">
+            <div class="f"><span class="fi"><svg><use href="#i-check"/></svg></span><div>Отмечаешь подходы на ходу — <b>вес и повторы уже проставлены</b></div></div>
+            <div class="f"><span class="fi"><svg><use href="#i-clock"/></svg></span><div>После подхода — <b>таймер отдыха с дыханием</b>, без секундомера в руке</div></div>
+            <div class="f"><span class="fi"><svg><use href="#i-swap"/></svg></span><div>База на <span style="font-family:var(--font-mono);color:var(--fg-1);font-weight:600;">924</span> упражнения с техникой и видео под рукой</div></div>
+          </div>
+        </div>
+        <div class="tour-stage">
+          <div class="device">
+            <div class="dv-mesh"></div>
+            <div class="dv-notch"></div>
+            <div class="dv-top">
+              <div class="ic-btn"><svg style="width:16px;height:16px"><use href="#i-chevronLeft"/></svg></div>
+              <div style="flex:1; min-width:0;">
+                <div class="sub" style="margin-top:0;">день 4 · 22:14</div>
+                <div class="title" style="margin-top:2px;">Грудь, трицепс</div>
+              </div>
+              <div class="ic-btn"><svg style="width:16px;height:16px"><use href="#i-moreHorizontal"/></svg></div>
+            </div>
+            <div class="dv-screen">
+              <div class="glass" style="padding:13px 13px 15px;">
+                <div class="eyebrow" style="color:hsl(var(--accent-h),55%,75%);">текущее упражнение</div>
+                <div style="font-family:var(--font-display); font-size:16px; font-weight:600; letter-spacing:-0.016em; margin-top:4px;">Cable Fly</div>
+                <div style="font-size:11.5px; color:var(--fg-2); margin-top:3px;">3 подхода × 12 · средний блок</div>
+                <div class="set-ladder">
+                  <div class="set-row done"><span class="idx">1</span><span class="lab">подход</span><span class="fld">14 кг</span><span class="fld">× 12</span><span class="chk"><svg><use href="#i-check"/></svg></span></div>
+                  <div class="set-row done"><span class="idx">2</span><span class="lab">подход</span><span class="fld">14 кг</span><span class="fld">× 12</span><span class="chk"><svg><use href="#i-check"/></svg></span></div>
+                  <div class="set-row current"><span class="idx">3</span><span class="lab">подход</span><span class="fld">14 кг</span><span class="fld">× 12</span><span class="chk"></span></div>
+                </div>
+                <div class="dv-btn-accent"><svg><use href="#i-check"/></svg> СДЕЛАЛ</div>
+              </div>
+
+              <div class="dv-sec"><span class="h">Дальше</span><span class="e">2 осталось</span></div>
+              <div class="glass ex-row2 done"><span class="ni"><svg style="width:12px;height:12px"><use href="#i-check"/></svg></span><span class="nm">Bench Press</span><span class="st">3×10 · 72.5</span></div>
+              <div class="glass ex-row2"><span class="ni">4</span><span class="nm">Tricep Pushdown</span><span class="st">3×12 · 28</span></div>
+              <div class="glass ex-row2"><span class="ni">5</span><span class="nm">Overhead Press</span><span class="st">3×8 · 30</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── How it works ─── -->
+<section style="background: linear-gradient(180deg, transparent, rgba(8,8,11,0.6), transparent);">
+  <div class="wrap" style="max-width: 1000px;">
+    <div style="margin-bottom: 64px; max-width: 760px;">
+      <div class="eyebrow" style="margin-bottom: 18px;">как это работает</div>
+      <h2 class="section text-balance">
+        Четыре шага — от знакомства до тренировки в&nbsp;зале.
+      </h2>
+    </div>
+
+    <div class="flow">
+      <!-- 01 -->
+      <div class="flow-step">
+        <div class="flow-num"><svg><use href="#i-messageCircle"/></svg></div>
+        <div class="flow-body">
+          <div class="txt">
+            <div class="e">шаг 01</div>
+            <h3>Знакомство</h3>
+            <p>Ассистент в Telegram спрашивает: цели, опыт, ограничения, расписание, что не любишь делать. Не анкета на пятьдесят пунктов — короткий живой диалог.</p>
+          </div>
+          <div class="flow-vis">
+            <div class="mini-bubble">Какая цель — масса, сила или форма?</div>
+            <div class="mini-bubble u">Набрать массу, верх тела</div>
+            <div class="mini-bubble">Сколько раз в неделю готов ходить?</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 02 -->
+      <div class="flow-step">
+        <div class="flow-num"><svg><use href="#i-sparkles"/></svg></div>
+        <div class="flow-body">
+          <div class="txt">
+            <div class="e">шаг 02</div>
+            <h3>Программа</h3>
+            <p>Собирает программу под тебя и объясняет, почему именно такая. Не «универсальный PPL для всех», а под твою историю и твой зал.</p>
+          </div>
+          <div class="flow-vis">
+            <div class="mini-row"><span class="mi"><svg><use href="#i-chest"/></svg></span><span class="ml">День 1 · Грудь</span><span class="mn">5 упр.</span></div>
+            <div class="mini-row"><span class="mi"><svg><use href="#i-back"/></svg></span><span class="ml">День 2 · Спина</span><span class="mn">6 упр.</span></div>
+            <div class="mini-row"><span class="mi"><svg><use href="#i-leg"/></svg></span><span class="ml">День 3 · Ноги</span><span class="mn">5 упр.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 03 -->
+      <div class="flow-step">
+        <div class="flow-num"><svg><use href="#i-dumbbell"/></svg></div>
+        <div class="flow-body">
+          <div class="txt">
+            <div class="e">шаг 03</div>
+            <h3>Тренировка</h3>
+            <p>В зале — мини-апп с тренировкой дня: подходы, веса, повторы. <span style="font-family:var(--font-mono);color:var(--fg-1);font-weight:600;">924</span> упражнения, замена в один тап, резюме после.</p>
+          </div>
+          <div class="flow-vis">
+            <div class="set-row done" style="margin-bottom:5px;"><span class="idx">1</span><span class="lab">подход</span><span class="fld">72.5</span><span class="fld">× 8</span><span class="chk"><svg><use href="#i-check"/></svg></span></div>
+            <div class="set-row current"><span class="idx">2</span><span class="lab">подход</span><span class="fld">72.5</span><span class="fld">× 8</span><span class="chk"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 04 -->
+      <div class="flow-step">
+        <div class="flow-num"><svg><use href="#i-bell"/></svg></div>
+        <div class="flow-body">
+          <div class="txt">
+            <div class="e">шаг 04</div>
+            <h3>После зала</h3>
+            <p>Тренер пишет первым: как прошло, что болело, что было тяжело. Подбрасывает технику, если ты застрял, и мотивирующие рилсы, если начинаешь пропускать.</p>
+          </div>
+          <div class="flow-vis">
+            <div class="mini-bubble">Как прошло? Жим дался тяжело?</div>
+            <div class="mini-bubble u">Да, плечо ныло</div>
+            <div class="mini-bubble">Нашёл короткий разогрев. <b>Скинуть?</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Extras -->
+    <div class="glass-strong extras" style="margin-top: 56px;">
+      <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+        <div class="eyebrow">и ещё</div>
+        <div style="font-family:var(--font-mono); font-size: 11px; color: var(--fg-3); letter-spacing: 0.04em;">06 · возможностей</div>
+      </div>
+      <div class="row"><svg><use href="#i-check"/></svg> <span>Подбор упражнения по фото тренажёра</span></div>
+      <div class="row"><svg><use href="#i-check"/></svg> <span>Альтернатива, если твой тренажёр занят</span></div>
+      <div class="row"><svg><use href="#i-check"/></svg> <span>Адаптация под конкретный зал</span></div>
+      <div class="row"><svg><use href="#i-check"/></svg> <span>Анализ прогресса и подсказка, когда менять программу</span></div>
+      <div class="row"><svg><use href="#i-check"/></svg> <span>Тон ассистента — тренер, девочка-тренер, друган</span></div>
+      <div class="row"><svg><use href="#i-check"/></svg> <span>База на 924 упражнения с техникой и видео</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Pricing ─── -->
+<section id="pricing">
+  <div class="aurora top"></div>
+  <div class="wrap">
+    <div class="reveal" style="text-align: center; margin-bottom: 56px;">
+      <div class="eyebrow center" style="justify-content: center; margin-bottom: 18px;">сколько стоит</div>
+      <h2 class="section text-balance" style="max-width: 820px; margin: 0 auto;">
+        Тренер в зале — <span class="strike" style="white-space: nowrap;">от&nbsp;30&nbsp;000&nbsp;₽/мес</span>
+        <span class="accent-text">Здесь другой порядок</span>
+      </h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+      <!-- Week -->
+      <div class="price reveal" style="--rd: 0ms;">
+        <div class="tier">неделя</div>
+        <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 14px;">
+          <span class="amount">990</span>
+          <span class="unit">₽</span>
+        </div>
+        <p class="why">Попробовать без обязательств. Программа, тренировки, чат — всё внутри.</p>
+        <div class="features">
+          <div class="f"><svg><use href="#i-check"/></svg>Программа под тебя</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Тренировки в мини-аппе</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Чат с ассистентом</div>
+        </div>
+        <a href="https://app.gymwithai.me/" class="btn btn-ghost cta">Попробовать</a>
+      </div>
+
+      <!-- Month (featured) -->
+      <div class="price featured reveal" style="--rd: 80ms;">
+        <div class="badge"><svg style="width:11px;height:11px"><use href="#i-sparkles"/></svg>рекомендуем</div>
+        <div class="tier">месяц</div>
+        <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 14px;">
+          <span class="amount" style="color: hsl(var(--accent-h),55%,82%);">3&nbsp;000</span>
+          <span class="unit">₽</span>
+        </div>
+        <p class="why">Цена одной тренировки с живым тренером — но безлимит и&nbsp;24/7.</p>
+        <div class="features">
+          <div class="f"><svg><use href="#i-check"/></svg>Всё из тарифа «Неделя»</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Подбор по фото тренажёра</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Анализ прогресса и плато</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Поддержка после тренировки</div>
+        </div>
+        <a href="https://app.gymwithai.me/" class="btn btn-accent cta">Подключить</a>
+      </div>
+
+      <!-- Lifetime -->
+      <div class="price reveal" style="--rd: 160ms;">
+        <div class="tier">lifetime</div>
+        <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 14px;">
+          <span class="amount">15&nbsp;000</span>
+          <span class="unit">₽</span>
+        </div>
+        <p class="why">Меньше, чем годовой абонемент в зал. Один раз — и навсегда.</p>
+        <div class="features">
+          <div class="f"><svg><use href="#i-check"/></svg>Всё из тарифа «Месяц»</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Без подписки — на всю жизнь</div>
+          <div class="f"><svg><use href="#i-check"/></svg>Все будущие апдейты</div>
+        </div>
+        <a href="https://app.gymwithai.me/" class="btn btn-ghost cta">Взять навсегда</a>
+      </div>
+    </div>
+
+    <!-- Final CTA -->
+    <div class="final reveal" style="margin-top: 96px;">
+      <div class="eyebrow center" style="justify-content: center; margin-bottom: 18px;">старт</div>
+      <h2 class="section text-balance" style="max-width: 760px; margin: 0 auto;">
+        Запусти ассистента и собери программу
+        <span class="accent-text">за&nbsp;30&nbsp;секунд</span>
+      </h2>
+      <p class="lead" style="margin-top: 18px;">Никаких регистраций. Telegram — и&nbsp;всё.</p>
+      <div style="margin-top: 32px; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;">
+        <a href="https://app.gymwithai.me/" class="btn btn-accent">
+          Открыть в Telegram
+          <svg style="width:16px;height:16px"><use href="#i-arrowRight"/></svg>
+        </a>
+        <span class="mono" style="font-size: 12.5px; color: var(--fg-3);">@ai_trainer_bot</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Footer ─── -->
+<footer>
+  <div class="wrap flex flex-col md:flex-row items-center justify-between gap-4" style="font-size: 13px; color: var(--fg-3);">
+    <div class="flex items-center gap-3">
+      <div class="brand-mark" style="width: 26px; height: 26px;"><svg style="width:14px;height:14px"><use href="#i-dumbbell"/></svg></div>
+      <span class="mono" style="letter-spacing: 0.04em;">ai-тренер · 2026</span>
+    </div>
+    <div class="flex gap-6">
+      <a href="/blog/" style="color: var(--fg-3); transition: color .15s;" onmouseover="this.style.color='var(--fg-1)'" onmouseout="this.style.color='var(--fg-3)'">Блог</a>
+      <a href="#" style="color: var(--fg-3); transition: color .15s;" onmouseover="this.style.color='var(--fg-1)'" onmouseout="this.style.color='var(--fg-3)'">Telegram</a>
+      <a href="#" style="color: var(--fg-3); transition: color .15s;" onmouseover="this.style.color='var(--fg-1)'" onmouseout="this.style.color='var(--fg-3)'">Поддержка</a>
+      <a href="#" style="color: var(--fg-3); transition: color .15s;" onmouseover="this.style.color='var(--fg-1)'" onmouseout="this.style.color='var(--fg-3)'">Оферта</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Reveal on scroll
+  (() => {
+    const els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(el => el.classList.add('in'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    els.forEach(el => io.observe(el));
+    // Safety net: force visible after 2.5s no matter what (handles throttled iframes)
+    setTimeout(() => els.forEach(el => el.classList.add('in')), 2500);
+  })();
+
+  // Progression demo sweep
+  (() => {
+    const grid = document.getElementById('weekSweep');
+    if (!grid) return;
+    const cells = [...grid.querySelectorAll('.week-cell')];
+    let i = cells.findIndex(c => c.classList.contains('on'));
+    if (i < 0) i = 0;
+    setInterval(() => {
+      cells.forEach(c => c.classList.remove('on'));
+      i = (i + 1) % cells.length;
+      cells[i].classList.add('on');
+    }, 2200);
+  })();
+
+  // Hero TG chat — replay the type/reveal loop
+  (() => {
+    const card = document.querySelector('.tg-card');
+    if (!card) return;
+    const bubbles = [...card.querySelectorAll('.bubble.row > .bubble')];
+    if (!bubbles.length) return;
+
+    const reset = () => {
+      bubbles.forEach(b => {
+        b.style.opacity = '0';
+        b.style.transform = 'translateY(8px)';
+        b.style.transition = 'opacity .35s cubic-bezier(.22,1,.36,1), transform .35s cubic-bezier(.22,1,.36,1)';
+      });
+    };
+    const show = (b, delay) => new Promise(res => {
+      setTimeout(() => {
+        b.style.opacity = '1';
+        b.style.transform = 'none';
+        res();
+      }, delay);
+    });
+
+    const run = async () => {
+      reset();
+      await show(bubbles[0], 400);
+      await show(bubbles[1], 800);
+      await show(bubbles[2], 700);
+      await show(bubbles[3], 900);
+      await new Promise(r => setTimeout(r, 3200));
+      run();
+    };
+    // start after the entrance animation finishes
+    setTimeout(run, 1600);
+  })();
+
+  // Subtle parallax on hero blobs
+  (() => {
+    const blobs = document.querySelectorAll('.mesh-bg .blob');
+    if (!blobs.length) return;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        blobs.forEach((b, i) => {
+          b.style.translate = `0 ${y * (0.08 + i * 0.04)}px`;
+        });
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+</script>
+
+</body>
+</html>

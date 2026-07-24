@@ -1,0 +1,110 @@
+---
+// Общий layout блога: тёмная glass-тема на тех же токенах, что лендинг и аппка.
+const { title, description, ogUrl } = Astro.props
+const canonical = ogUrl || new URL(Astro.url.pathname, Astro.site).href
+---
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-64.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="alternate" type="application/rss+xml" title="AI Trainer — блог" href="/rss.xml" />
+    <meta name="theme-color" content="#050507" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="ru_RU" />
+  </head>
+  <body>
+    <nav class="topnav">
+      <a href="/" class="brand">AI&nbsp;Trainer</a>
+      <div class="links">
+        <a href="/blog/">Блог</a>
+        <a href="https://app.gymwithai.me/" class="app-link">Открыть приложение</a>
+      </div>
+    </nav>
+    <main class="wrap">
+      <slot />
+    </main>
+    <footer class="footer">
+      <span>© {new Date().getFullYear()} AI Trainer · gymwithai.me</span>
+      <a href="/rss.xml">RSS</a>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --accent-h: 158;
+    --accent: hsl(var(--accent-h), 65%, 56%);
+    --accent-text: hsl(var(--accent-h), 55%, 75%);
+    --bg-base: #050507;
+    --surface-0: rgba(22, 22, 28, 0.55);
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-accent: hsla(var(--accent-h), 70%, 50%, 0.2);
+    --fg-1: #eceaef;
+    --fg-2: rgba(236, 234, 239, 0.7);
+    --fg-3: rgba(236, 234, 239, 0.5);
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 500px at 80% -10%, hsla(var(--accent-h), 60%, 30%, 0.16), transparent 60%),
+      var(--bg-base);
+    color: var(--fg-1);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.65;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .topnav {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 720px; margin: 0 auto; padding: 20px 24px;
+  }
+  .brand { color: var(--fg-1); text-decoration: none; font-weight: 700; letter-spacing: 0.02em; }
+  .topnav .links { display: flex; gap: 20px; align-items: center; }
+  .topnav .links a { color: var(--fg-2); text-decoration: none; font-size: 14px; }
+  .topnav .links a:hover { color: var(--fg-1); }
+  .topnav .app-link {
+    padding: 7px 14px; border-radius: 999px;
+    background: var(--surface-0); border: 1px solid var(--border-accent);
+    color: var(--accent-text) !important;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 24px 80px; }
+  .footer {
+    display: flex; justify-content: space-between; gap: 16px;
+    max-width: 720px; margin: 0 auto; padding: 24px;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--fg-3); font-size: 13px;
+  }
+  .footer a { color: var(--fg-3); }
+  h1 { font-size: 32px; line-height: 1.2; letter-spacing: -0.02em; margin: 16px 0; }
+  h2 { font-size: 22px; margin-top: 40px; }
+  h3 { font-size: 18px; margin-top: 28px; }
+  a { color: var(--accent-text); }
+  article img { max-width: 100%; border-radius: 12px; }
+  article blockquote {
+    margin: 20px 0; padding: 4px 20px;
+    border-left: 2px solid var(--border-accent);
+    background: var(--surface-0); border-radius: 0 12px 12px 0;
+    color: var(--fg-2);
+  }
+  article code {
+    background: var(--surface-0); border: 1px solid var(--border-subtle);
+    border-radius: 6px; padding: 1px 6px; font-size: 0.9em;
+  }
+  article pre { background: var(--surface-0); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px; overflow-x: auto; }
+  article pre code { background: none; border: none; padding: 0; }
+  .post-meta { color: var(--fg-3); font-size: 14px; }
+</style>

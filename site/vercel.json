@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    { "source": "/workout", "destination": "https://app.gymwithai.me/workout", "permanent": true },
+    { "source": "/progress", "destination": "https://app.gymwithai.me/progress", "permanent": true },
+    { "source": "/library", "destination": "https://app.gymwithai.me/library", "permanent": true },
+    { "source": "/me", "destination": "https://app.gymwithai.me/me", "permanent": true },
+    { "source": "/paywall", "destination": "https://app.gymwithai.me/paywall", "permanent": true },
+    { "source": "/login", "destination": "https://app.gymwithai.me/login", "permanent": true },
+    { "source": "/demo", "destination": "https://app.gymwithai.me/demo", "permanent": true },
+    { "source": "/summary/:id", "destination": "https://app.gymwithai.me/summary/:id", "permanent": true },
+    { "source": "/program/:id", "destination": "https://app.gymwithai.me/program/:id", "permanent": true },
+    { "source": "/auth/:path*", "destination": "https://app.gymwithai.me/auth/:path*", "permanent": true },
+    { "source": "/landing.html", "destination": "/", "permanent": true }
+  ]
+}
