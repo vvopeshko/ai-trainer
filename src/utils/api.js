@@ -3,6 +3,8 @@
 // dev-браузер без того и другого → dev_bypass (только сборка DEV).
 
 import { tokenStorage } from './tokenStorage.js'
+import { queryClient } from '../lib/queryClient.js'
+import { queryKeys } from '../lib/queryKeys.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 const DEFAULT_TIMEOUT = 15_000
@@ -110,6 +112,11 @@ async function makeError(res) {
     payload = await res.json()
   } catch {
     /* ignore */
+  }
+  // Hard paywall: сервер отбил запрос requirePremium'ом — рефетчим статус
+  // подписки, BillingGate уведёт на /paywall сам (ARCHITECTURE_PAYMENTS.md §5.4)
+  if (res.status === 403 && payload?.code === 'PREMIUM_REQUIRED') {
+    queryClient.invalidateQueries({ queryKey: queryKeys.billing.status })
   }
   const err = new Error(payload?.error ?? `HTTP ${res.status}`)
   err.status = res.status

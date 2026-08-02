@@ -1,0 +1,236 @@
+const question = (id, topic, questionText, outcomes, critical, reviewIntervalMonths) => ({
+  id,
+  topic,
+  question: questionText,
+  outcomes,
+  critical,
+  reviewIntervalMonths,
+  scope: 'Healthy adults; treatment, rehabilitation and acute injuries are out of scope.',
+})
+
+const work = (id, title, year, workType, identifiers, reviewScope = 'abstract_only') => ({
+  id,
+  status: 'screened_in',
+  title,
+  year,
+  workType,
+  identifiers,
+  correctionStatus: 'unknown',
+  reviewScope,
+  sourceNotes: 'Draft pilot import; full status, license and conflict checks are required before approval.',
+})
+
+const assessment = (id, questionId, workId, outcomes, mainResult) => ({
+  id,
+  questionId,
+  workId,
+  status: 'draft',
+  reviewScope: 'abstract_only',
+  population: 'Healthy adults in the populations represented by the source.',
+  outcomes,
+  mainResults: [mainResult],
+  directness: 'some_concerns',
+  riskOfBias: 'not_assessed',
+  limitations: ['Formal full-text and supplement appraisal has not been completed.'],
+  cannotSupport: ['An individual optimum or guaranteed outcome.'],
+})
+
+const claim = ({
+  id,
+  claimId,
+  questionId,
+  statement,
+  outcomes,
+  effect,
+  certainty,
+  evidence,
+  population = 'Healthy adults.',
+  trainingStatuses = ['mixed'],
+  bodyScopes = ['whole_body'],
+  limitations = ['Evidence is heterogeneous and does not define an individual optimum.'],
+  unknowns = ['Individual response and long-term effects remain uncertain.'],
+}) => ({
+  id,
+  claimId,
+  questionId,
+  version: 1,
+  status: 'draft',
+  statement,
+  population,
+  trainingStatuses,
+  bodyScopes,
+  outcomes,
+  effect,
+  certainty,
+  certaintyRationale: 'Rapid editorial synthesis; scientific review is required before runtime use.',
+  limitations,
+  unknowns,
+  evidence: { supports: [], contradicts: [], contextualizes: [], ...evidence },
+  searchCutoff: '2026-08-02',
+  reviewDueAt: '2027-02-02',
+  createdBy: 'evidence-pilot',
+})
+
+const recommendation = ({
+  id,
+  claimVersionId,
+  supportingClaimVersionIds = [],
+  guidance,
+  heuristic,
+  forbidden,
+  surfaces = ['ai_trainer', 'program_generation', 'blog'],
+}) => ({
+  id,
+  claimVersionId,
+  supportingClaimVersionIds,
+  status: 'draft',
+  surfaces,
+  audience: 'Healthy adults using AI Trainer for general resistance training.',
+  guidance,
+  implementationHeuristic: heuristic,
+  strength: 'conditional',
+  exceptions: ['Clinical, rehabilitation or acute-injury context.'],
+  safetyNotes: ['Pain or loss of safe technique overrides progression guidance.'],
+  allowedWording: ['Use probabilistic wording and identify product defaults as heuristics.'],
+  forbiddenWording: [forbidden],
+  reviewDueAt: '2027-02-02',
+})
+
+const questions = [
+  question('EQ-HYP-001', 'weekly_volume', 'How does weekly set volume affect hypertrophy?', ['hypertrophy'], true, 6),
+  question('EQ-HYP-002', 'proximity_to_failure', 'Must working sets reach momentary muscular failure?', ['hypertrophy', 'maximal_strength', 'fatigue'], true, 6),
+  question('EQ-HYP-003', 'load_and_repetitions', 'How do load and repetition range affect hypertrophy and strength?', ['hypertrophy', 'maximal_strength'], true, 12),
+  question('EQ-HYP-004', 'frequency', 'Does muscle-training frequency matter when volume is equated?', ['hypertrophy', 'maximal_strength'], false, 12),
+  question('EQ-HYP-005', 'inter_set_rest', 'How long should rest between working sets be?', ['hypertrophy', 'maximal_strength', 'fatigue'], false, 12),
+  question('EQ-PRG-001', 'progression', 'How should load, repetitions and volume progress?', ['hypertrophy', 'exercise_specific_strength', 'adherence', 'fatigue'], true, 12),
+  question('EQ-HYP-006', 'range_of_motion', 'How do full and partial ranges of motion affect adaptations?', ['hypertrophy', 'exercise_specific_strength'], false, 6),
+  question('EQ-PRG-002', 'exercise_order', 'How does exercise order affect strength and hypertrophy?', ['hypertrophy', 'exercise_specific_strength'], false, 18),
+  question('EQ-PRG-003', 'periodization_and_deload', 'Do periodization and planned deloads improve outcomes?', ['hypertrophy', 'maximal_strength', 'fatigue'], false, 12),
+  question('EQ-CON-001', 'concurrent_training', 'When does aerobic work interfere with resistance adaptations?', ['hypertrophy', 'maximal_strength', 'power'], true, 12),
+]
+
+const works = [
+  work('RW-ACSM-2026', 'Resistance Training Prescription for Muscle Function, Hypertrophy, and Physical Performance in Healthy Adults', 2026, 'position_stand', { doi: '10.1249/MSS.0000000000003897', pmid: '41843416', pmcid: 'PMC12965823' }, 'full_text'),
+  work('RW-VOLUME-2026', 'The Resistance Training Dose Response: Meta-Regressions Exploring Weekly Volume and Frequency', 2026, 'meta_analysis', { doi: '10.1007/s40279-025-02344-w', pmid: '41343037' }),
+  work('RW-PRESCRIPTION-2023', 'Resistance training prescription for muscle strength and hypertrophy in healthy adults', 2023, 'meta_analysis', { doi: '10.1136/bjsports-2023-106807', pmid: '37414459' }),
+  work('RW-RIR-METAREG-2024', 'Dose-Response Between Proximity to Failure, Strength Gain, and Hypertrophy', 2024, 'meta_analysis', { doi: '10.1007/s40279-024-02069-2', pmid: '38970765' }),
+  work('RW-FAILURE-META-2022', 'Resistance Training to Repetition Failure or Non-Failure', 2022, 'meta_analysis', { doi: '10.1016/j.jshs.2021.01.007', pmid: '33497853', pmcid: 'PMC9068575' }),
+  work('RW-RIR-RCT-2024', 'Similar hypertrophy after training to failure or with repetitions in reserve', 2024, 'rct', { doi: '10.1080/02640414.2024.2321021', pmid: '38393985' }),
+  work('RW-LOAD-NMA-2021', 'Resistance Training Load Effects on Muscle Hypertrophy and Strength Gain', 2021, 'meta_analysis', { doi: '10.1249/MSS.0000000000002585', pmid: '33433148', pmcid: 'PMC8126497' }),
+  work('RW-FREQUENCY-META-2019', 'How many times per week should a muscle be trained?', 2019, 'meta_analysis', { doi: '10.1080/02640414.2018.1555906', pmid: '30558493' }),
+  work('RW-REST-META-2024', 'Give it a rest: inter-set rest interval duration and hypertrophy', 2024, 'meta_analysis', { doi: '10.3389/fspor.2024.1429789', pmid: '39205815', pmcid: 'PMC11349676' }),
+  work('RW-PROG-CHAVES-2024', 'Effects of Resistance Training Overload Progression Protocols', 2024, 'rct', { doi: '10.1055/a-2256-5857', pmid: '38286426' }),
+  work('RW-PROG-PLOTKIN-2022', 'Progressive overload without progressing load?', 2022, 'rct', { doi: '10.7717/peerj.14142', pmid: '36199287', pmcid: 'PMC9528903' }),
+  work('RW-ROM-PALLARES-2021', 'Effects of range of motion on resistance training adaptations', 2021, 'meta_analysis', { doi: '10.1111/sms.14006', pmid: '34170576' }),
+  work('RW-ROM-KASSIANO-2023', 'Which ROMs Lead to Rome?', 2023, 'systematic_review', { doi: '10.1519/JSC.0000000000004415', pmid: '36662126' }),
+  work('RW-ORDER-NUNES-2021', 'What influence does resistance exercise order have?', 2021, 'meta_analysis', { doi: '10.1080/17461391.2020.1733672', pmid: '32077380' }),
+  work('RW-PERIOD-MOESGAARD-2022', 'Effects of Periodization on Strength and Muscle Hypertrophy', 2022, 'meta_analysis', { doi: '10.1007/s40279-021-01636-1', pmid: '35044672' }),
+  work('RW-DELOAD-COLEMAN-2024', 'Gaining more from doing less?', 2024, 'rct', { doi: '10.7717/peerj.16777', pmid: '38274324', pmcid: 'PMC10809978' }),
+  work('RW-DELOAD-PANCAR-2026', 'Effects of deload periods in resistance training', 2026, 'rct', { doi: '10.1038/s41598-026-40612-5', trialId: 'NCT06825052' }),
+  work('RW-CON-SCHUMANN-2022', 'Compatibility of Concurrent Aerobic and Strength Training', 2022, 'meta_analysis', { doi: '10.1007/s40279-021-01587-7', pmid: '34757594', pmcid: 'PMC8891239' }),
+  work('RW-CON-HELD-2026', 'Maximizing Adaptations in Concurrent Training', 2026, 'umbrella_review', { doi: '10.1007/s40279-026-02401-y', pmid: '41762427' }),
+]
+
+const assessments = [
+  assessment('RA-VOLUME-HYP', 'EQ-HYP-001', 'RW-VOLUME-2026', ['hypertrophy'], 'Volume has a positive dose-response with diminishing returns.'),
+  assessment('RA-RIR-HYP', 'EQ-HYP-002', 'RW-RIR-METAREG-2024', ['hypertrophy', 'maximal_strength'], 'Exact failure is not required; proximity may matter more for hypertrophy than strength.'),
+  assessment('RA-LOAD-GOAL', 'EQ-HYP-003', 'RW-LOAD-NMA-2021', ['hypertrophy', 'maximal_strength'], 'A broad load range supports hypertrophy, while heavier practice better supports 1RM strength.'),
+  assessment('RA-FREQUENCY-HYP', 'EQ-HYP-004', 'RW-FREQUENCY-META-2019', ['hypertrophy'], 'No clear independent hypertrophy benefit was detected when volume was equated.'),
+  assessment('RA-REST-HYP', 'EQ-HYP-005', 'RW-REST-META-2024', ['hypertrophy'], 'Very short rest may be less favorable, but no universal optimum is established.'),
+  assessment('RA-PROG-METHOD', 'EQ-PRG-001', 'RW-PROG-CHAVES-2024', ['hypertrophy', 'exercise_specific_strength'], 'Load and repetition progression both improved outcomes in early training.'),
+  assessment('RA-ROM-FULL', 'EQ-HYP-006', 'RW-ROM-PALLARES-2021', ['hypertrophy', 'exercise_specific_strength'], 'Full ROM generally outperformed pooled partial ROM conditions.'),
+  assessment('RA-ROM-LENGTHENED', 'EQ-HYP-006', 'RW-ROM-KASSIANO-2023', ['hypertrophy'], 'Lengthened partials may be useful for selected muscles and exercises.'),
+  assessment('RA-ORDER', 'EQ-PRG-002', 'RW-ORDER-NUNES-2021', ['hypertrophy', 'exercise_specific_strength'], 'Exercises performed earlier tended to gain more exercise-specific strength.'),
+  assessment('RA-PERIOD', 'EQ-PRG-003', 'RW-PERIOD-MOESGAARD-2022', ['hypertrophy', 'maximal_strength'], 'Periodization may modestly favor 1RM strength but not hypertrophy.'),
+  assessment('RA-DELOAD', 'EQ-PRG-003', 'RW-DELOAD-COLEMAN-2024', ['hypertrophy', 'maximal_strength'], 'A week of complete cessation did not improve adaptations and reduced strength gains.'),
+  assessment('RA-CONCURRENT', 'EQ-CON-001', 'RW-CON-SCHUMANN-2022', ['hypertrophy', 'maximal_strength', 'power'], 'Hypertrophy and maximal strength were similar; explosive strength showed possible attenuation.'),
+]
+
+const claims = [
+  claim({ id: 'ECV-WEEKLY-VOLUME-HYP-v1', claimId: 'EC-WEEKLY-VOLUME-HYP', questionId: 'EQ-HYP-001', statement: 'Greater weekly hard-set volume is associated with more hypertrophy on average, with diminishing returns and no universal upper boundary.', outcomes: ['hypertrophy'], effect: 'Positive dose-response with diminishing returns.', certainty: 'moderate', bodyScopes: ['muscle_specific'], evidence: { supports: ['RW-ACSM-2026', 'RW-VOLUME-2026', 'RW-PRESCRIPTION-2023'] } }),
+  claim({ id: 'ECV-RIR-HYP-v1', claimId: 'EC-RIR-HYP', questionId: 'EQ-HYP-002', statement: 'Exact momentary failure is not required for hypertrophy, while consistently stopping very far from failure may be less effective.', outcomes: ['hypertrophy', 'fatigue'], effect: 'Near-failure work can be effective without every set reaching failure.', certainty: 'moderate', evidence: { supports: ['RW-RIR-METAREG-2024', 'RW-FAILURE-META-2022', 'RW-RIR-RCT-2024'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-LOAD-GOAL-v1', claimId: 'EC-LOAD-GOAL', questionId: 'EQ-HYP-003', statement: 'A broad range of loads can support hypertrophy with sufficient effort, while heavier specific practice is more favorable for maximal strength.', outcomes: ['hypertrophy', 'maximal_strength'], effect: 'Outcome-specific effect of load.', certainty: 'moderate', evidence: { supports: ['RW-LOAD-NMA-2021', 'RW-PRESCRIPTION-2023'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-FREQUENCY-HYP-v1', claimId: 'EC-FREQUENCY-HYP', questionId: 'EQ-HYP-004', statement: 'When weekly volume is equated, training frequency has no clear large independent effect on hypertrophy.', outcomes: ['hypertrophy'], effect: 'No clear independent hypertrophy effect detected.', certainty: 'moderate', bodyScopes: ['muscle_specific'], evidence: { supports: ['RW-FREQUENCY-META-2019', 'RW-VOLUME-2026', 'RW-PRESCRIPTION-2023'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-REST-HYP-v1', claimId: 'EC-REST-HYP', questionId: 'EQ-HYP-005', statement: 'Rest longer than very short intervals may modestly favor hypertrophy by preserving subsequent set quality, but no universal optimum is established.', outcomes: ['hypertrophy', 'fatigue'], effect: 'Possible small benefit above very short rest intervals.', certainty: 'low', evidence: { supports: ['RW-REST-META-2024'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-PROGRESSION-METHOD-v1', claimId: 'EC-PROGRESSION-METHOD', questionId: 'EQ-PRG-001', statement: 'Increasing load and increasing repetitions can both support strength and muscle-size gains; neither has established universal superiority.', outcomes: ['hypertrophy', 'exercise_specific_strength'], effect: 'Both compared overload methods produced adaptations.', certainty: 'low', bodyScopes: ['exercise_specific', 'muscle_specific'], evidence: { supports: ['RW-PROG-CHAVES-2024', 'RW-PROG-PLOTKIN-2022'] } }),
+  claim({ id: 'ECV-PROGRESSION-ALGORITHM-v1', claimId: 'EC-PROGRESSION-ALGORITHM', questionId: 'EQ-PRG-001', statement: 'Evidence is insufficient to identify one exact sequence of load, repetition and set changes as optimal for everyone.', outcomes: ['hypertrophy', 'exercise_specific_strength', 'adherence', 'fatigue'], effect: 'Insufficient comparative evidence.', certainty: 'very_low', evidence: { contextualizes: ['RW-ACSM-2026', 'RW-PROG-CHAVES-2024', 'RW-PROG-PLOTKIN-2022'] } }),
+  claim({ id: 'ECV-ROM-FULL-DEFAULT-v1', claimId: 'EC-ROM-FULL-DEFAULT', questionId: 'EQ-HYP-006', statement: 'Full ROM is a more reliable general strategy than arbitrary shortened ROM, particularly for lower-body strength and hypertrophy.', outcomes: ['hypertrophy', 'exercise_specific_strength'], effect: 'Full ROM generally favored over pooled partial-ROM conditions.', certainty: 'moderate', bodyScopes: ['lower_body', 'exercise_specific'], evidence: { supports: ['RW-ROM-PALLARES-2021', 'RW-ROM-KASSIANO-2023'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-ROM-LENGTHENED-PARTIAL-v1', claimId: 'EC-ROM-LENGTHENED-PARTIAL', questionId: 'EQ-HYP-006', statement: 'Lengthened partial ROM may match or exceed full ROM for local hypertrophy in selected muscles and exercises, but it is not a universal rule.', outcomes: ['hypertrophy'], effect: 'Potential exercise- and site-specific benefit.', certainty: 'low', bodyScopes: ['muscle_specific', 'exercise_specific'], evidence: { supports: ['RW-ROM-KASSIANO-2023'], contextualizes: ['RW-ROM-PALLARES-2021'] } }),
+  claim({ id: 'ECV-ORDER-STRENGTH-PRIORITY-v1', claimId: 'EC-ORDER-STRENGTH-PRIORITY', questionId: 'EQ-PRG-002', statement: 'Placing a priority exercise earlier in a session tends to favor strength gain in that exercise.', outcomes: ['exercise_specific_strength'], effect: 'Earlier placement favors exercise-specific strength.', certainty: 'moderate', bodyScopes: ['exercise_specific'], evidence: { supports: ['RW-ORDER-NUNES-2021'] } }),
+  claim({ id: 'ECV-ORDER-HYPERTROPHY-v1', claimId: 'EC-ORDER-HYPERTROPHY', questionId: 'EQ-PRG-002', statement: 'No clear hypertrophy advantage has been shown for multi-joint-first versus single-joint-first ordering.', outcomes: ['hypertrophy'], effect: 'No clear difference detected.', certainty: 'low', evidence: { supports: ['RW-ORDER-NUNES-2021'] } }),
+  claim({ id: 'ECV-PERIODIZATION-OUTCOMES-v1', claimId: 'EC-PERIODIZATION-OUTCOMES', questionId: 'EQ-PRG-003', statement: 'Volume-equated periodization may modestly improve 1RM strength, especially in trained lifters, without a clear hypertrophy advantage.', outcomes: ['maximal_strength', 'hypertrophy'], effect: 'Small strength advantage; no clear hypertrophy advantage.', certainty: 'moderate', trainingStatuses: ['trained', 'mixed'], evidence: { supports: ['RW-PERIOD-MOESGAARD-2022'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-DELOAD-PLANNED-v1', claimId: 'EC-DELOAD-PLANNED', questionId: 'EQ-PRG-003', statement: 'Evidence is insufficient to consider fixed-schedule deloads necessary or superior for everyone.', outcomes: ['maximal_strength', 'hypertrophy', 'fatigue'], effect: 'Insufficient evidence for a universal planned-deload rule.', certainty: 'very_low', evidence: { contextualizes: ['RW-DELOAD-COLEMAN-2024', 'RW-DELOAD-PANCAR-2026'] } }),
+  claim({ id: 'ECV-CONCURRENT-STRENGTH-HYP-v1', claimId: 'EC-CONCURRENT-STRENGTH-HYP', questionId: 'EQ-CON-001', statement: 'Concurrent aerobic and resistance training does not show meaningful average impairment of hypertrophy or maximal strength in healthy adults.', outcomes: ['hypertrophy', 'maximal_strength'], effect: 'No meaningful average impairment detected.', certainty: 'moderate', evidence: { supports: ['RW-CON-SCHUMANN-2022', 'RW-CON-HELD-2026'] } }),
+  claim({ id: 'ECV-CONCURRENT-POWER-SCHEDULE-v1', claimId: 'EC-CONCURRENT-POWER-SCHEDULE', questionId: 'EQ-CON-001', statement: 'Explosive-strength adaptations may be attenuated when endurance and resistance work occur in the same session; separation by several hours may reduce the risk.', outcomes: ['power'], effect: 'Possible attenuation, especially in the same session.', certainty: 'low', evidence: { supports: ['RW-CON-SCHUMANN-2022'], contextualizes: ['RW-CON-HELD-2026'] } }),
+]
+
+const recommendations = [
+  recommendation({ id: 'ER-WEEKLY-VOLUME-HYP-DEFAULT-v1', claimVersionId: 'ECV-WEEKLY-VOLUME-HYP-v1', guidance: 'Use weekly volume as an adjustable dose rather than a mandatory universal number.', heuristic: 'Start conservatively and increase only when execution, recovery and adherence remain good.', forbidden: 'A fixed set count is optimal or mandatory for everyone.' }),
+  recommendation({ id: 'ER-RIR-HYP-DEFAULT-v1', claimVersionId: 'ECV-RIR-HYP-v1', guidance: 'Most working sets can stop close to failure without reaching exact failure.', heuristic: 'Use a broad 1–3 RIR default and teach calibration without false precision.', forbidden: 'Every set must reach failure or a sharp RIR threshold is proven.' }),
+  recommendation({ id: 'ER-LOAD-GOAL-DEFAULT-v1', claimVersionId: 'ECV-LOAD-GOAL-v1', guidance: 'Choose load ranges by outcome and exercise constraints.', heuristic: 'Use moderate repetitions for convenience; include heavier practice for maximal-strength goals.', forbidden: 'Only 8–12 repetitions build muscle.' }),
+  recommendation({ id: 'ER-FREQUENCY-HYP-DEFAULT-v1', claimVersionId: 'ECV-FREQUENCY-HYP-v1', guidance: 'Use frequency primarily to distribute weekly volume and preserve session quality.', heuristic: 'Choose the lowest schedule complexity that supports quality and adherence.', forbidden: 'Every muscle must be trained a fixed number of times per week.' }),
+  recommendation({ id: 'ER-REST-DEFAULT-v1', claimVersionId: 'ECV-REST-HYP-v1', guidance: 'Rest long enough to preserve safe technique and intended set quality.', heuristic: 'Start around 2–3 minutes for compound and 1–2 minutes for isolation work, then adjust.', forbidden: 'A single rest duration is biologically optimal for everyone.' }),
+  recommendation({ id: 'ER-PROGRESSION-DOUBLE-v1', claimVersionId: 'ECV-PROGRESSION-METHOD-v1', supportingClaimVersionIds: ['ECV-PROGRESSION-ALGORITHM-v1'], guidance: 'Progress can come from repetitions or load.', heuristic: 'Use double progression as a transparent default; change sets separately.', forbidden: 'Double progression is proven optimal.' }),
+  recommendation({ id: 'ER-ROM-COMFORTABLE-FULL-v1', claimVersionId: 'ECV-ROM-FULL-DEFAULT-v1', supportingClaimVersionIds: ['ECV-ROM-LENGTHENED-PARTIAL-v1'], guidance: 'Use controlled full ROM as the general default.', heuristic: 'Offer lengthened partials only as an exercise-specific option.', forbidden: 'Deeper ROM is always better or pain should be pushed through.' }),
+  recommendation({ id: 'ER-ORDER-PRIORITY-FIRST-v1', claimVersionId: 'ECV-ORDER-STRENGTH-PRIORITY-v1', supportingClaimVersionIds: ['ECV-ORDER-HYPERTROPHY-v1'], guidance: 'Place the highest-priority exercise earlier.', heuristic: 'Resolve equal priorities with safety, equipment and preference constraints.', forbidden: 'Compound exercises must always come first.' }),
+  recommendation({ id: 'ER-PERIODIZATION-DELOAD-v1', claimVersionId: 'ECV-PERIODIZATION-OUTCOMES-v1', supportingClaimVersionIds: ['ECV-DELOAD-PLANNED-v1'], guidance: 'Use simple variation for strength goals without claiming a hypertrophy advantage.', heuristic: 'Trigger deload decisions from persistent user signals rather than a mandatory calendar.', forbidden: 'Everyone needs a deload every fixed number of weeks.' }),
+  recommendation({ id: 'ER-CONCURRENT-SCHEDULE-v1', claimVersionId: 'ECV-CONCURRENT-STRENGTH-HYP-v1', supportingClaimVersionIds: ['ECV-CONCURRENT-POWER-SCHEDULE-v1'], guidance: 'Do not remove cardio by default from strength or hypertrophy plans.', heuristic: 'When power is the priority, lift first and separate demanding sessions by hours or days.', forbidden: 'Cardio always kills gains or three hours guarantees no interference.' }),
+]
+
+const testGroup = (prefix, claimId, prompts) => prompts.map(([suffix, prompt, answerability]) => ({
+  id: `AIT-${prefix}-${suffix}`,
+  question: prompt,
+  expectedAnswerability: answerability,
+  requiredClaims: answerability === 'supported' ? [claimId] : [],
+  mustInclude: ['Evidence limits and the relevant outcome.'],
+  mustNotInclude: ['A guaranteed individual result or invented exact threshold.'],
+}))
+
+const aiTests = [
+  ...testGroup('VOL', 'ECV-WEEKLY-VOLUME-HYP-v1', [['01', 'How many weekly chest sets?', 'supported'], ['02', 'Are 20 sets mandatory?', 'supported'], ['03', 'Should a returning novice start with 20 sets?', 'supported'], ['04', 'Should I change eight sets if I progress?', 'supported'], ['05', 'Does a press count fully for chest and triceps?', 'uncertain'], ['06', 'What exact growth percentage will 12 sets cause?', 'uncertain'], ['07', 'Thirty sets and falling performance: what now?', 'supported'], ['08', 'Acute shoulder pain: prescribe chest volume.', 'out_of_scope']]),
+  ...testGroup('RIR', 'ECV-RIR-HYP-v1', [['01', 'Every set to failure?', 'supported'], ['02', 'Is two RIR useless?', 'supported'], ['03', 'Is five RIR ideal for hypertrophy?', 'supported'], ['04', 'A novice cannot estimate RIR.', 'supported'], ['05', 'Can leg extensions reach failure?', 'supported'], ['06', 'Is zero RIR exactly 7% better?', 'uncertain'], ['07', 'Technique fails before target RIR.', 'supported'], ['08', 'Which RIR treats knee pain?', 'out_of_scope']]),
+  ...testGroup('LOAD', 'ECV-LOAD-GOAL-v1', [['01', 'Are 15 reps outside hypertrophy?', 'supported'], ['02', 'Can only high reps maximize 1RM?', 'supported'], ['03', 'Can lighter loads build muscle?', 'supported'], ['04', 'Are five and 30 reps always equal?', 'supported'], ['05', 'What is the exact lower %1RM threshold?', 'uncertain'], ['06', 'A light set ends far from failure.', 'supported'], ['07', 'Heavy pressing causes elbow pain.', 'out_of_scope'], ['08', 'Must a novice test 1RM?', 'supported']]),
+  ...testGroup('FREQ', 'ECV-FREQUENCY-HYP-v1', [['01', 'Are legs once weekly useless?', 'supported'], ['02', 'Is three times always better than two?', 'supported'], ['03', 'Twelve sets in one session lose quality.', 'supported'], ['04', 'I can only train on weekends.', 'supported'], ['05', 'Bench once weekly for a strength goal.', 'supported'], ['06', 'Do muscles recover in exactly 48 hours?', 'uncertain'], ['07', 'High soreness between sessions.', 'supported'], ['08', 'Prescribe around disease-related fatigue.', 'out_of_scope']]),
+  ...testGroup('REST', 'ECV-REST-HYP-v1', [['01', 'Rest 60 or 180 seconds for hypertrophy?', 'supported'], ['02', 'The squat timer ended but I am not ready.', 'supported'], ['03', 'Ninety seconds works for isolation sets.', 'supported'], ['04', 'Does long rest kill intensity?', 'supported'], ['05', 'Are 90 seconds proven optimal?', 'supported'], ['06', 'Exact rest for maximal strength?', 'uncertain'], ['07', 'Can circuits trade performance for time?', 'supported'], ['08', 'I feel dizzy between sets.', 'out_of_scope']]),
+  ...testGroup('PRG', 'ECV-PROGRESSION-METHOD-v1', [['01', 'Must progression only increase weight?', 'supported'], ['02', 'Prove the exact best progression algorithm.', 'uncertain']]),
+  ...testGroup('ROM', 'ECV-ROM-FULL-DEFAULT-v1', [['01', 'Is half ROM always worse?', 'supported'], ['02', 'Should I push deeper through squat pain?', 'out_of_scope']]),
+  ...testGroup('ORDER', 'ECV-ORDER-STRENGTH-PRIORITY-v1', [['01', 'Where should bench go for a bench 1RM goal?', 'supported'], ['02', 'Will isolation first ruin hypertrophy?', 'supported']]),
+  ...testGroup('PER', 'ECV-PERIODIZATION-OUTCOMES-v1', [['01', 'Is periodization mandatory for hypertrophy?', 'supported']]),
+  ...testGroup('DELOAD', 'ECV-DELOAD-PLANNED-v1', [['01', 'Must every fourth week be a deload?', 'uncertain']]),
+  ...testGroup('CON', 'ECV-CONCURRENT-STRENGTH-HYP-v1', [['01', 'Will cardio eat my muscle?', 'supported'], ['02', 'Hard intervals and legs in one power session?', 'supported']]),
+]
+
+const blog = (id, primaryQuestionId, workingTitle, primaryClaimVersions) => ({
+  id,
+  primaryQuestionId,
+  workingTitle,
+  searchIntent: workingTitle.toLowerCase(),
+  reader: 'Healthy adult planning gym training.',
+  primaryClaimVersions,
+  sections: [{ heading: 'Short answer', purpose: 'Answer the query and state evidence limits.' }],
+  originalValue: ['Separate research findings from the AI Trainer product heuristic.'],
+  mandatoryLimitations: ['Population, outcome, certainty and unknowns.'],
+  cta: 'Use AI Trainer to adapt the general principle to training constraints.',
+  reviewerRequired: true,
+})
+
+const blogOutlines = [
+  blog('BO-WEEKLY-VOLUME', 'EQ-HYP-001', 'How many weekly sets build muscle?', ['ECV-WEEKLY-VOLUME-HYP-v1']),
+  blog('BO-RIR-FAILURE', 'EQ-HYP-002', 'Do you need to train to failure?', ['ECV-RIR-HYP-v1']),
+  blog('BO-LOAD-REPS', 'EQ-HYP-003', 'How many repetitions build muscle?', ['ECV-LOAD-GOAL-v1']),
+  blog('BO-ROM', 'EQ-HYP-006', 'Full or partial range of motion?', ['ECV-ROM-FULL-DEFAULT-v1', 'ECV-ROM-LENGTHENED-PARTIAL-v1']),
+  blog('BO-DELOAD', 'EQ-PRG-003', 'Do you need a deload week?', ['ECV-PERIODIZATION-OUTCOMES-v1', 'ECV-DELOAD-PLANNED-v1']),
+  blog('BO-CONCURRENT', 'EQ-CON-001', 'Does cardio interfere with muscle and strength?', ['ECV-CONCURRENT-STRENGTH-HYP-v1', 'ECV-CONCURRENT-POWER-SCHEDULE-v1']),
+]
+
+export const evidencePilotFixtures = {
+  version: 1,
+  generatedAt: '2026-08-02T00:00:00.000Z',
+  questions,
+  works,
+  assessments,
+  claims,
+  recommendations,
+  aiTests,
+  blogOutlines,
+}

@@ -17,6 +17,9 @@
     "postinstall": "prisma generate",
     "seed:exercises": "node scripts/seedExercises.js",
     "seed:dev": "node scripts/seedDevData.js",
+    "seed:billing": "node scripts/seedBilling.js",
+    "evidence:import-pilot": "node scripts/importEvidencePilot.js",
+    "evidence:import-pilot:dry": "node scripts/importEvidencePilot.js --dry-run",
     "enrich:media": "node --env-file=.env scripts/enrichProgramMedia.js",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -9,6 +9,7 @@
 - [План реализации экранов](docs/implementation-plan.md) — фазы, API-карта, Prisma-изменения
 - [Web-версия и авторизация](ARCHITECTURE_WEB_AUTH.md) — Better Auth, мульти-провайдерный вход, adoption (фазы 1–2 на проде: https://gymwithai.me)
 - [Сервис уведомлений](NOTIFICATIONS.md) — durable-очередь в Postgres, Telegram + Web Push, флаги rollout
+- [Научная база знаний](EVIDENCE_KNOWLEDGE_BASE.md) — исследования → evidence claims → AI-тренер и блог
 
 ---
 
@@ -37,6 +38,7 @@
 - **better-auth** — web-авторизация: email+пароль, DB-сессии (Bearer), account linking; Telegram-идентичность остаётся на `User.telegramId`
 - **web-push** — Web Push доставка (VAPID) для PWA
 - **LLM-клиент**: `@anthropic-ai/sdk` для Claude, за тонкой абстракцией `utils/llm.js`
+- **Биллинг** — `services/billing/` (entitlement + провайдеры-адаптеры, без внешних SDK: ЮKassa/Paddle — raw fetch, Stars — Telegraf); hard paywall за флагом `PREMIUM_GATING`. См. [ARCHITECTURE_PAYMENTS.md](ARCHITECTURE_PAYMENTS.md)
 
 ### Инфраструктура
 - **Frontend:** Vercel (автодеплой из GitHub, `vercel.json` c SPA-rewrites); домен **https://gymwithai.me** (web-версия + PWA)
@@ -284,7 +286,7 @@ node-cron '0 4 * * *' (суточная чистка; scheduler/retention.js)
 
 ## 4. Схема БД
 
-> ⚠️ Ниже — исходный черновик MVP. **Источник правды — `server/prisma/schema.prisma`** (21 модель).
+> ⚠️ Ниже — исходный черновик MVP. **Источник правды — `server/prisma/schema.prisma`** (28 моделей, включая 7 биллинговых — [ARCHITECTURE_PAYMENTS.md §4](ARCHITECTURE_PAYMENTS.md)).
 > После черновика добавлены: `UserExerciseSettings`, `WorkoutPlanOverride`, `NotificationLog`,
 > `PendingChatContext`, `Insight`, `LlmUsage`, а также web-auth (`Session`, `Account`,
 > `Verification`, `RateLimit` — Better Auth; `User.telegramId` стал nullable, добавлены
@@ -917,6 +919,16 @@ Session-tracking (debounced lastSeen + `X-Timezone` + `user_seen`) общий д
 | `GET` | `/stats/month` | Месячная статистика |
 | `GET` | `/progress` | Прогресс (plan adherence, muscle volume, records) |
 | `GET` | `/auth/init` | Инициализация юзера |
+| `GET` | `/billing/status` | Статус подписки (`active`, `plan`, `periodEnd`, `gatingEnabled`) |
+| `GET` | `/billing/plans` | Планы + цены для региона юзера + доступные методы оплаты |
+| `POST` | `/billing/checkout` | `{ planCode, method }` → ссылка/redirect провайдера (или мгновенный grant у mock) |
+| `POST` | `/billing/promo/redeem` | Активация промокода (free_period / discount) |
+| `POST` | `/billing/cancel` | Отключить автопродление |
+| `POST` | `/admin/billing/grant?key=` | Ручная выдача Premium (саппорт/подарки/grandfathering) |
+
+⚠️ Все данные-роуты (exercises/workouts/stats/programs/progress/chat/insights/push) дополнительно
+закрыты `requirePremium` (hard paywall, 403 `PREMIUM_REQUIRED`) — активен только при
+`PREMIUM_GATING=on`. Свободны от гейта: `/auth/*`, `/billing/*`, `/admin/*`.
 
 ### 5.5 Аналитика
 
@@ -1178,6 +1190,12 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
   VAPID_PUBLIC_KEY=<web-push generate-vapid-keys>
   VAPID_PRIVATE_KEY=<...>
   VAPID_SUBJECT=mailto:noreply@gymwithai.me
+
+  # Биллинг — см. ARCHITECTURE_PAYMENTS.md. Пока обе переменные не заданы,
+  # прод работает как раньше (гейт выключен, методов оплаты нет).
+  PAYMENT_PROVIDERS=                   # фиче-флаги методов: stars,yookassa,tribute,paddle (mock — только dev)
+  PREMIUM_GATING=off                   # on = hard paywall (requirePremium + гейт фронта + paywallGuard бота)
+  # BILLING_GRACE_HOURS=24
   ```
 
 ### БД (Neon)
@@ -1275,6 +1293,7 @@ curl https://<railway-url>/api/health
 | 12 | Web-авторизация | Better Auth (email + Login Widget; Google/Yandex код готов) поверх нашей таблицы User; канон Telegram-идентичности — `User.telegramId`, adoption пустых аккаунтов | Проверено в проде LPT; DB-сессии заменяют JWT/refresh целиком. См. [ARCHITECTURE_WEB_AUTH.md](ARCHITECTURE_WEB_AUTH.md) |
 | 13 | PWA | vite-plugin-pwa (injectManifest, свой `src/sw.js`); SW только на web-платформе | Установка на iOS/Android без сторов; Mini App живёт без SW — кэш не задерживает его обновления |
 | 14 | Очередь уведомлений | PostgreSQL как durable-очередь (`NotificationJob`), без Redis/BullMQ; каналы telegram + web_push; сохранённый LLM-рендер | Архитектура из Flamy: меньше инфраструктуры, транзакционный аудит, retry не жжёт токены. См. [NOTIFICATIONS.md](NOTIFICATIONS.md) |
+| 15 | Биллинг | Entitlement-слой (`Subscription`, единый `isPremium`) отделён от платёжного (адаптеры-провайдеры: Stars/ЮKassa/Tribute/Paddle, mock для dev); hard paywall за флагом `PREMIUM_GATING`; идемпотентность через `Payment.providerPaymentId @unique` | Порт проверенной архитектуры из life-progress-tracker: оплатил в Telegram — пользуешься на web (entitlement на `User.id`); новый провайдер не трогает гейтинг. См. [ARCHITECTURE_PAYMENTS.md](ARCHITECTURE_PAYMENTS.md) |
 
 ---
 

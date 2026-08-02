@@ -31,6 +31,23 @@
 
 ---
 
+## 💳 Биллинг — следующие шаги (2026-07-12)
+
+Фаза 1 (фундамент + mock, hard paywall за флагом) — в коде, смоук пройден
+(см. [UPDATES.md](UPDATES.md), [ARCHITECTURE_PAYMENTS.md](ARCHITECTURE_PAYMENTS.md)).
+На проде выключено: `PREMIUM_GATING` и `PAYMENT_PROVIDERS` не заданы на Railway.
+
+- [ ] **Фаза 2 — Telegram Stars** (первые живые деньги, без юрлица): `provider/stars.js`,
+      `bot/payments.js` (`pre_checkout_query` ≤10с + `successful_payment`), месяц — нативная
+      Stars-подписка, неделя/lifetime — разовые инвойсы; напоминание «продлить» через очередь
+- [ ] Проверить лимит суммы Stars-инвойса для lifetime (~12 000 ⭐) — не влезет → только картой
+- [ ] Цены `default`-корзины (USD/Stars) — сейчас черновик в seedBilling ($9.99/$29.99/$149)
+- [ ] Grandfathering активных юзеров перед `PREMIUM_GATING=on` (`admin/billing/grant`)
+- [ ] Орг-трек RU (самозанятость/оферта на gymwithai.me/ЮKassa) → фазы 3–4;
+      орг-трек AU (Paddle) → фаза 5. Треки общие с life-progress-tracker (GUIDE_PAYMENTS_ORG.md)
+
+---
+
 ## 🎯 Следующий заход: Фаза 6 — Polish + AI-фичи
 
 Полный план реализации — в [docs/implementation-plan.md](docs/implementation-plan.md).
@@ -333,10 +350,10 @@
 |---|--------|-------------|
 | ~~1~~ | ~~JavaScript vs TypeScript~~ | ✅ 2026-04-20: JavaScript |
 | 2 | Нужен ли Redis | Когда появится реальная проблема с кэшем |
-| 3 | Схема биллинга (Stars vs Stripe) | Коммерческий запуск |
+| ~~3~~ | ~~Схема биллинга (Stars vs Stripe)~~ | ✅ 2026-07-12: мультипровайдер — Stars + ЮKassa + Tribute + Paddle, entitlement-слой отдельно ([ARCHITECTURE_PAYMENTS.md](ARCHITECTURE_PAYMENTS.md)); фаза 1 в коде |
 | 4 | Источник видео: свои или YouTube | После теста на друзьях |
 | ~~5~~ | ~~Дизайн-палитра~~ | ✅ 2026-04-26: дизайн-система из Claude Design |
-| 6 | Длительность триала: 7 vs 14 дней | Перед коммерческим запуском |
+| ~~6~~ | ~~Длительность триала~~ | ✅ 2026-07-12: триала нет — hard paywall, бесплатный период только промокодом/admin-грантом |
 | ~~7~~ | ~~База упражнений: какой источник~~ | ✅ 2026-04-26: Free Exercise DB + ExerciseDB OSS (комбинация) |
 
 ---

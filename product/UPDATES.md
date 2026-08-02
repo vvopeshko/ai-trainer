@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-12 — Биллинг, фаза 1: hard paywall + entitlement-слой (за флагом, без живых денег)
+
+Архитектура — [ARCHITECTURE_PAYMENTS.md](ARCHITECTURE_PAYMENTS.md) (порт из life-progress-tracker, адаптированный под AI Trainer). Продуктовые решения: **hard paywall** (всё приложение по подписке), **триала нет** — бесплатный период только промокодом/admin-грантом; тарифы с лендинга: неделя 990 ₽ / месяц 3 000 ₽ / lifetime 15 000 ₽. На проде ничего не меняется, пока `PREMIUM_GATING=off` и `PAYMENT_PROVIDERS` пуст.
+
+- **Схема (+7 моделей, все новые → db push безопасен):** `BillingPlan`/`BillingPlanPrice` (каталог: провайдер × регион-корзина, сид `npm run seed:billing`), `Payment` (`providerPaymentId @unique` — идемпотентность), `Subscription` (entitlement; `currentPeriodEnd` nullable = lifetime), `PromoCode`/`PromoRedemption` (free_period / discount), `BillingEvent` (журнал вебхуков, фазы 3–5).
+- **`services/billing/`:** `billingCore` (чистая логика: периоды складываются, активность+grace, lifetime поглощает, регион, промокоды, machine рекуррентки; 39 Vitest-тестов), `billingService` (applySuccessfulPayment идемпотентно / isPremium / redeemPromo / cancelAutoRenew / revokeForRefund / grantManual), `pricing` (каталог с кешем, `PAYMENT_PROVIDERS`-флаги, матрица платформа×регион), `provider/mock` (мгновенный grant — весь флоу без платёжек).
+- **Hard paywall на трёх поверхностях:** API — `requirePremium` после auth на всех данные-роутах (403 `PREMIUM_REQUIRED`; `/auth`, `/billing`, `/admin` свободны); фронт — `BillingGate` (редирект на `/paywall` по `gatingEnabled && !active`) + рефетч статуса при 403; бот — `paywallGuard` перед LLM-хэндлерами (чат, фото, /program) с кнопкой «Открыть тарифы».
+- **Роуты** `/api/v1/billing/{status,plans,checkout,promo/redeem,cancel}` (+ rate limit), `POST /api/v1/admin/billing/grant?key=` (саппорт/подарки/grandfathering). `AppError(status, code)` в errorHandler — клиент ветвится по `payload.code`.
+- **Фронт:** `/paywall` (lazy: план-свитчер, месяц featured, промокод, методы из `/billing/plans`, `openInvoice`/`openTelegramLink`/redirect по типу ответа), блок «Подписка» в `/me` (статус/дата/источник, отмена автопродления с подтверждением, «продлить»), хуки `useBillingStatus`/`useBillingPlans` + мутации, i18n `billing.*`.
+- **Смоук на деве** (`PAYMENT_PROVIDERS=mock`, `PREMIUM_GATING=on`): гейт 403 → paywall → mock-покупка месяца → доступ; неделя поверх месяца — периоды сложились; lifetime → `periodEnd: null`, покупка поверх lifetime поглощается; discount-промокод порезал сумму вдвое (redemption pending→applied), повторная активация → 409; free_period +7 дней; admin grant 30 дней; левый ключ → 401. Браузером: paywall → оплата → приложение → `/me`.
+- Аналитика: `paywall_shown / checkout_started / payment_succeeded / payment_refunded / promo_redeemed / subscription_canceled / subscription_expired / premium_granted`.
+
+Дальше (фаза 2 — первые живые деньги): Stars в боте — месяц как нативная Stars-подписка (30 дней), неделя/lifetime разовыми инвойсами; проверить лимит инвойса для lifetime (~12 000 ⭐).
+
 ## 2026-07-12 — Активация на проде: Web Push проверен, виджет включён + актуализация доков
 
 - **Web Push работает end-to-end:** VAPID-ключи на Railway, `NOTIFICATION_QUEUE=shadow`, кнопка «Отправить тестовое» на `/me` (`POST /api/v1/push/test`, мимо очереди) — пуш дошёл до реального iPhone (standalone PWA, web.push.apple.com, 201).

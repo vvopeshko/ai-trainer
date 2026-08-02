@@ -1,8 +1,23 @@
 import { ZodError } from 'zod'
 
+// Ошибка с HTTP-статусом и машиночитаемым кодом (клиент ветвится по payload.code,
+// не по тексту). Бросается из сервисов/контроллеров, ловится errorHandler'ом.
+export class AppError extends Error {
+  constructor(status, code, message) {
+    super(message)
+    this.status = status
+    this.code = code
+  }
+}
+
 // Централизованный обработчик ошибок Express. Последний в цепочке.
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
+  if (err instanceof AppError) {
+    if (err.status >= 500) console.error('[error]', req.method, req.path, err)
+    return res.status(err.status).json({ error: err.message, code: err.code })
+  }
+
   if (err instanceof ZodError) {
     return res.status(400).json({
       error: 'Validation failed',

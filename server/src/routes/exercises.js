@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import { auth } from '../middleware/auth.js'
+import { requirePremium } from '../middleware/requirePremium.js'
 import { list, search, getById, batchLastResults, getAllSettings, upsertSettings } from '../controllers/exerciseController.js'
 
 const router = Router()
 
 router.use(auth)
+router.use(requirePremium) // hard paywall (PREMIUM_GATING)
 
 router.get('/', list)
 router.get('/search', search)

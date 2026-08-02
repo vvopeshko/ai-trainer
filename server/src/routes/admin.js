@@ -1,10 +1,18 @@
 import { Router } from 'express'
 import prisma from '../utils/prisma.js'
+import { postAdminGrant } from '../controllers/billingController.js'
+import { auth } from '../middleware/auth.js'
+import { requireEvidenceRole } from '../middleware/evidenceAdmin.js'
+import evidenceAdminRoutes from './evidenceAdmin.js'
 
 // Админ-диагностика (не под telegram/BA auth — гейт по ANALYTICS_SECRET).
 // payload/renderedText не возвращаются: содержимое уведомлений не раскрываем.
 
 const router = Router()
+
+// Evidence writes require a real user session plus reviewer/approver allowlist.
+// This route is intentionally mounted before the legacy ANALYTICS_SECRET gate.
+router.use('/evidence', auth, requireEvidenceRole('reviewer'), evidenceAdminRoutes)
 
 router.use((req, res, next) => {
   const secret = process.env.ANALYTICS_SECRET
@@ -46,5 +54,11 @@ router.get('/notifications', async (req, res, next) => {
     next(err)
   }
 })
+
+/**
+ * POST /api/v1/admin/billing/grant?key=... — ручная выдача Premium
+ * { userId? | telegramId?, days, planCode? } (саппорт, подарки, grandfathering).
+ */
+router.post('/billing/grant', postAdminGrant)
 
 export default router

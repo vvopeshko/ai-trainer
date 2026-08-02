@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { auth } from '../middleware/auth.js'
+import { requirePremium } from '../middleware/requirePremium.js'
 import { authLimiter } from '../middleware/rateLimiter.js'
 import { webPushEnabled, getVapidPublicKey, sendPushToUser } from '../services/webPushService.js'
 import { track } from '../utils/analytics.js'
@@ -11,6 +12,7 @@ import { track } from '../utils/analytics.js'
 
 const router = Router()
 router.use(auth)
+router.use(requirePremium) // hard paywall (PREMIUM_GATING)
 
 /** GET /api/v1/push/key — VAPID public key для pushManager.subscribe. */
 router.get('/key', (req, res) => {

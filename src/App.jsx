@@ -8,6 +8,7 @@ import { queryClient } from './lib/queryClient.js'
 import { queryKeys } from './lib/queryKeys.js'
 import { apiGet } from './utils/api.js'
 import { Skeleton } from './components/ui/Skeleton.jsx'
+import { BillingGate } from './components/BillingGate.jsx'
 
 const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
@@ -15,6 +16,11 @@ const ProgramEditPage = lazy(() => import('./pages/Main/ProgramEditPage.jsx'))
 const LibraryPage = lazy(() => import('./pages/Main/LibraryPage.jsx'))
 const MePage = lazy(() => import('./pages/Main/MePage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
+const EvidenceConsolePage = lazy(() => import('./pages/Admin/EvidenceConsolePage.jsx'))
+const EvidenceClaimPage = lazy(() => import('./pages/Admin/EvidenceClaimPage.jsx'))
+
+// Paywall: lazy — hard paywall (BillingGate), вне бандла критического пути
+const PaywallPage = lazy(() => import('./pages/Paywall/PaywallPage.jsx'))
 
 // Web-auth страницы: lazy — в бандл мини-аппа не попадают
 const LoginPage = lazy(() => import('./pages/Auth/LoginPage.jsx'))
@@ -59,6 +65,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)', color: 'var(--fg-primary)' }}>
+      <BillingGate>
       <Routes>
         {/* Tab screens */}
         <Route path="/" element={<TabLayout><HomePage /></TabLayout>} />
@@ -72,6 +79,13 @@ export default function App() {
         <Route path="/summary/:id" element={<Suspense fallback={<PageSkeleton />}><SummaryPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={null}><DesignSystemDemo /></Suspense>} />
 
+        {/* Internal evidence review console (auth + server-side role allowlist) */}
+        <Route path="/admin/evidence" element={<Suspense fallback={<PageSkeleton />}><EvidenceConsolePage /></Suspense>} />
+        <Route path="/admin/evidence/claims/:id" element={<Suspense fallback={<PageSkeleton />}><EvidenceClaimPage /></Suspense>} />
+
+        {/* Paywall (hard paywall: сюда уводит BillingGate при неактивной подписке) */}
+        <Route path="/paywall" element={<Suspense fallback={<PageSkeleton />}><PaywallPage /></Suspense>} />
+
         {/* Web-авторизация (браузер; в Mini App не используются) */}
         <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
         <Route path="/auth/callback" element={<Suspense fallback={null}><AuthCallback /></Suspense>} />
@@ -79,6 +93,7 @@ export default function App() {
         <Route path="/auth/verify" element={<Suspense fallback={null}><VerifyEmailPage /></Suspense>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </BillingGate>
     </div>
   )
 }

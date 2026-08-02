@@ -24,4 +24,16 @@ export const queryKeys = {
     detail:   (id) => ['exercises', 'detail', id],
     settings: ['exercises', 'settings'],
   },
+  billing: {
+    status: ['billing', 'status'],
+    plans:  ['billing', 'plans'],
+  },
+  evidence: {
+    all: ['evidence'],
+    access: ['evidence', 'access'],
+    questions: ['evidence', 'questions'],
+    claims: (filters = {}) => ['evidence', 'claims', filters],
+    claim: (id) => ['evidence', 'claim', id],
+    runtime: (questionId, outcome = '') => ['evidence', 'runtime', questionId, outcome],
+  },
 }

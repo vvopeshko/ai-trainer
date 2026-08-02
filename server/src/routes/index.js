@@ -8,6 +8,7 @@ import progressRoutes from './progress.js'
 import chatRoutes from './chat.js'
 import insightRoutes from './insights.js'
 import pushRoutes from './push.js'
+import billingRoutes from './billing.js'
 import adminRoutes from './admin.js'
 
 const router = Router()
@@ -21,6 +22,7 @@ router.use('/progress', progressRoutes)
 router.use('/chat', chatRoutes)
 router.use('/insights', insightRoutes)
 router.use('/push', pushRoutes)
+router.use('/billing', billingRoutes) // без requirePremium: paywall работает без подписки
 router.use('/admin', adminRoutes) // гейт по ANALYTICS_SECRET внутри
 
 // Примечание: сам диалог тренера живёт в Telegram-боте; /chat/context — только

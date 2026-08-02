@@ -191,3 +191,25 @@ export function useExerciseDetail(exerciseId) {
     },
   })
 }
+
+// ─── Billing (product/ARCHITECTURE_PAYMENTS.md §5.4) ─────────────────
+
+export function useBillingStatus() {
+  return useQuery({
+    queryKey: queryKeys.billing.status,
+    queryFn: async () => {
+      const d = await apiGet('/api/v1/billing/status')
+      return d.billing
+    },
+    staleTime: 60_000, // статус меняют только мутации (они инвалидируют) и оплата извне
+  })
+}
+
+export function useBillingPlans(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.billing.plans,
+    queryFn: () => apiGet('/api/v1/billing/plans'),
+    enabled, // грузится только при показе paywall'а (сервер трекает paywall_shown)
+    staleTime: 10 * 60_000,
+  })
+}

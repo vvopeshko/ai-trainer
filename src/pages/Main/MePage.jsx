@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Glass, Button, ConfirmDialog } from '../../components/ui/index.js'
+import { useBillingStatus } from '../../hooks/queries.js'
+import { useCancelSubscription } from '../../hooks/mutations.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
 import { usePlatform } from '../../contexts/PlatformContext.jsx'
 import { useTranslation } from '../../i18n/useTranslation.js'
@@ -244,6 +247,10 @@ export default function MePage() {
         </div>
       </Glass>
 
+      {/* Подписка (product/ARCHITECTURE_PAYMENTS.md §5.4) */}
+      <SubscriptionCard t={t} />
+
+
       {/* Вход через браузер (set-password) */}
       {emailEnabled && (
         <Glass radius={16} padding="var(--space-4)" style={{ marginBottom: 'var(--space-4)' }}>
@@ -477,6 +484,98 @@ export default function MePage() {
         onCancel={() => setAdoptWidgetData(null)}
       />
     </div>
+  )
+}
+
+// Блок «Подписка»: статус, отмена автопродления, переход на paywall.
+// Показывается, только когда бэкенд отдаёт биллинг (старый прод без него — молчит).
+function SubscriptionCard({ t }) {
+  const navigate = useNavigate()
+  const { data: billing } = useBillingStatus()
+  const cancelSub = useCancelSubscription()
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [error, setError] = useState(null)
+
+  if (!billing) return null
+
+  // Отмена автопродления сами умеем только для локальных провайдеров (§5.1);
+  // у «толстых» (tribute/paddle/IAP) жизненный цикл на их стороне.
+  const cancelableLocally = ['yookassa', 'mock'].includes(billing.provider)
+  const providerNoteKey = `billing.subProvider.${billing.provider}`
+  const providerNote = billing.provider && t(providerNoteKey) !== providerNoteKey ? t(providerNoteKey) : null
+
+  async function confirmCancel() {
+    setCancelOpen(false)
+    setError(null)
+    try {
+      await cancelSub.mutateAsync()
+    } catch {
+      setError(t('billing.error.generic'))
+    }
+  }
+
+  return (
+    <Glass radius={16} padding="var(--space-4)" style={{ marginBottom: 'var(--space-4)' }}>
+      <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{t('billing.subTitle')}</div>
+
+      {billing.active ? (
+        <>
+          <p style={{ margin: '0 0 var(--space-1)', fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)' }}>
+            {billing.periodEnd
+              ? t('billing.subActiveUntil', {
+                  date: new Date(billing.periodEnd).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
+                })
+              : t('billing.subLifetime')}
+            {providerNote ? ` · ${providerNote}` : ''}
+          </p>
+          {billing.periodEnd && (
+            <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)' }}>
+              {billing.autoRenew ? t('billing.subAutoRenew') : t('billing.subNoAutoRenew')}
+            </p>
+          )}
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            {billing.autoRenew && cancelableLocally && (
+              <Button variant="ghost" size="sm" loading={cancelSub.isPending} onClick={() => setCancelOpen(true)}>
+                {t('billing.subCancel')}
+              </Button>
+            )}
+            {!billing.autoRenew && billing.periodEnd && (
+              <Button variant="secondary" size="sm" onClick={() => navigate('/paywall')}>
+                {t('billing.subRenewCta')}
+              </Button>
+            )}
+          </div>
+          {billing.autoRenew && !cancelableLocally && (
+            <p style={{ margin: 'var(--space-2) 0 0', fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)' }}>
+              {t('billing.subCancelViaProvider')}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)' }}>
+            {t('billing.subInactive')}
+          </p>
+          <Button variant="accent" size="md" onClick={() => navigate('/paywall')}>
+            {t('billing.subBuyCta')}
+          </Button>
+        </>
+      )}
+
+      {error && (
+        <p style={{ margin: 'var(--space-2) 0 0', fontSize: 'var(--text-xs)', color: 'var(--danger)' }}>{error}</p>
+      )}
+
+      <ConfirmDialog
+        open={cancelOpen}
+        title={t('billing.subCancelTitle')}
+        message={t('billing.subCancelText')}
+        confirmLabel={t('billing.subCancelConfirm')}
+        variant="danger"
+        onConfirm={confirmCancel}
+        onCancel={() => setCancelOpen(false)}
+      />
+    </Glass>
   )
 }
 

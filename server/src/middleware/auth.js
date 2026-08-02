@@ -16,10 +16,12 @@ export async function auth(req, res, next) {
   const header = req.header('authorization') || req.header('Authorization') || ''
 
   if (header.startsWith('tma ')) {
+    req.authType = 'tma' // платёжный слой выбирает методы по платформе (billing/pricing.js)
     return telegramAuth(req, res, next)
   }
 
   if (header.startsWith('Bearer ')) {
+    req.authType = 'web'
     if (!betterAuth) {
       return res.status(401).json({ error: 'Web auth is not configured' })
     }

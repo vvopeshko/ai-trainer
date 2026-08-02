@@ -4,6 +4,7 @@ import { handleChatMessage } from '../services/aiTrainer/chat.js'
 import { buildUsageReportHtml } from '../services/aiTrainer/usageReport.js'
 import { generateProgramScene } from './scenes/generateProgram.js'
 import { escapeHtml } from './notifier.js'
+import { requireBotPremium } from './paywallGuard.js'
 import prisma from '../utils/prisma.js'
 
 // Создание Telegraf-бота. Запускается из server/src/index.js параллельно Express.
@@ -159,7 +160,12 @@ export function createBot(token) {
     )
   })
 
-  bot.command('program', (ctx) => ctx.scene.enter('generate-program'))
+  bot.command('program', async (ctx) => {
+    // Paywall: генерация программы — LLM-функция (hard paywall, PREMIUM_GATING)
+    const user = await requireBotPremium(ctx)
+    if (!user) return
+    return ctx.scene.enter('generate-program')
+  })
 
   // ─── /cost: расход токенов LLM в деньгах (только админ) ───────────
   bot.command('cost', async (ctx) => {
@@ -196,12 +202,17 @@ export function createBot(token) {
         return
       }
 
-      // ─── 1. Показать индикатор "печатает..." ──────────────────
+      // ─── 1. Paywall + юзер ────────────────────────────────────
+      // Vision — самый дорогой LLM-вызов; гейт до скачивания фото.
+      const user = await requireBotPremium(ctx)
+      if (!user) return
+
+      // ─── 2. Показать индикатор "печатает..." ──────────────────
       // Без этого пользователь 5-10 секунд смотрит в пустой чат.
       // sendChatAction автоматически пропадёт, когда отправим ответ.
       await ctx.sendChatAction('typing')
 
-      // ─── 2. Скачать фото ─────────────────────────────────────
+      // ─── 3. Скачать фото ─────────────────────────────────────
       // ctx.message.photo — массив PhotoSize[], отсортирован по размеру.
       // Последний элемент — максимальное разрешение (обычно ~1280px).
       const photos = ctx.message.photo
@@ -217,23 +228,6 @@ export function createBot(token) {
       }
       const buffer = Buffer.from(await response.arrayBuffer())
       const imageBase64 = buffer.toString('base64')
-
-      // ─── 3. Найти юзера в БД ─────────────────────────────────
-      // telegramAuth middleware работает только для API-роутов.
-      // В боте у нас нет middleware — upsert по telegramId (не find+create:
-      // параллельные апдейты от одного юзера гоняются и ловят P2002).
-      const telegramId = BigInt(ctx.from.id)
-      const user = await prisma.user.upsert({
-        where: { telegramId },
-        update: {},
-        create: {
-          telegramId,
-          firstName: ctx.from.first_name,
-          lastName: ctx.from.last_name ?? null,
-          username: ctx.from.username ?? null,
-          languageCode: ctx.from.language_code ?? null,
-        },
-      })
 
       // ─── 4. Вызвать сервис распознавания ──────────────────────
       const result = await identifyMachine(user.id, imageBase64, {
@@ -297,22 +291,11 @@ export function createBot(token) {
     }
 
     try {
-      await ctx.sendChatAction('typing')
+      // Paywall + upsert юзера (у бота нет telegramAuth middleware)
+      const user = await requireBotPremium(ctx)
+      if (!user) return
 
-      // У бота нет telegramAuth middleware — upsert юзера по telegramId
-      // (не find+create: параллельные сообщения гоняются и ловят P2002).
-      const telegramId = BigInt(ctx.from.id)
-      const user = await prisma.user.upsert({
-        where: { telegramId },
-        update: {},
-        create: {
-          telegramId,
-          firstName: ctx.from.first_name,
-          lastName: ctx.from.last_name ?? null,
-          username: ctx.from.username ?? null,
-          languageCode: ctx.from.language_code ?? null,
-        },
-      })
+      await ctx.sendChatAction('typing')
 
       const { reply } = await handleChatMessage(user, ctx.message.text)
       try {

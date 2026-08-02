@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiPatch, apiDelete } from '../utils/api.js'
+import { apiPost, apiPatch, apiDelete } from '../utils/api.js'
 import { queryKeys } from '../lib/queryKeys.js'
 
 // ─── Cancel (delete) active workout ─────────────────────────────────
@@ -129,6 +129,49 @@ export function useDeleteWorkout() {
       queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
       // Детали закэшированы со staleTime: Infinity — убираем мёртвую запись.
       queryClient.removeQueries({ queryKey: queryKeys.workouts.detail(id) })
+    },
+  })
+}
+
+// ─── Billing (product/ARCHITECTURE_PAYMENTS.md §5.4) ─────────────────
+
+export function useCheckout() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ planCode, method }) =>
+      apiPost('/api/v1/billing/checkout', { planCode, method }),
+    onSuccess: (result) => {
+      // mock/мгновенные провайдеры: доступ выдан сразу — гейт снимется сам.
+      // Для invoice_link/redirect статус доедет рефетчем после оплаты.
+      if (result?.type === 'granted') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.billing.status })
+      }
+    },
+  })
+}
+
+export function useRedeemPromo() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (code) => apiPost('/api/v1/billing/promo/redeem', { code }),
+    onSuccess: (result) => {
+      // free_period выдаёт entitlement сразу; discount статус не меняет
+      if (result?.kind === 'free_period') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.billing.status })
+      }
+    },
+  })
+}
+
+export function useCancelSubscription() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => apiPost('/api/v1/billing/cancel'),
+    onSuccess: (d) => {
+      queryClient.setQueryData(queryKeys.billing.status, d.billing)
     },
   })
 }

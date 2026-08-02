@@ -59,6 +59,9 @@ model User {
   sessions               Session[]
   accounts               Account[]
   pushSubscriptions      PushSubscription[]
+  payments               Payment[]
+  subscriptions          Subscription[]
+  promoRedemptions       PromoRedemption[]
 }
 
 // ═══════════════════════════════════════════════
@@ -586,4 +589,364 @@ model LlmUsage {
 
   @@index([createdAt])
   @@index([feature, createdAt])
+}
+
+// ═══════════════════════════════════════════════
+// БИЛЛИНГ (product/ARCHITECTURE_PAYMENTS.md)
+//
+// Entitlement-слой (Subscription) отделён от платёжного (Payment + провайдеры).
+// Все таблицы добавлены новыми → db push безопасен.
+// ═══════════════════════════════════════════════
+
+// Тарифный план. Каталог маленький — сидируется (scripts/seedBilling.js),
+// кешируется в памяти (services/billing/pricing.js).
+model BillingPlan {
+  id        String   @id @default(uuid())
+  code      String   @unique // 'premium_week' | 'premium_month' | 'premium_lifetime'
+  period    String // 'week' | 'month' | 'lifetime'
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  prices        BillingPlanPrice[]
+  payments      Payment[]
+  subscriptions Subscription[]
+}
+
+// Цена плана: провайдер × регион-корзина. Суммы в МИНИМАЛЬНЫХ единицах
+// (копейки / целые Stars / центы). region — bucket ('default' | 'ru'), НЕ страна:
+// маппинг страна → bucket живёт в billingCore.resolvePriceRegion().
+// У paddle/IAP per-country цены настраиваются в кабинете провайдера — у нас
+// одна строка 'default' + providerPriceId (источник правды по сумме — провайдер).
+model BillingPlanPrice {
+  id              String  @id @default(uuid())
+  planId          String
+  plan            BillingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  provider        String // 'stars' | 'yookassa' | 'tribute' | 'paddle' | 'mock'
+  region          String  @default("default")
+  currency        String // 'XTR' | 'RUB' | 'USD'
+  amount          Int
+  providerPriceId String? // pri_... (Paddle) / productId (IAP); null для stars/yookassa
+
+  @@unique([planId, provider, region, currency])
+}
+
+// Одна попытка/факт оплаты. providerPaymentId — ключ идемпотентности:
+// повторный вебхук/апдейт Telegram упирается в unique (P2002 → no-op).
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  planId            String
+  plan              BillingPlan   @relation(fields: [planId], references: [id])
+  provider          String
+  providerPaymentId String        @unique // yookassa payment.id | telegram_payment_charge_id | Paddle transaction_id
+  status            PaymentStatus @default(pending)
+  amount            Int
+  currency          String
+  meta              Json? // сырой payload провайдера (без карточных данных)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  canceled
+  refunded
+}
+
+// Entitlement: подписка юзера (single-row на юзера, держится billingService).
+// АКТИВНОСТЬ = status active|canceled|past_due И (currentPeriodEnd == null
+// ИЛИ currentPeriodEnd + grace > now). currentPeriodEnd == null — lifetime.
+// canceled = автопродление выключено, оплаченный период дохаживается.
+// provider: платёжные + бесплатные источники 'promo' | 'admin' (не продлеваются).
+model Subscription {
+  id                     String    @id @default(uuid())
+  userId                 String
+  user                   User      @relation(fields: [userId], references: [id])
+  planId                 String
+  plan                   BillingPlan @relation(fields: [planId], references: [id])
+  provider               String
+  status                 SubStatus @default(active)
+  currentPeriodEnd       DateTime? // null = lifetime
+  autoRenew              Boolean   @default(false)
+  providerSubscriptionId String? // Stars charge_id подписки | Tribute subscription_id | Paddle sub_...
+  paymentMethodId        String? // сохранённый метод ЮKassa (рекуррентка)
+  recurrentConsentAt     DateTime? // ФЗ-376: момент согласия на автосписания
+  renewalAttempts        Int       @default(0) // dunning-счётчик крона ЮKassa
+  lastRenewalAttemptAt   DateTime?
+  canceledAt             DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([status, currentPeriodEnd]) // для крона продлений
+}
+
+enum SubStatus {
+  active
+  past_due // не удалось списать, идут ретраи (grace)
+  canceled // автопродление выключено, период дохаживается
+  expired
+}
+
+// Промокод: free_period (бесплатные N дней — entitlement сразу, provider='promo')
+// или discount (процент со следующей покупки — применяется в checkout).
+model PromoCode {
+  id             String    @id @default(uuid())
+  code           String    @unique // нормализованный UPPERCASE
+  kind           String // 'free_period' | 'discount'
+  freeDays       Int? // для free_period
+  discountPct    Int? // для discount: 1-99
+  planCode       String? // null = любой план
+  maxRedemptions Int? // null = без лимита
+  expiresAt      DateTime?
+  isActive       Boolean   @default(true)
+  comment        String? // для себя: «блогер X», «друзья из зала»
+  createdAt      DateTime  @default(now())
+
+  redemptions PromoRedemption[]
+}
+
+// Активация промокода юзером. discount: pending → applied (checkout берёт
+// ровно одну pending-активацию, снапшот скидки — в связанном PromoCode).
+model PromoRedemption {
+  id          String    @id @default(uuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  status      String    @default("applied") // free_period: сразу 'applied'; discount: 'pending' → 'applied'
+  paymentId   String? // какой платёж получил скидку
+  createdAt   DateTime  @default(now())
+  appliedAt   DateTime?
+
+  @@unique([promoCodeId, userId]) // один код — один раз на юзера
+  @@index([userId, status])
+}
+
+// Журнал вебхуков/событий провайдеров — идемпотентность и отладка (фазы 3-5).
+// processedAt ставится только при успешной обработке: упавший вебхук ретраится.
+model BillingEvent {
+  id          String    @id @default(uuid())
+  provider    String
+  eventId     String // id события у провайдера (или синтетический)
+  type        String // 'payment.succeeded' | 'successful_payment' | ...
+  payload     Json
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([provider, eventId])
+}
+
+// ═══════════════════════════════════════════════
+// EVIDENCE KNOWLEDGE BASE (product/EVIDENCE_KNOWLEDGE_BASE.md)
+//
+// Claim-centric knowledge store. Research work is a source, ClaimVersion is an
+// immutable scientific synthesis, Recommendation is a separately approved product
+// policy. Runtime retrieval is fail-closed in services/evidence/repository.js.
+// All tables are new; phase-0 pilot data is imported by scripts/importEvidencePilot.js.
+// ═══════════════════════════════════════════════
+
+model EvidenceQuestion {
+  id                   String   @id // semantic ID: EQ-HYP-001
+  topic                String
+  question             String   @db.Text
+  outcomes             String[] @default([])
+  critical             Boolean  @default(false)
+  reviewIntervalMonths Int
+  scope                String   @db.Text
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  assessments ResearchAssessment[]
+  claims      EvidenceClaim[]
+
+  @@index([topic])
+}
+
+model ResearchWork {
+  id               String    @id // semantic ID: RW-...
+  status           String    @default("discovered")
+  title            String    @db.Text
+  year             Int
+  workType         String
+  identifiers      Json
+  doi              String?   @unique
+  pmid             String?   @unique
+  pmcid             String?   @unique
+  trialId           String?   @unique
+  url               String?
+  correctionStatus String    @default("unknown")
+  statusCheckedAt  DateTime?
+  reviewScope      String    @default("abstract_only")
+  sourceNotes      String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  assessments ResearchAssessment[]
+  claimLinks  ClaimEvidence[]
+
+  @@index([status, correctionStatus])
+  @@index([year, workType])
+}
+
+model ResearchAssessment {
+  id            String    @id // semantic ID: RA-...
+  questionId    String
+  question      EvidenceQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  workId        String
+  work          ResearchWork @relation(fields: [workId], references: [id], onDelete: Restrict)
+  version       Int       @default(1)
+  status        String    @default("draft")
+  reviewScope   String    @default("abstract_only")
+  population    String    @db.Text
+  outcomes      String[]  @default([])
+  mainResults   String[]  @default([])
+  directness    String
+  riskOfBias    String
+  limitations   String[]  @default([])
+  cannotSupport String[]  @default([])
+  assessedBy    String?
+  assessedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([questionId, workId, version])
+  @@index([status])
+}
+
+model EvidenceClaim {
+  id         String   @id // stable semantic ID: EC-...
+  questionId String
+  question   EvidenceQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  status     String   @default("draft")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  versions EvidenceClaimVersion[]
+
+  @@index([questionId, status])
+}
+
+model EvidenceClaimVersion {
+  id                 String    @id // semantic ID: ECV-...-v1
+  claimId            String
+  claim              EvidenceClaim @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  version            Int
+  status             String    @default("draft")
+  statement          String    @db.Text
+  population         String    @db.Text
+  trainingStatuses   String[]  @default([])
+  bodyScopes         String[]  @default([])
+  outcomes           String[]  @default([])
+  effect             String    @db.Text
+  certainty          String
+  certaintyRationale String    @db.Text
+  limitations        String[]  @default([])
+  unknowns           String[]  @default([])
+  searchCutoff       DateTime
+  reviewDueAt        DateTime
+  createdBy          String
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  evidenceLinks       ClaimEvidence[]
+  recommendationLinks EvidenceRecommendationClaim[]
+
+  @@unique([claimId, version])
+  @@index([status, reviewDueAt])
+  @@index([outcomes], type: Gin)
+}
+
+model ClaimEvidence {
+  id             String   @id @default(uuid())
+  claimVersionId String
+  claimVersion   EvidenceClaimVersion @relation(fields: [claimVersionId], references: [id], onDelete: Cascade)
+  workId         String
+  work           ResearchWork @relation(fields: [workId], references: [id], onDelete: Restrict)
+  relation       String // supports | contradicts | contextualizes
+  displayOrder   Int      @default(0)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@unique([claimVersionId, workId])
+  @@index([workId])
+}
+
+model EvidenceRecommendation {
+  id                      String    @id // semantic ID: ER-...-v1
+  status                  String    @default("draft")
+  surfaces                String[]  @default([])
+  audience                String    @db.Text
+  guidance                String    @db.Text
+  implementationHeuristic String    @db.Text
+  strength                String
+  exceptions              String[]  @default([])
+  safetyNotes             String[]  @default([])
+  allowedWording          String[]  @default([])
+  forbiddenWording        String[]  @default([])
+  reviewDueAt             DateTime
+  reviewedBy              String?
+  reviewedAt              DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  claimLinks EvidenceRecommendationClaim[]
+
+  @@index([status, reviewDueAt])
+  @@index([surfaces], type: Gin)
+}
+
+model EvidenceRecommendationClaim {
+  id               String   @id @default(uuid())
+  recommendationId String
+  recommendation   EvidenceRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  claimVersionId   String
+  claimVersion     EvidenceClaimVersion @relation(fields: [claimVersionId], references: [id], onDelete: Restrict)
+  role             String // primary | supporting
+  displayOrder     Int      @default(0)
+
+  @@unique([recommendationId, claimVersionId])
+  @@index([claimVersionId])
+}
+
+// Regression and content artifacts are validated by Zod before import. Their
+// structures evolve faster than runtime claims, so v0 stores the complete payload.
+model EvidenceAiTest {
+  id        String   @id // AIT-...
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EvidenceBlogOutline {
+  id        String   @id // BO-...
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Append-only application audit for every review transition. actorId is intentionally
+// not an FK: review history survives account deletion and can also represent scripts.
+model EvidenceAuditEvent {
+  id         String   @id @default(uuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  beforeJson Json?
+  afterJson  Json?
+  comment    String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
 }

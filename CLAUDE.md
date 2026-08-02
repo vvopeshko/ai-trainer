@@ -22,6 +22,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/machine-scanning.md](product/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
 | **[product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)** | Web-версия: Better Auth, мульти-провайдерная авторизация. Фазы 1–2 на проде (gymwithai.me); фаза 3 — план |
 | **[product/NOTIFICATIONS.md](product/NOTIFICATIONS.md)** | Сервис уведомлений: durable-очередь в Postgres, Telegram + Web Push, флаги rollout |
+| **[product/EVIDENCE_KNOWLEDGE_BASE.md](product/EVIDENCE_KNOWLEDGE_BASE.md)** | Научная база знаний: исследования → claims → рекомендации AI-тренера и блог |
+| **[product/ARCHITECTURE_PAYMENTS.md](product/ARCHITECTURE_PAYMENTS.md)** | Платежи и подписка: hard paywall, entitlement-слой, провайдеры (Stars/ЮKassa/Tribute/Paddle). Фаза 1 (фундамент + mock) в коде за флагом `PREMIUM_GATING=off`; живые платёжки — фазы 2–5 |
+| **[product/DOMAIN_MIGRATION.md](product/DOMAIN_MIGRATION.md)** | План переезда: аппка → app.gymwithai.me, корень → сайт+блог (Astro в `site/`) |
 | **[product/implementation-plan.md](product/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
 | **[product/CODESTYLE.md](product/CODESTYLE.md)** | Code style guide: именование, компоненты, стили, паттерны |
 | **[product/design/DESIGN_BRIEF.md](product/design/DESIGN_BRIEF.md)** | Дизайн-бриф (Glass UI) |
@@ -54,6 +57,9 @@ cd server && npm run seed:exercises && npm run seed:dev
 
 # Seed упражнений (924 штуки, idempotent upsert по slug)
 cd server && npm run seed:exercises
+
+# Seed биллинга (планы week/month/lifetime + цены по регион-корзинам, idempotent)
+cd server && npm run seed:billing
 
 # Lint (только фронтенд, ESLint 9 flat config; server/ excluded)
 npm run lint
@@ -123,11 +129,12 @@ cd server && npx prisma generate       # регенерация клиента (
 └── server/                  # Express + Telegraf + Prisma (Railway)
     ├── src/
     │   ├── index.js         # entry: Express + bot.launch() + scheduler (один процесс)
-    │   ├── routes/          # /api/v1/{auth,exercises,workouts,stats,programs,progress,chat,insights,push,admin}
-    │   ├── controllers/     # auth, exercise, workout, program, stats, progress
-    │   ├── middleware/       # auth.js (единый: tma|Bearer), telegramAuth.js, rateLimiter.js, errorHandler.js
+    │   ├── routes/          # /api/v1/{auth,exercises,workouts,stats,programs,progress,chat,insights,push,billing,admin}
+    │   ├── controllers/     # auth, exercise, workout, program, stats, progress, billing
+    │   ├── middleware/       # auth.js (единый: tma|Bearer), telegramAuth.js, requirePremium.js (hard paywall), rateLimiter.js, errorHandler.js (+AppError)
     │   ├── bot/             # Telegraf bot (long polling) + scenes (WizardScene для /program)
     │   ├── services/aiTrainer/  # LLM-логика: chat (tool-use), chatTools, programEditor, identifyMachine, generateProgram, importProgram, weekly/dailyInsight
+    │   ├── services/billing/    # entitlement + платежи: billingCore (чистая логика), billingService, pricing, provider/ (mock; stars/юkassa/tribute/paddle — по фазам). См. product/ARCHITECTURE_PAYMENTS.md
     │   └── utils/           # prisma.js (singleton), llm.js (chat/vision), analytics.js, dateUtils.js
     ├── prisma/schema.prisma
     ├── scripts/             # seedExercises.js, seedDevData.js, enrichProgramMedia.js и др.
@@ -204,7 +211,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 
 ### Prisma / БД
 
-21 модель: `User` (`telegramId` — **nullable**: web-only юзеры; `email`/`emailVerified` — Better Auth), `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише), `NotificationLog` (идемпотентность проактивных рассылок), `PendingChatContext` (handoff из мини-аппа в чат, peek/commit), `Insight` (кэш дневного инсайта), `LlmUsage` (учёт токенов LLM с денежной оценкой для `/cost`), web-auth: `Session`/`Account`/`Verification`/`RateLimit` (таблицы Better Auth; Telegram-идентичность — канонически на `User.telegramId`, в `Account` НЕ дублируется), уведомления: `NotificationJob` (durable-очередь: state machine, CAS-claim, сохранённый LLM-рендер), `PushSubscription` (Web Push устройства, 404/410 → автоудаление). Полная схема — `server/prisma/schema.prisma`.
+28 моделей: `User` (`telegramId` — **nullable**: web-only юзеры; `email`/`emailVerified` — Better Auth), `UserProfile`, `Exercise` (924 seed'а, enum `source`: seed/ai_generated/user_created, поля `gifUrl`, `videos` Json), `Program` (planJson — JSON с неделями/днями/упражнениями), `Workout` (`pausedAt`/`totalPausedMs` — пауза/возобновление), `WorkoutSet`, `ChatMessage`, `MachineIdentification`, `AnalyticsEvent`, `UserExerciseSettings` (per-exercise настройки: preset, unit, step, weight range, type; `@@unique([userId, exerciseSlug])`), `WorkoutPlanOverride` (разовая правка дня от чат-тренера, `scope: 'next'`; `@@unique([userId, programId, dayIndex])`; мёрж в getNextWorkout/getActive, consume при финише), `NotificationLog` (идемпотентность проактивных рассылок), `PendingChatContext` (handoff из мини-аппа в чат, peek/commit), `Insight` (кэш дневного инсайта), `LlmUsage` (учёт токенов LLM с денежной оценкой для `/cost`), web-auth: `Session`/`Account`/`Verification`/`RateLimit` (таблицы Better Auth; Telegram-идентичность — канонически на `User.telegramId`, в `Account` НЕ дублируется), уведомления: `NotificationJob` (durable-очередь: state machine, CAS-claim, сохранённый LLM-рендер), `PushSubscription` (Web Push устройства, 404/410 → автоудаление), биллинг: `BillingPlan`/`BillingPlanPrice` (каталог, сид `seed:billing`), `Payment` (`providerPaymentId @unique` — идемпотентность), `Subscription` (entitlement; `currentPeriodEnd` **nullable** = lifetime), `PromoCode`/`PromoRedemption`, `BillingEvent` (журнал вебхуков). Полная схема — `server/prisma/schema.prisma`.
 
 **Миграций НЕТ, только `prisma db push`.** В референсном проекте `db push` однажды дропнул все таблицы (2026-03-08) при добавлении NOT NULL колонки. Спасла Neon PITR.
 
@@ -257,7 +264,7 @@ Fire-and-forget `track(userId, event, payload)` — **без `await`**, не б�
 
 **Фронт:** `VITE_API_URL` (локально `http://localhost:3001`).
 
-**Бэк:** `DATABASE_URL`, `BOT_TOKEN` (+`BOT_DISABLED=1` для локальных смоуков), `FRONTEND_URL` (список origin'ов через запятую, первый — канонический), `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_*` (**зарезервировано, в коде пока не используется**), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed); web-auth: `BETTER_AUTH_SECRET` (без него web-вход выключен целиком), `AUTH_PROVIDERS` (email,telegram_widget; google/yandex — по credentials), `API_URL`, `RESEND_API_KEY`/`EMAIL_FROM`; уведомления: `NOTIFICATION_QUEUE` (off/shadow/on), `NOTIFICATION_WORKER`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`.
+**Бэк:** `DATABASE_URL`, `BOT_TOKEN` (+`BOT_DISABLED=1` для локальных смоуков), `FRONTEND_URL` (список origin'ов через запятую, первый — канонический), `WEBAPP_URL`, `ANTHROPIC_API_KEY`, `R2_*` (**зарезервировано, в коде пока не используется**), `ANALYTICS_SECRET`, `ADMIN_TELEGRAM_ID`, `ALLOW_DEV_BYPASS` (только для локалки, fail-closed); web-auth: `BETTER_AUTH_SECRET` (без него web-вход выключен целиком), `AUTH_PROVIDERS` (email,telegram_widget; google/yandex — по credentials), `API_URL`, `RESEND_API_KEY`/`EMAIL_FROM`; уведомления: `NOTIFICATION_QUEUE` (off/shadow/on), `NOTIFICATION_WORKER`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`; биллинг: `PAYMENT_PROVIDERS` (фиче-флаги методов; `mock` — только dev), `PREMIUM_GATING` (off/on — hard paywall: requirePremium + гейт фронта + paywallGuard бота), `BILLING_GRACE_HOURS`.
 
 `postinstall` в server/package.json автоматически запускает `prisma generate`.
 
