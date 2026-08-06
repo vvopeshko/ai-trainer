@@ -22,6 +22,15 @@ export function getClaimApprovalBlockers(claimVersion, assessments, { now = new 
   const supportingLinks = decisionLinks.filter(({ relation }) => relation === 'supports')
   if (supportingLinks.length === 0) blockers.push('claim_has_no_supporting_evidence')
 
+  const isMuscleSpecificHypertrophy = claimVersion.outcomes?.includes('hypertrophy') &&
+    claimVersion.bodyScopes?.includes('muscle_specific')
+  if (isMuscleSpecificHypertrophy && !claimVersion.muscles?.length) {
+    blockers.push('claim_muscle_scope_missing')
+  }
+  if (claimVersion.muscleRegions?.length && !claimVersion.measurementMethods?.length) {
+    blockers.push('claim_measurement_scope_missing')
+  }
+
   for (const { work } of claimVersion.evidenceLinks) {
     if (work.status === 'retracted' || work.correctionStatus === 'retracted') {
       blockers.push(`work_retracted:${work.id}`)
@@ -90,6 +99,89 @@ export function createEvidenceReviewService(db = prisma) {
       include: { _count: { select: { assessments: true, claims: true } } },
       orderBy: { id: 'asc' },
     })
+  }
+
+  async function getQuestion(id) {
+    const question = await db.evidenceQuestion.findUnique({
+      where: { id },
+      include: {
+        assessments: { include: { work: true }, orderBy: [{ workId: 'asc' }, { version: 'desc' }] },
+        claims: {
+          include: {
+            versions: {
+              include: {
+                evidenceLinks: { include: { work: true }, orderBy: { displayOrder: 'asc' } },
+                recommendationLinks: { include: { recommendation: true } },
+              },
+              orderBy: { version: 'desc' },
+            },
+          },
+          orderBy: { id: 'asc' },
+        },
+      },
+    })
+    if (!question) notFound('Question')
+
+    const rawClaimVersions = question.claims.flatMap(({ versions }) => versions)
+    const claimVersions = rawClaimVersions.map((version) => ({
+      ...version,
+      approvalBlockers: getClaimApprovalBlockers(
+        version,
+        question.assessments.filter(({ workId }) => version.evidenceLinks.some((link) => link.workId === workId)),
+      ),
+    }))
+    const workById = new Map()
+    for (const assessment of question.assessments) workById.set(assessment.workId, assessment.work)
+    for (const version of claimVersions) {
+      for (const link of version.evidenceLinks) workById.set(link.workId, link.work)
+    }
+    const works = [...workById.values()].sort((a, b) => b.year - a.year || a.id.localeCompare(b.id))
+    const directlyLinkedIds = new Set(claimVersions.flatMap(({ evidenceLinks }) => evidenceLinks
+      .filter(({ relation }) => relation === 'supports' || relation === 'contradicts')
+      .map(({ workId }) => workId)))
+    const assessedIds = new Set(question.assessments.map(({ workId }) => workId))
+    const includedStudiesReported = works.reduce((sum, work) =>
+      sum + (directlyLinkedIds.has(work.id) ? work.includedStudiesCount || 0 : 0), 0)
+    const searchCutoffs = claimVersions.map(({ searchCutoff }) => searchCutoff).filter(Boolean)
+
+    const [aiTests, blogOutlines, audit] = await Promise.all([
+      db.evidenceAiTest.findMany({ orderBy: { id: 'asc' } }),
+      db.evidenceBlogOutline.findMany({ orderBy: { id: 'asc' } }),
+      db.evidenceAuditEvent.findMany({
+        where: {
+          OR: [
+            { entityType: 'question', entityId: id },
+            { entityType: 'claim_version', entityId: { in: claimVersions.map(({ id: claimId }) => claimId) } },
+            { entityType: 'assessment', entityId: { in: question.assessments.map(({ id: assessmentId }) => assessmentId) } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+    ])
+
+    return {
+      ...question,
+      claims: claimVersions,
+      works,
+      coverage: {
+        linkedPublications: works.length,
+        decisionPublications: directlyLinkedIds.size,
+        assessedPublications: assessedIds.size,
+        primaryStudies: works.filter(({ workType }) => workType === 'rct').length,
+        evidenceSyntheses: works.filter(({ workType }) => ['systematic_review', 'meta_analysis', 'umbrella_review', 'position_stand'].includes(workType)).length,
+        fullTextReviewed: works.filter(({ reviewScope }) => reviewScope !== 'abstract_only').length,
+        approvedAssessments: question.assessments.filter(({ status }) => status === 'approved').length,
+        currentStatusVerified: works.filter(({ correctionStatus }) => ['current', 'corrected'].includes(correctionStatus)).length,
+        includedStudiesReported,
+        includedStudiesDeduplicated: null,
+        deduplicationStatus: 'not_recorded',
+        searchCutoff: searchCutoffs.length ? new Date(Math.max(...searchCutoffs.map((date) => new Date(date)))).toISOString() : null,
+      },
+      aiTests: aiTests.filter(({ payload }) => payload.requiredClaims?.some((claimId) => claimVersions.some(({ id: versionId }) => versionId === claimId))),
+      blogOutlines: blogOutlines.filter(({ payload }) => payload.primaryQuestionId === id),
+      audit,
+    }
   }
 
   async function listClaimVersions({ status, questionId, take = 50 } = {}) {
@@ -329,6 +421,7 @@ export function createEvidenceReviewService(db = prisma) {
 
   return {
     listQuestions,
+    getQuestion,
     listClaimVersions,
     getClaimVersion,
     updateAssessment,

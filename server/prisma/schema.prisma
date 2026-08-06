@@ -757,10 +757,17 @@ model EvidenceQuestion {
   id                   String   @id // semantic ID: EQ-HYP-001
   topic                String
   question             String   @db.Text
+  questionRu           String   @db.Text
+  plainQuestion        String   @db.Text
+  plainQuestionRu      String   @db.Text
   outcomes             String[] @default([])
   critical             Boolean  @default(false)
   reviewIntervalMonths Int
   scope                String   @db.Text
+  scopeRu              String   @db.Text
+  searchStrategy       Json
+  searchDate           DateTime?
+  searchNotes          String?  @db.Text
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -785,6 +792,7 @@ model ResearchWork {
   correctionStatus String    @default("unknown")
   statusCheckedAt  DateTime?
   reviewScope      String    @default("abstract_only")
+  includedStudiesCount Int?
   sourceNotes      String?   @db.Text
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -841,10 +849,19 @@ model EvidenceClaimVersion {
   version            Int
   status             String    @default("draft")
   statement          String    @db.Text
+  statementRu        String    @db.Text
+  plainStatement     String    @db.Text
+  plainStatementRu   String    @db.Text
   population         String    @db.Text
   trainingStatuses   String[]  @default([])
   bodyScopes         String[]  @default([])
   outcomes           String[]  @default([])
+  muscles            String[]  @default([])
+  muscleRegions      String[]  @default([])
+  exercises          String[]  @default([])
+  romSegments        String[]  @default([])
+  measurementMethods String[]  @default([])
+  applicabilityNotes String[]  @default([])
   effect             String    @db.Text
   certainty          String
   certaintyRationale String    @db.Text

@@ -14,7 +14,7 @@ export default function EvidenceClaimPage() {
 
 function EvidenceClaim() {
   const { id } = useParams()
-  const { language, t, content } = useEvidenceLocale()
+  const { language, t, content, term } = useEvidenceLocale()
   const toast = useToast()
   const access = useEvidenceAccess()
   const claimQuery = useEvidenceClaim(id, access.isSuccess)
@@ -25,6 +25,7 @@ function EvidenceClaim() {
   const claim = claimQuery.data
   const runtime = useEvidenceRuntime(claim?.claim.questionId, '', showRuntime)
   const isApprover = access.data?.role === 'approver'
+  const termValue = (value) => term(value)
 
   const assessmentsByWork = useMemo(() => new Map(
     (claim?.assessments || []).map((assessment) => [assessment.workId, assessment]),
@@ -64,8 +65,8 @@ function EvidenceClaim() {
       <section className="evidence-detail-head">
         <div>
           <div className="evidence-detail-labels"><span className="evidence-id">{claim.id}</span><StatusBadge status={claim.status} /></div>
-          <h1>{content(claim, 'statement')}</h1>
-          <p>{content(claim.claim.question, 'question')}</p>
+          <h1>{content(claim, 'plainStatement')}</h1>
+          <p>{content(claim.claim.question, 'plainQuestion')}</p>
         </div>
         <ClaimActions claim={claim} isApprover={isApprover} open={openTransition} />
       </section>
@@ -73,6 +74,7 @@ function EvidenceClaim() {
       <div className="evidence-detail-grid">
         <div className="evidence-detail-main">
           <Section title={t('synthesis')} aside={`${CERTAINTY_LABELS[language]?.[claim.certainty] || claim.certainty} · ${t('certainty')}`}>
+            <div className="evidence-scientific-box"><strong>{t('scientificWording')}</strong><p>{content(claim, 'statement')}</p></div>
             <dl className="evidence-definition-grid">
               <div><dt>{t('population')}</dt><dd>{content(claim, 'population')}</dd></div>
               <div><dt>{t('effect')}</dt><dd>{content(claim, 'effect')}</dd></div>
@@ -81,6 +83,17 @@ function EvidenceClaim() {
             </dl>
             <ListBlock title={t('limitations')} items={content(claim, 'limitations')} />
             <ListBlock title={t('unknowns')} items={content(claim, 'unknowns')} />
+          </Section>
+
+          <Section title={t('applicability')}>
+            <dl className="evidence-definition-grid">
+              <div><dt>{t('muscles')}</dt><dd>{claim.muscles?.length ? claim.muscles.join(', ') : t('notSpecified')}</dd></div>
+              <div><dt>{t('muscleRegions')}</dt><dd>{claim.muscleRegions?.length ? claim.muscleRegions.join(', ') : t('notSpecified')}</dd></div>
+              <div><dt>{t('exercises')}</dt><dd>{claim.exercises?.length ? claim.exercises.join(', ') : t('notSpecified')}</dd></div>
+              <div><dt>{t('romSegments')}</dt><dd>{claim.romSegments?.length ? claim.romSegments.map(termValue).join(', ') : t('notSpecified')}</dd></div>
+              <div><dt>{t('measurementMethods')}</dt><dd>{claim.measurementMethods?.length ? claim.measurementMethods.join(', ') : t('notSpecified')}</dd></div>
+            </dl>
+            <ListBlock title={t('applicabilityNotes')} items={claim.applicabilityNotes} />
           </Section>
 
           <Section title={t('studiesAssessments')} aside={t('sourceCount', { count: claim.evidenceLinks.length })}>

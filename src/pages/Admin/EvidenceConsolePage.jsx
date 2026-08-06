@@ -95,8 +95,8 @@ function ClaimGrid({ claims, language, t, content }) {
               <span className="evidence-id">{claim.id}</span>
               <StatusBadge status={claim.status} />
             </div>
-            <h2>{content(claim, 'statement')}</h2>
-            <p className="evidence-question">{content(claim.claim.question, 'question')}</p>
+            <h2>{content(claim, 'plainStatement')}</h2>
+            <p className="evidence-question">{content(claim.claim.question, 'plainQuestion')}</p>
             <div className="evidence-card-meta">
               <span>{CERTAINTY_LABELS[language]?.[claim.certainty] || claim.certainty} · {t('certainty')}</span>
               <span>{t('sourceCount', { count: claim.evidenceLinks?.length || 0 })}</span>
@@ -114,13 +114,16 @@ function QuestionGrid({ questions, loading, t, content, term }) {
   return (
     <div className="evidence-question-grid">
       {questions.map((question) => (
-        <Glass key={question.id} padding={20} radius={16} className="evidence-question-card">
+        <Link key={question.id} to={`/admin/evidence/questions/${question.id}`} className="evidence-question-link">
+        <Glass padding={20} radius={16} className="evidence-question-card">
           <div className="evidence-card-top"><span className="evidence-id">{question.id}</span>{question.critical && <span className="evidence-critical">{t('critical')}</span>}</div>
-          <h2>{content(question, 'question')}</h2>
+          <h2>{content(question, 'plainQuestion')}</h2>
+          <p className="evidence-scientific-caption">{content(question, 'question')}</p>
           <p>{content(question, 'scope')}</p>
           <div className="evidence-card-meta"><span>{term(question.topic)}</span><span>{t('claimCount', { count: question._count.claims })}</span><span>{t('assessmentCount', { count: question._count.assessments })}</span></div>
-          <span className="evidence-inline-link">{t('reviewEvery', { count: question.reviewIntervalMonths })}</span>
+          <span className="evidence-inline-link">{t('openQuestion')} · {t('reviewEvery', { count: question.reviewIntervalMonths })}</span>
         </Glass>
+        </Link>
       ))}
     </div>
   )

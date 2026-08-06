@@ -7,6 +7,7 @@ const approver = requireEvidenceRole('approver')
 
 router.get('/access', controller.access)
 router.get('/questions', controller.listQuestions)
+router.get('/questions/:id', controller.getQuestion)
 router.get('/claims', controller.listClaims)
 router.get('/claim-versions/:id', controller.getClaimVersion)
 router.get('/runtime-check/:questionId', controller.runtimeCheck)

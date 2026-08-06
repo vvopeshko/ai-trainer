@@ -18,6 +18,7 @@ const MePage = lazy(() => import('./pages/Main/MePage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
 const EvidenceConsolePage = lazy(() => import('./pages/Admin/EvidenceConsolePage.jsx'))
 const EvidenceClaimPage = lazy(() => import('./pages/Admin/EvidenceClaimPage.jsx'))
+const EvidenceQuestionPage = lazy(() => import('./pages/Admin/EvidenceQuestionPage.jsx'))
 
 // Paywall: lazy — hard paywall (BillingGate), вне бандла критического пути
 const PaywallPage = lazy(() => import('./pages/Paywall/PaywallPage.jsx'))
@@ -81,6 +82,7 @@ export default function App() {
 
         {/* Internal evidence review console (auth + server-side role allowlist) */}
         <Route path="/admin/evidence" element={<Suspense fallback={<PageSkeleton />}><EvidenceConsolePage /></Suspense>} />
+        <Route path="/admin/evidence/questions/:id" element={<Suspense fallback={<PageSkeleton />}><EvidenceQuestionPage /></Suspense>} />
         <Route path="/admin/evidence/claims/:id" element={<Suspense fallback={<PageSkeleton />}><EvidenceClaimPage /></Suspense>} />
 
         {/* Paywall (hard paywall: сюда уводит BillingGate при неактивной подписке) */}

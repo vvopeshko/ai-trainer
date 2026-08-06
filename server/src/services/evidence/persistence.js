@@ -26,6 +26,7 @@ function workData(work, existing = null) {
       ? toDate(work.statusCheckedAt)
       : existing?.statusCheckedAt ?? null,
     reviewScope: work.reviewScope,
+    includedStudiesCount: work.includedStudiesCount ?? existing?.includedStudiesCount ?? null,
     sourceNotes: work.sourceNotes ?? null,
   }
 }
@@ -36,10 +37,19 @@ function claimVersionData(claim) {
     version: claim.version,
     status: claim.status,
     statement: claim.statement,
+    statementRu: claim.statementRu,
+    plainStatement: claim.plainStatement,
+    plainStatementRu: claim.plainStatementRu,
     population: claim.population,
     trainingStatuses: claim.trainingStatuses,
     bodyScopes: claim.bodyScopes,
     outcomes: claim.outcomes,
+    muscles: claim.muscles,
+    muscleRegions: claim.muscleRegions,
+    exercises: claim.exercises,
+    romSegments: claim.romSegments,
+    measurementMethods: claim.measurementMethods,
+    applicabilityNotes: claim.applicabilityNotes,
     effect: claim.effect,
     certainty: claim.certainty,
     certaintyRationale: claim.certaintyRationale,
@@ -100,7 +110,10 @@ export function buildEvidencePersistencePlan(rawDataset) {
   return {
     version: dataset.version,
     generatedAt: dataset.generatedAt,
-    questions: dataset.questions.map((item) => ({ ...item })),
+    questions: dataset.questions.map((item) => ({
+      ...item,
+      searchDate: item.searchDate ? toDate(item.searchDate) : null,
+    })),
     works: dataset.works.map((item) => ({ id: item.id, ...workData(item) })),
     assessments: dataset.assessments.map((item) => ({
       id: item.id,
@@ -289,6 +302,7 @@ function rowToWork(row) {
     correctionStatus: row.correctionStatus,
     ...(row.statusCheckedAt ? { statusCheckedAt: toDateOnly(row.statusCheckedAt) } : {}),
     reviewScope: row.reviewScope,
+    ...(row.includedStudiesCount ? { includedStudiesCount: row.includedStudiesCount } : {}),
     ...(row.sourceNotes ? { sourceNotes: row.sourceNotes } : {}),
   }
 }
@@ -305,10 +319,19 @@ function rowToClaim(row) {
     version: row.version,
     status: row.status,
     statement: row.statement,
+    statementRu: row.statementRu,
+    plainStatement: row.plainStatement,
+    plainStatementRu: row.plainStatementRu,
     population: row.population,
     trainingStatuses: row.trainingStatuses,
     bodyScopes: row.bodyScopes,
     outcomes: row.outcomes,
+    muscles: row.muscles,
+    muscleRegions: row.muscleRegions,
+    exercises: row.exercises,
+    romSegments: row.romSegments,
+    measurementMethods: row.measurementMethods,
+    applicabilityNotes: row.applicabilityNotes,
     effect: row.effect,
     certainty: row.certainty,
     certaintyRationale: row.certaintyRationale,
@@ -373,10 +396,17 @@ function rowToQuestion(row) {
     id: row.id,
     topic: row.topic,
     question: row.question,
+    questionRu: row.questionRu,
+    plainQuestion: row.plainQuestion,
+    plainQuestionRu: row.plainQuestionRu,
     outcomes: row.outcomes,
     critical: row.critical,
     reviewIntervalMonths: row.reviewIntervalMonths,
     scope: row.scope,
+    scopeRu: row.scopeRu,
+    searchStrategy: row.searchStrategy,
+    ...(row.searchDate ? { searchDate: toDateOnly(row.searchDate) } : {}),
+    ...(row.searchNotes ? { searchNotes: row.searchNotes } : {}),
   }
 }
 

@@ -31,6 +31,14 @@ export function useEvidenceQuestions(enabled = true) {
   })
 }
 
+export function useEvidenceQuestion(id, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.evidence.question(id),
+    queryFn: async () => (await apiGet(`${ROOT}/questions/${id}`)).question,
+    enabled: enabled && Boolean(id),
+  })
+}
+
 export function useEvidenceClaims(filters = {}, enabled = true) {
   return useQuery({
     queryKey: queryKeys.evidence.claims(filters),

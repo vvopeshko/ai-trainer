@@ -4,6 +4,26 @@
 трёх цепочках, — кандидаты в Prisma schema. Остальные могут остаться JSON или частью
 редакторского интерфейса.
 
+## 0. Evidence Question
+
+```yaml
+id: EQ-...
+topic:
+question: # точная исследовательская формулировка EN
+questionRu: # точная исследовательская формулировка RU
+plainQuestion: # основная понятная формулировка EN
+plainQuestionRu: # основная понятная формулировка RU
+outcomes: []
+scope:
+scopeRu:
+searchStrategy:
+  databases: []
+  queries: []
+  supplementaryMethods: []
+searchDate:
+searchNotes:
+```
+
 ## 1. Research Work
 
 ```yaml
@@ -73,9 +93,18 @@ questionId: EQ-...
 version: 1
 status: draft # draft|in_review|approved|disputed|superseded|withdrawn
 statement:
+statementRu:
+plainStatement: # понятный основной вывод без потери условий и certainty
+plainStatementRu:
 population:
 context:
 outcome:
+muscles: [] # обязательны для muscle-specific outcomes
+muscleRegions: [] # обязательны, если измерялся отдельный участок мышцы
+exercises: [] # упражнения, непосредственно исследованные в evidence
+romSegments: [] # full|lengthened_partial|shortened_partial|middle_partial
+measurementMethods: [] # например MRI, ultrasound; с measurement site при наличии
+applicabilityNotes: []
 effect:
 certainty: # high|moderate|low|very_low
 certaintyRationale:
@@ -90,7 +119,14 @@ reviewDueAt:
 createdBy:
 reviewedBy:
 reviewedAt:
+glossaryTerms: [] # идентификаторы использованных утверждённых терминов
 ```
+
+Для claim о гипертрофии недостаточно формулировки «для отдельных мышц». Нужно
+перечислить мышцы, исследованные упражнения и, если применимо, участки мышцы и точки
+измерения. Локальное измерение нельзя формулировать как эффект для всей мышцы. Claim
+с неизвестной мышцей или областью применимости может оставаться исследовательским
+черновиком, но не проходит approval как основание для product recommendation.
 
 ## 4. Product recommendation
 

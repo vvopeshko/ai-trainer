@@ -42,6 +42,12 @@ export function createEvidenceAdminController(service = evidenceReviewService) {
       } catch (error) { next(error) }
     },
 
+    getQuestion: async (req, res, next) => {
+      try {
+        res.json({ question: await service.getQuestion(idSchema.parse(req.params.id)) })
+      } catch (error) { next(error) }
+    },
+
     listClaims: async (req, res, next) => {
       try {
         const query = listClaimsSchema.parse(req.query)

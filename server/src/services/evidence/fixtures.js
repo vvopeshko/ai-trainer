@@ -1,11 +1,58 @@
+const questionLanguage = {
+  'EQ-HYP-001': ['Как недельный объём подходов влияет на гипертрофию?', 'Сколько рабочих подходов в неделю нужно мышце для роста?', 'How many weekly working sets does a muscle need to grow?'],
+  'EQ-HYP-002': ['Нужно ли доводить рабочие подходы до мышечного отказа?', 'Нужно ли делать каждый подход до отказа для роста мышц?', 'Do you need to take every set to failure to build muscle?'],
+  'EQ-HYP-003': ['Как нагрузка и диапазон повторений влияют на гипертрофию и силу?', 'С каким весом и числом повторений лучше тренироваться для мышц и силы?', 'What weight and repetition range should you use for muscle and strength?'],
+  'EQ-HYP-004': ['Имеет ли значение частота тренировки мышцы при равном объёме?', 'Сколько раз в неделю нужно тренировать одну мышцу?', 'How many times per week should you train a muscle?'],
+  'EQ-HYP-005': ['Сколько отдыхать между рабочими подходами?', 'Сколько отдыхать между подходами, чтобы следующий подход оставался качественным?', 'How long should you rest so the next set stays effective?'],
+  'EQ-PRG-001': ['Как прогрессировать нагрузку, повторения и объём?', 'Когда увеличивать вес, повторения или число подходов?', 'When should you add weight, repetitions, or sets?'],
+  'EQ-HYP-006': ['Как полная и частичная амплитуда влияют на адаптацию?', 'Нужно ли всегда делать движение полностью или иногда полезна только его часть?', 'Should you always use the full movement, or can part of it sometimes help?'],
+  'EQ-PRG-002': ['Как порядок упражнений влияет на силу и гипертрофию?', 'Какие упражнения лучше ставить в начало тренировки?', 'Which exercises should come first in a workout?'],
+  'EQ-PRG-003': ['Улучшают ли периодизация и плановые разгрузки результаты?', 'Нужно ли заранее менять нагрузку и планировать лёгкие недели?', 'Do you need planned training changes and easier weeks?'],
+  'EQ-CON-001': ['Когда аэробная нагрузка мешает адаптации к силовым тренировкам?', 'Когда кардио может мешать росту мышц, силы или мощности?', 'When can cardio interfere with muscle, strength, or power gains?'],
+}
+
+const claimLanguage = {
+  'ECV-WEEKLY-VOLUME-HYP-v1': ['Больший недельный объём тяжёлых подходов в среднем связан с большей гипертрофией, но отдача снижается, а универсальной верхней границы нет.', 'Больше качественных рабочих подходов за неделю в среднем помогает мышцам расти, но каждый следующий подход приносит меньше пользы. Единого лучшего числа для всех нет.', 'More quality weekly working sets generally support more muscle growth, but each additional set adds less benefit and there is no single best number for everyone.'],
+  'ECV-RIR-HYP-v1': ['Для гипертрофии не обязательно доходить до точного мышечного отказа, однако постоянная остановка очень далеко от отказа может быть менее эффективной.', 'Для роста мышц не обязательно делать каждый подход до отказа. Но подходы, которые заканчиваются слишком легко, могут давать меньше стимула.', 'You do not need to take every set to failure to build muscle, but sets that finish too easily may provide less stimulus.'],
+  'ECV-LOAD-GOAL-v1': ['Широкий диапазон нагрузок при достаточном усилии может поддерживать гипертрофию, а тяжёлая специфичная практика лучше способствует максимальной силе.', 'Мышцы могут расти с разными рабочими весами, если подход достаточно трудный. Для роста максимальной силы важна отдельная практика с тяжёлыми весами.', 'Muscle can grow with a range of weights when sets are sufficiently hard; maximal strength also benefits from specific practice with heavy weights.'],
+  'ECV-FREQUENCY-HYP-v1': ['При равном недельном объёме частота тренировок не оказывает явно выраженного самостоятельного влияния на гипертрофию.', 'Если недельное число качественных подходов одинаково, само по себе количество тренировок мышцы обычно не даёт большого преимущества в росте.', 'When weekly quality-set volume is the same, the number of sessions per muscle does not appear to add a large growth benefit by itself.'],
+  'ECV-REST-HYP-v1': ['Отдых дольше совсем коротких интервалов может немного способствовать гипертрофии за счёт сохранения качества следующих подходов, но универсального оптимума не установлено.', 'Слишком короткий отдых может ухудшить следующие подходы. Лучше отдыхать достаточно для сохранения качества, но одной идеальной длительности для всех нет.', 'Very short rests can reduce the quality of later sets; resting long enough to recover is useful, but there is no single ideal duration for everyone.'],
+  'ECV-PROGRESSION-METHOD-v1': ['Увеличение веса и увеличение повторений могут поддерживать рост силы и мышц; универсальное превосходство одного метода не установлено.', 'Прогрессировать можно и добавляя вес, и делая больше повторений. Нет доказательств, что один из этих способов всегда лучше.', 'You can progress by adding weight or repetitions; neither method is proven universally better.'],
+  'ECV-PROGRESSION-ALGORITHM-v1': ['Доказательств недостаточно, чтобы назвать одну точную последовательность изменения веса, повторений и подходов оптимальной для всех.', 'Исследования пока не позволяют назвать один лучший порядок, в котором всем нужно добавлять вес, повторения и подходы.', 'Research does not identify one best sequence for adding weight, repetitions, and sets for everyone.'],
+  'ECV-ROM-FULL-DEFAULT-v1': ['Полная амплитуда — более надёжная общая стратегия, чем произвольно сокращённая, особенно для силы и гипертрофии нижней части тела.', 'Полное контролируемое движение — более надёжный вариант по умолчанию, чем повторения только в короткой части движения, особенно для мышц нижней части тела.', 'A controlled full movement is a more reliable default than training only a shortened part of the movement, especially for lower-body muscles.'],
+  'ECV-ROM-LENGTHENED-PARTIAL-v1': ['В изученных сравнениях работа в растянутой части движения давала сопоставимый или больший рост отдельных участков прямой и латеральной широкой мышц бедра, бицепса, плечевой мышцы и трицепса, но результаты нельзя переносить на все мышцы и упражнения.', 'В некоторых упражнениях повторения только там, где мышца растянута, дали не меньший или больший рост измеренных участков квадрицепса и мышц рук. Это ещё не универсальная замена полному движению.', 'In some studied exercises, repetitions performed where the muscle is lengthened produced similar or greater growth at measured regions of the quadriceps and arm muscles; this is not a universal replacement for full movement.'],
+  'ECV-ORDER-STRENGTH-PRIORITY-v1': ['Размещение приоритетного упражнения в начале тренировки обычно способствует большему приросту силы именно в нём.', 'Упражнение, в котором важнее всего стать сильнее, обычно стоит выполнять ближе к началу тренировки.', 'The exercise in which strength matters most should generally be performed earlier in the workout.'],
+  'ECV-ORDER-HYPERTROPHY-v1': ['Явного преимущества для гипертрофии у порядка «многосуставные сначала» по сравнению с «односуставные сначала» не показано.', 'Для роста мышц не показано, что базовые упражнения всегда нужно выполнять раньше изолирующих.', 'For muscle growth, evidence does not show that compound exercises must always come before isolation exercises.'],
+  'ECV-PERIODIZATION-OUTCOMES-v1': ['При равном объёме периодизация может немного улучшать силу в 1ПМ, особенно у тренированных, но явного преимущества для гипертрофии нет.', 'Плановая смена нагрузки может немного помогать росту максимальной силы, особенно у тренированных, но явного дополнительного роста мышц не показано.', 'Planned variation may modestly help maximal strength, especially in trained lifters, but has not shown a clear extra muscle-growth benefit.'],
+  'ECV-DELOAD-PLANNED-v1': ['Доказательств недостаточно, чтобы считать разгрузки по фиксированному графику необходимыми или лучшими для всех.', 'Нет достаточных данных, что всем нужна лёгкая неделя через одинаковое число недель.', 'There is not enough evidence that everyone needs an easier week on the same fixed schedule.'],
+  'ECV-CONCURRENT-STRENGTH-HYP-v1': ['Совмещение аэробных и силовых тренировок в среднем не показывает значимого ухудшения гипертрофии или максимальной силы у здоровых взрослых.', 'В среднем кардио вместе с силовыми тренировками не мешает росту мышц или максимальной силы у здоровых взрослых.', 'On average, combining cardio and resistance training does not meaningfully reduce muscle or maximal-strength gains in healthy adults.'],
+  'ECV-CONCURRENT-POWER-SCHEDULE-v1': ['Развитие взрывной силы может ослабляться, когда выносливость и силовая работа выполняются в одной сессии; разнесение на несколько часов может снизить риск.', 'Тяжёлое кардио и силовая работа в одной тренировке могут немного мешать развитию взрывной силы. Разделение по времени может снизить этот риск.', 'Hard endurance and resistance work in the same session may slightly reduce power gains; separating them may reduce that risk.'],
+}
+
+const includedStudyCounts = {
+  'RW-ROM-PALLARES-2021': 16,
+  'RW-ROM-KASSIANO-2023': 11,
+}
+
 const question = (id, topic, questionText, outcomes, critical, reviewIntervalMonths) => ({
   id,
   topic,
   question: questionText,
+  questionRu: questionLanguage[id][0],
+  plainQuestion: questionLanguage[id][2],
+  plainQuestionRu: questionLanguage[id][1],
   outcomes,
   critical,
   reviewIntervalMonths,
   scope: 'Healthy adults; treatment, rehabilitation and acute injuries are out of scope.',
+  scopeRu: 'Здоровые взрослые; лечение, реабилитация и острые травмы не входят в область рассмотрения.',
+  searchStrategy: {
+    databases: ['PubMed/MEDLINE', 'publisher and DOI records'],
+    queries: [questionText],
+    supplementaryMethods: ['reference-list checks', 'known guideline and review checks'],
+  },
+  searchDate: '2026-08-02',
+  searchNotes: 'Rapid editorial scan, not a systematic review. Screening totals and deduplicated primary-study counts were not recorded in phase 0.',
 })
 
 const work = (id, title, year, workType, identifiers, reviewScope = 'abstract_only') => ({
@@ -17,6 +64,7 @@ const work = (id, title, year, workType, identifiers, reviewScope = 'abstract_on
   identifiers,
   correctionStatus: 'unknown',
   reviewScope,
+  ...(includedStudyCounts[id] ? { includedStudiesCount: includedStudyCounts[id] } : {}),
   sourceNotes: 'Draft pilot import; full status, license and conflict checks are required before approval.',
 })
 
@@ -47,6 +95,12 @@ const claim = ({
   population = 'Healthy adults.',
   trainingStatuses = ['mixed'],
   bodyScopes = ['whole_body'],
+  muscles = [],
+  muscleRegions = [],
+  exercises = [],
+  romSegments = [],
+  measurementMethods = [],
+  applicabilityNotes = [],
   limitations = ['Evidence is heterogeneous and does not define an individual optimum.'],
   unknowns = ['Individual response and long-term effects remain uncertain.'],
 }) => ({
@@ -56,10 +110,19 @@ const claim = ({
   version: 1,
   status: 'draft',
   statement,
+  statementRu: claimLanguage[id][0],
+  plainStatement: claimLanguage[id][2],
+  plainStatementRu: claimLanguage[id][1],
   population,
   trainingStatuses,
   bodyScopes,
   outcomes,
+  muscles,
+  muscleRegions,
+  exercises,
+  romSegments,
+  measurementMethods,
+  applicabilityNotes,
   effect,
   certainty,
   certaintyRationale: 'Rapid editorial synthesis; scientific review is required before runtime use.',
@@ -154,8 +217,8 @@ const claims = [
   claim({ id: 'ECV-REST-HYP-v1', claimId: 'EC-REST-HYP', questionId: 'EQ-HYP-005', statement: 'Rest longer than very short intervals may modestly favor hypertrophy by preserving subsequent set quality, but no universal optimum is established.', outcomes: ['hypertrophy', 'fatigue'], effect: 'Possible small benefit above very short rest intervals.', certainty: 'low', evidence: { supports: ['RW-REST-META-2024'], contextualizes: ['RW-ACSM-2026'] } }),
   claim({ id: 'ECV-PROGRESSION-METHOD-v1', claimId: 'EC-PROGRESSION-METHOD', questionId: 'EQ-PRG-001', statement: 'Increasing load and increasing repetitions can both support strength and muscle-size gains; neither has established universal superiority.', outcomes: ['hypertrophy', 'exercise_specific_strength'], effect: 'Both compared overload methods produced adaptations.', certainty: 'low', bodyScopes: ['exercise_specific', 'muscle_specific'], evidence: { supports: ['RW-PROG-CHAVES-2024', 'RW-PROG-PLOTKIN-2022'] } }),
   claim({ id: 'ECV-PROGRESSION-ALGORITHM-v1', claimId: 'EC-PROGRESSION-ALGORITHM', questionId: 'EQ-PRG-001', statement: 'Evidence is insufficient to identify one exact sequence of load, repetition and set changes as optimal for everyone.', outcomes: ['hypertrophy', 'exercise_specific_strength', 'adherence', 'fatigue'], effect: 'Insufficient comparative evidence.', certainty: 'very_low', evidence: { contextualizes: ['RW-ACSM-2026', 'RW-PROG-CHAVES-2024', 'RW-PROG-PLOTKIN-2022'] } }),
-  claim({ id: 'ECV-ROM-FULL-DEFAULT-v1', claimId: 'EC-ROM-FULL-DEFAULT', questionId: 'EQ-HYP-006', statement: 'Full ROM is a more reliable general strategy than arbitrary shortened ROM, particularly for lower-body strength and hypertrophy.', outcomes: ['hypertrophy', 'exercise_specific_strength'], effect: 'Full ROM generally favored over pooled partial-ROM conditions.', certainty: 'moderate', bodyScopes: ['lower_body', 'exercise_specific'], evidence: { supports: ['RW-ROM-PALLARES-2021', 'RW-ROM-KASSIANO-2023'], contextualizes: ['RW-ACSM-2026'] } }),
-  claim({ id: 'ECV-ROM-LENGTHENED-PARTIAL-v1', claimId: 'EC-ROM-LENGTHENED-PARTIAL', questionId: 'EQ-HYP-006', statement: 'Lengthened partial ROM may match or exceed full ROM for local hypertrophy in selected muscles and exercises, but it is not a universal rule.', outcomes: ['hypertrophy'], effect: 'Potential exercise- and site-specific benefit.', certainty: 'low', bodyScopes: ['muscle_specific', 'exercise_specific'], evidence: { supports: ['RW-ROM-KASSIANO-2023'], contextualizes: ['RW-ROM-PALLARES-2021'] } }),
+  claim({ id: 'ECV-ROM-FULL-DEFAULT-v1', claimId: 'EC-ROM-FULL-DEFAULT', questionId: 'EQ-HYP-006', statement: 'Full ROM is a more reliable general strategy than arbitrary shortened ROM, particularly for lower-body strength and hypertrophy.', outcomes: ['hypertrophy', 'exercise_specific_strength'], effect: 'Full ROM generally favored over pooled partial-ROM conditions.', certainty: 'moderate', bodyScopes: ['lower_body', 'exercise_specific'], muscles: ['quadriceps femoris', 'gluteus maximus', 'hip adductors'], exercises: ['squat', 'knee extension'], romSegments: ['full', 'shortened_partial'], measurementMethods: ['MRI', 'ultrasound'], applicabilityNotes: ['Muscle-specific results differ; the lower-body finding must not be generalized to every muscle.'], evidence: { supports: ['RW-ROM-PALLARES-2021', 'RW-ROM-KASSIANO-2023'], contextualizes: ['RW-ACSM-2026'] } }),
+  claim({ id: 'ECV-ROM-LENGTHENED-PARTIAL-v1', claimId: 'EC-ROM-LENGTHENED-PARTIAL', questionId: 'EQ-HYP-006', statement: 'In studied comparisons, lengthened-region training produced similar or greater growth at measured regions of rectus femoris, vastus lateralis, biceps brachii, brachialis and triceps brachii, but the result cannot be generalized to all muscles and exercises.', outcomes: ['hypertrophy'], effect: 'Potential exercise-, muscle- and measurement-site-specific benefit.', certainty: 'low', bodyScopes: ['muscle_specific', 'exercise_specific'], muscles: ['rectus femoris', 'vastus lateralis', 'biceps brachii', 'brachialis', 'triceps brachii'], muscleRegions: ['proximal rectus femoris', 'distal elbow flexors', 'study-specific triceps measurement sites'], exercises: ['knee extension', 'elbow flexion', 'triceps extension'], romSegments: ['full', 'lengthened_partial', 'middle_partial', 'shortened_partial'], measurementMethods: ['ultrasound'], applicabilityNotes: ['The evidence concerns measured muscle regions, not necessarily whole-muscle growth.', 'Do not transfer results from one muscle or exercise to another without direct evidence.'], evidence: { supports: ['RW-ROM-KASSIANO-2023'], contextualizes: ['RW-ROM-PALLARES-2021'] } }),
   claim({ id: 'ECV-ORDER-STRENGTH-PRIORITY-v1', claimId: 'EC-ORDER-STRENGTH-PRIORITY', questionId: 'EQ-PRG-002', statement: 'Placing a priority exercise earlier in a session tends to favor strength gain in that exercise.', outcomes: ['exercise_specific_strength'], effect: 'Earlier placement favors exercise-specific strength.', certainty: 'moderate', bodyScopes: ['exercise_specific'], evidence: { supports: ['RW-ORDER-NUNES-2021'] } }),
   claim({ id: 'ECV-ORDER-HYPERTROPHY-v1', claimId: 'EC-ORDER-HYPERTROPHY', questionId: 'EQ-PRG-002', statement: 'No clear hypertrophy advantage has been shown for multi-joint-first versus single-joint-first ordering.', outcomes: ['hypertrophy'], effect: 'No clear difference detected.', certainty: 'low', evidence: { supports: ['RW-ORDER-NUNES-2021'] } }),
   claim({ id: 'ECV-PERIODIZATION-OUTCOMES-v1', claimId: 'EC-PERIODIZATION-OUTCOMES', questionId: 'EQ-PRG-003', statement: 'Volume-equated periodization may modestly improve 1RM strength, especially in trained lifters, without a clear hypertrophy advantage.', outcomes: ['maximal_strength', 'hypertrophy'], effect: 'Small strength advantage; no clear hypertrophy advantage.', certainty: 'moderate', trainingStatuses: ['trained', 'mixed'], evidence: { supports: ['RW-PERIOD-MOESGAARD-2022'], contextualizes: ['RW-ACSM-2026'] } }),

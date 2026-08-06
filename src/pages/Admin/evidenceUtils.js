@@ -9,8 +9,8 @@ export const CERTAINTY_LABELS = {
 }
 
 export const BLOCKER_LABELS = {
-  ru: { claim_not_in_review: 'Тезис ещё не отправлен на ревью', claim_review_expired: 'Дата пересмотра тезиса истекла', claim_has_no_supporting_evidence: 'Нет поддерживающих исследований' },
-  en: { claim_not_in_review: 'Claim is not in review', claim_review_expired: 'Claim review is overdue', claim_has_no_supporting_evidence: 'Claim has no supporting evidence' },
+  ru: { claim_not_in_review: 'Тезис ещё не отправлен на ревью', claim_review_expired: 'Дата пересмотра тезиса истекла', claim_has_no_supporting_evidence: 'Нет поддерживающих исследований', claim_muscle_scope_missing: 'Не указаны мышцы для мышечно-специфичного вывода', claim_measurement_scope_missing: 'Для локального результата не указан метод измерения' },
+  en: { claim_not_in_review: 'Claim is not in review', claim_review_expired: 'Claim review is overdue', claim_has_no_supporting_evidence: 'Claim has no supporting evidence', claim_muscle_scope_missing: 'Muscles are missing for a muscle-specific claim', claim_measurement_scope_missing: 'Measurement method is missing for a regional result' },
 }
 
 const TONES = { in_review: 'warning', approved: 'success', disputed: 'danger' }

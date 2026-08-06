@@ -44,6 +44,25 @@ describe('getClaimApprovalBlockers', () => {
     expect(getClaimApprovalBlockers(claim, [], { now: NOW }))
       .toContain('claim_has_no_supporting_evidence')
   })
+
+  test('blocks a muscle-specific hypertrophy claim without named muscles', () => {
+    const claim = readyClaim()
+    claim.outcomes = ['hypertrophy']
+    claim.bodyScopes = ['muscle_specific']
+    claim.muscles = []
+
+    expect(getClaimApprovalBlockers(claim, [{ workId: 'RW-A', status: 'approved' }], { now: NOW }))
+      .toContain('claim_muscle_scope_missing')
+  })
+
+  test('requires a measurement method when regional muscle results are claimed', () => {
+    const claim = readyClaim()
+    claim.muscleRegions = ['distal biceps']
+    claim.measurementMethods = []
+
+    expect(getClaimApprovalBlockers(claim, [{ workId: 'RW-A', status: 'approved' }], { now: NOW }))
+      .toContain('claim_measurement_scope_missing')
+  })
 })
 
 describe('getRecommendationApprovalBlockers', () => {

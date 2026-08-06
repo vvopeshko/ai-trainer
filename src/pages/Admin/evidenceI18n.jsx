@@ -36,6 +36,17 @@ const ui = {
     recommendationSubmitTitle: 'Отправить рекомендацию на ревью?', recommendationSubmitSuccess: 'Рекомендация отправлена на ревью',
     recommendationApproveTitle: 'Одобрить рекомендацию?', recommendationApproveSuccess: 'Рекомендация одобрена',
     workCurrentTitle: 'Подтвердить актуальность источника?', workCurrentConfirm: 'Отметить актуальным', workCurrentSuccess: 'Статус источника обновлён',
+    openQuestion: 'Открыть материалы', scientificWording: 'Точная научная формулировка', applicability: 'Где применим вывод',
+    muscles: 'Мышцы', muscleRegions: 'Участки мышцы', exercises: 'Упражнения', romSegments: 'Часть амплитуды',
+    measurementMethods: 'Методы измерения', applicabilityNotes: 'Границы переноса результата', notSpecified: 'Не указано',
+    backQuestions: '← Назад к вопросам', researchCoverage: 'Покрытие исследований', linkedPublications: 'связанных публикаций',
+    decisionPublications: 'влияют на вывод', assessedPublications: 'имеют оценку', fullTextReviewed: 'проверено полностью',
+    collectionMethod: 'Как собирали материалы', searchDate: 'Дата поиска', databases: 'Базы и источники', searchQueries: 'Поисковые формулировки',
+    coverageCaveat: 'Почему число нельзя считать полным', coverageCaveatText: 'Это быстрый редакционный поиск, а не систематический обзор. Число найденных записей и уникальных первичных исследований после удаления дублей на первом этапе не фиксировалось.',
+    works: 'Публикации', includedStudies: '{{count}} исследований внутри обзора', primaryStudy: 'первичное исследование',
+    synthesisType: 'обзорный источник', usages: 'Использование знаний', aiTests: 'AI-сценарии', blogOutlines: 'Материалы блога',
+    noItems: 'Пока ничего нет', scientificQuestion: 'Точная исследовательская формулировка', reportedReviewStudies: 'исследований заявлено внутри обзоров',
+    notDeduplicated: 'не удалены пересечения между обзорами', currentVerified: 'источников с проверенным статусом',
   },
   en: {
     knowledgeBase: 'AI Trainer knowledge base', toApp: 'Back to app', loading: 'Loading evidence base…',
@@ -69,6 +80,17 @@ const ui = {
     recommendationSubmitTitle: 'Submit recommendation for review?', recommendationSubmitSuccess: 'Recommendation submitted for review',
     recommendationApproveTitle: 'Approve recommendation?', recommendationApproveSuccess: 'Recommendation approved',
     workCurrentTitle: 'Confirm this source is current?', workCurrentConfirm: 'Mark current', workCurrentSuccess: 'Source status updated',
+    openQuestion: 'Open workspace', scientificWording: 'Exact scientific wording', applicability: 'Where the claim applies',
+    muscles: 'Muscles', muscleRegions: 'Muscle regions', exercises: 'Exercises', romSegments: 'ROM segment',
+    measurementMethods: 'Measurement methods', applicabilityNotes: 'Generalization limits', notSpecified: 'Not specified',
+    backQuestions: '← Back to questions', researchCoverage: 'Research coverage', linkedPublications: 'linked publications',
+    decisionPublications: 'inform the conclusion', assessedPublications: 'have an assessment', fullTextReviewed: 'reviewed in full',
+    collectionMethod: 'How materials were collected', searchDate: 'Search date', databases: 'Databases and sources', searchQueries: 'Search queries',
+    coverageCaveat: 'Why this is not a complete count', coverageCaveatText: 'This was a rapid editorial search, not a systematic review. Phase 0 did not record all screened records or the deduplicated number of primary studies.',
+    works: 'Publications', includedStudies: '{{count}} studies inside this review', primaryStudy: 'primary study', synthesisType: 'evidence synthesis',
+    usages: 'Knowledge usages', aiTests: 'AI scenarios', blogOutlines: 'Blog materials', noItems: 'Nothing yet',
+    scientificQuestion: 'Exact research wording', reportedReviewStudies: 'studies reported inside reviews', notDeduplicated: 'overlap between reviews not removed',
+    currentVerified: 'sources with verified status',
   },
 }
 
@@ -127,6 +149,7 @@ const termsRu = {
   position_stand: 'позиционный документ', meta_analysis: 'метаанализ', systematic_review: 'систематический обзор', umbrella_review: 'зонтичный обзор', rct: 'РКИ',
   load_and_repetitions: 'нагрузка и повторения', frequency: 'частота', inter_set_rest: 'отдых между подходами', progression: 'прогрессия',
   range_of_motion: 'амплитуда движения', exercise_order: 'порядок упражнений', periodization_and_deload: 'периодизация и разгрузка', concurrent_training: 'совмещённые тренировки',
+  full: 'полное движение', lengthened_partial: 'растянутая часть движения', shortened_partial: 'сокращённая часть движения', middle_partial: 'средняя часть движения',
 }
 
 const EvidenceLocaleContext = createContext(null)
@@ -139,6 +162,8 @@ export function evidenceUiText(key, language = 'ru', params) {
 export function evidenceContent(entity, field, language = 'ru') {
   if (!entity) return ''
   if (language === 'en') return entity[field]
+  const storedRu = entity[`${field}Ru`]
+  if (storedRu != null) return storedRu
   const localized = ruContent[entity.id]
   if (!localized) return entity[field]
   return localized[field] ?? commonRu[field] ?? entity[field]

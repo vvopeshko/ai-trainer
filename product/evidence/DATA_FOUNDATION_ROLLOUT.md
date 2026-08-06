@@ -124,3 +124,27 @@ EVIDENCE_APPROVER_IDS=<User.id или tg:telegramId через запятую>
 
 Без этих переменных review API fail-closed. `ANALYTICS_SECRET` не открывает доступ к
 evidence write endpoints.
+
+## 8. Plain-language и Question workspace rollout — 2026-08-06
+
+Перед деплоем версии с понятными формулировками и детальной страницей вопроса нужно
+один раз выполнить в Neon SQL Editor:
+
+```text
+server/prisma/manual/2026-08-06-evidence-plain-language-workspace.sql
+```
+
+SQL только добавляет новые колонки и безопасно заполняет их текущими текстами как
+fallback. После этого запустить pilot import, чтобы загрузить подготовленные RU/EN
+формулировки, поисковый контекст и muscle scope:
+
+```bash
+cd server
+npm run evidence:import-pilot:dry
+npm run evidence:import-pilot
+```
+
+Порядок важен: новый backend нельзя включать до применения SQL, иначе Prisma будет
+запрашивать отсутствующие колонки. Одобренные версии import не перезаписывает; если
+такие версии уже существуют, новые поля должен заполнить reviewer отдельной новой
+версией claim.

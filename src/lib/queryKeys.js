@@ -32,6 +32,7 @@ export const queryKeys = {
     all: ['evidence'],
     access: ['evidence', 'access'],
     questions: ['evidence', 'questions'],
+    question: (id) => ['evidence', 'question', id],
     claims: (filters = {}) => ['evidence', 'claims', filters],
     claim: (id) => ['evidence', 'claim', id],
     runtime: (questionId, outcome = '') => ['evidence', 'runtime', questionId, outcome],
