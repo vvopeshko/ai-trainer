@@ -69,8 +69,8 @@ Import выполняется одной транзакцией и идемпо�
 - не понижает проверенный correction status работы обратно до `unknown`;
 - перестраивает только evidence/recommendation links изменённого draft.
 
-Ожидаемые counts: 10 questions, 19 works, 12 assessments, 15 claim versions,
-10 recommendations, 50 AI tests, 6 blog outlines.
+Ожидаемые counts: 10 questions, 27 works, 20 assessments, 18 claim versions,
+10 recommendations, 56 AI tests, 6 blog outlines.
 
 ## 4. Runtime smoke test
 

@@ -9,9 +9,9 @@ describe('evidenceDatasetSchema', () => {
     const dataset = evidenceDatasetSchema.parse(evidencePilotFixtures)
 
     expect(dataset.questions).toHaveLength(10)
-    expect(dataset.claims).toHaveLength(15)
+    expect(dataset.claims).toHaveLength(18)
     expect(dataset.recommendations).toHaveLength(10)
-    expect(dataset.aiTests).toHaveLength(50)
+    expect(dataset.aiTests).toHaveLength(56)
     expect(dataset.blogOutlines).toHaveLength(6)
   })
 

@@ -35,6 +35,8 @@
   evidence-цепочек по основным переменным программы.
 - [SPIKE_02_ADVANCED_PROGRAMMING.md](SPIKE_02_ADVANCED_PROGRAMMING.md) — ещё десять
   outcome-specific claims по пяти вопросам.
+- [ROM_REVIEW_PACKET.md](ROM_REVIEW_PACKET.md) — обновлённый поиск, evidence matrix
+  и muscle-specific draft claims по полной и частичной амплитуде.
 - [AI_REGRESSION_SET.md](AI_REGRESSION_SET.md) — 50 тестовых вопросов для AI.
 - [BLOG_BRIEFS.md](BLOG_BRIEFS.md) — шесть evidence-backed content briefs.
 - [SPIKE_01_FINDINGS.md](SPIKE_01_FINDINGS.md) — что spike изменил в будущей
@@ -68,8 +70,9 @@
 
 ## Дата среза
 
-Первый поиск выполнен 2026-08-02. Для каждой цепочки отдельно указаны дата поиска,
-охват и ограничения. Это rapid editorial scan, а не systematic review.
+Первый поиск выполнен 2026-08-02; вопрос об амплитуде обновлён 2026-08-06. Для
+каждой цепочки отдельно указаны дата поиска, охват и ограничения. Это rapid
+editorial scan, а не systematic review.
 
 ## Готовность фазы 0
 
@@ -81,6 +84,9 @@
 - ✅ подготовлены шесть blog briefs;
 - ⏳ нужен human scientific review всех draft claims;
 - ⏳ после review нужно реально прогнать AI regression set.
+
+После фазы 0 вопрос об амплитуде расширен до 18 draft claims и 56 AI regression
+cases. Исторические counts выше сохранены как результат исходного пилота.
 
 ## Data foundation v0
 

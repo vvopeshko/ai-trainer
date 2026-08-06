@@ -37,11 +37,11 @@ describe('createEvidenceRepository', () => {
 
     expect(repository.counts).toEqual({
       questions: 10,
-      works: 19,
-      assessments: 12,
-      claims: 15,
+      works: 27,
+      assessments: 20,
+      claims: 18,
       recommendations: 10,
-      aiTests: 50,
+      aiTests: 56,
       blogOutlines: 6,
     })
   })
@@ -86,7 +86,12 @@ describe('createEvidenceRepository', () => {
     )
     expect(result.answerability).toBe('evidence_only')
 
-    approveClaim(dataset, 'ECV-ROM-LENGTHENED-PARTIAL-v1')
+    for (const claimId of [
+      'ECV-ROM-LENGTHENED-PARTIAL-v1',
+      'ECV-ROM-CALF-LENGTHENED-v1',
+      'ECV-ROM-ARMS-LENGTHENED-v1',
+      'ECV-ROM-QUAD-LENGTHENED-v1',
+    ]) approveClaim(dataset, claimId)
     repository = createEvidenceRepository(dataset)
     result = repository.getEvidenceGuidance(
       { questionId: 'EQ-HYP-006', outcome: 'exercise_specific_strength', bodyScope: 'lower_body' },
