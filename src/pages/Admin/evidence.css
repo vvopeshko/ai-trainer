@@ -6,6 +6,9 @@
 .evidence-brand strong { font-size: 14px; letter-spacing: -.01em; }
 .evidence-brand small { color: var(--fg-tertiary); font-size: 10px; }
 .evidence-header-actions { display: flex; align-items: center; gap: 12px; }
+.evidence-language { display: flex; padding: 2px; border: 1px solid var(--border-subtle); border-radius: 9px; background: rgba(255,255,255,.035); }
+.evidence-language button { width: 34px; height: 27px; padding: 0; border: 0; border-radius: 7px; color: var(--fg-tertiary); background: transparent; cursor: pointer; font: 650 9px/1 var(--font-mono); }
+.evidence-language button.is-active { color: var(--fg-primary); background: rgba(255,255,255,.11); box-shadow: var(--shadow-flat); }
 .evidence-role { padding: 5px 9px; border-radius: 999px; color: var(--accent-color-strong); background: var(--accent-color-soft); font: 600 10px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
 .evidence-app-link, .evidence-back { color: var(--fg-secondary); text-decoration: none; transition: color 150ms; }
 .evidence-app-link:hover, .evidence-back:hover { color: var(--fg-primary); }

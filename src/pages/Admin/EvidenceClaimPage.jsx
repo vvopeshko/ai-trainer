@@ -6,9 +6,15 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import { useEvidenceAccess, useEvidenceAction, useEvidenceClaim, useEvidenceRuntime } from '../../hooks/evidence.js'
 import { ActionDialog, ErrorState, EvidenceShell, LoadingState, StatusBadge } from './EvidenceShared.jsx'
 import { blockerLabel, CERTAINTY_LABELS, errorMessage, formatDate } from './evidenceUtils.js'
+import { EvidenceLocaleProvider, useEvidenceLocale } from './evidenceI18n.jsx'
 
 export default function EvidenceClaimPage() {
+  return <EvidenceLocaleProvider><EvidenceClaim /></EvidenceLocaleProvider>
+}
+
+function EvidenceClaim() {
   const { id } = useParams()
+  const { language, t, content } = useEvidenceLocale()
   const toast = useToast()
   const access = useEvidenceAccess()
   const claimQuery = useEvidenceClaim(id, access.isSuccess)
@@ -35,49 +41,49 @@ export default function EvidenceClaimPage() {
       toast.show(dialog.success, 'success')
       setDialog(null)
     } catch (error) {
-      toast.show(errorMessage(error))
+      toast.show(errorMessage(error, language))
     }
   }
 
   const openTransition = (kind, entity = claim) => {
     const transitions = {
-      claimSubmit: { title: 'Отправить claim на ревью?', confirmLabel: 'Отправить', path: `/claim-versions/${claim.id}/submit`, success: 'Claim отправлен на ревью' },
-      claimApprove: { title: 'Одобрить claim?', description: 'После одобрения он сможет участвовать в runtime guidance.', confirmLabel: 'Одобрить', path: `/claim-versions/${claim.id}/approve`, success: 'Claim одобрен' },
-      claimDispute: { title: 'Оспорить claim?', description: 'Связанные рекомендации перестанут быть доступны runtime.', confirmLabel: 'Оспорить', variant: 'danger', path: `/claim-versions/${claim.id}/dispute`, success: 'Claim помечен как disputed' },
-      assessmentSubmit: { title: 'Отправить assessment на ревью?', confirmLabel: 'Отправить', path: `/assessments/${entity.id}/submit`, success: 'Assessment отправлен на ревью' },
-      assessmentApprove: { title: 'Одобрить assessment?', confirmLabel: 'Одобрить', path: `/assessments/${entity.id}/approve`, success: 'Assessment одобрен' },
-      recommendationSubmit: { title: 'Отправить рекомендацию на ревью?', confirmLabel: 'Отправить', path: `/recommendations/${entity.id}/submit`, success: 'Рекомендация отправлена на ревью' },
-      recommendationApprove: { title: 'Одобрить рекомендацию?', confirmLabel: 'Одобрить', path: `/recommendations/${entity.id}/approve`, success: 'Рекомендация одобрена' },
+      claimSubmit: { title: t('claimSubmitTitle'), confirmLabel: t('submit'), path: `/claim-versions/${claim.id}/submit`, success: t('claimSubmitSuccess') },
+      claimApprove: { title: t('claimApproveTitle'), description: t('claimApproveDesc'), confirmLabel: t('approve'), path: `/claim-versions/${claim.id}/approve`, success: t('claimApproveSuccess') },
+      claimDispute: { title: t('claimDisputeTitle'), description: t('claimDisputeDesc'), confirmLabel: t('dispute'), variant: 'danger', path: `/claim-versions/${claim.id}/dispute`, success: t('claimDisputeSuccess') },
+      assessmentSubmit: { title: t('assessmentSubmitTitle'), confirmLabel: t('submit'), path: `/assessments/${entity.id}/submit`, success: t('assessmentSubmitSuccess') },
+      assessmentApprove: { title: t('assessmentApproveTitle'), confirmLabel: t('approve'), path: `/assessments/${entity.id}/approve`, success: t('assessmentApproveSuccess') },
+      recommendationSubmit: { title: t('recommendationSubmitTitle'), confirmLabel: t('submit'), path: `/recommendations/${entity.id}/submit`, success: t('recommendationSubmitSuccess') },
+      recommendationApprove: { title: t('recommendationApproveTitle'), confirmLabel: t('approve'), path: `/recommendations/${entity.id}/approve`, success: t('recommendationApproveSuccess') },
     }
     setDialog(transitions[kind])
   }
 
   return (
     <EvidenceShell role={access.data.role}>
-      <Link className="evidence-back" to="/admin/evidence">← Назад к очереди</Link>
+      <Link className="evidence-back" to="/admin/evidence">{t('backQueue')}</Link>
       <section className="evidence-detail-head">
         <div>
           <div className="evidence-detail-labels"><span className="evidence-id">{claim.id}</span><StatusBadge status={claim.status} /></div>
-          <h1>{claim.statement}</h1>
-          <p>{claim.claim.question.question}</p>
+          <h1>{content(claim, 'statement')}</h1>
+          <p>{content(claim.claim.question, 'question')}</p>
         </div>
         <ClaimActions claim={claim} isApprover={isApprover} open={openTransition} />
       </section>
 
       <div className="evidence-detail-grid">
         <div className="evidence-detail-main">
-          <Section title="Evidence synthesis" aside={`${CERTAINTY_LABELS[claim.certainty] || claim.certainty} certainty`}>
+          <Section title={t('synthesis')} aside={`${CERTAINTY_LABELS[language]?.[claim.certainty] || claim.certainty} · ${t('certainty')}`}>
             <dl className="evidence-definition-grid">
-              <div><dt>Population</dt><dd>{claim.population}</dd></div>
-              <div><dt>Effect</dt><dd>{claim.effect}</dd></div>
-              <div><dt>Certainty rationale</dt><dd>{claim.certaintyRationale}</dd></div>
-              <div><dt>Search cutoff</dt><dd>{formatDate(claim.searchCutoff)}</dd></div>
+              <div><dt>{t('population')}</dt><dd>{content(claim, 'population')}</dd></div>
+              <div><dt>{t('effect')}</dt><dd>{content(claim, 'effect')}</dd></div>
+              <div><dt>{t('certaintyRationale')}</dt><dd>{content(claim, 'certaintyRationale')}</dd></div>
+              <div><dt>{t('searchCutoff')}</dt><dd>{formatDate(claim.searchCutoff, language)}</dd></div>
             </dl>
-            <ListBlock title="Ограничения" items={claim.limitations} />
-            <ListBlock title="Неизвестно" items={claim.unknowns} />
+            <ListBlock title={t('limitations')} items={content(claim, 'limitations')} />
+            <ListBlock title={t('unknowns')} items={content(claim, 'unknowns')} />
           </Section>
 
-          <Section title="Исследования и assessments" aside={`${claim.evidenceLinks.length} sources`}>
+          <Section title={t('studiesAssessments')} aside={t('sourceCount', { count: claim.evidenceLinks.length })}>
             <div className="evidence-source-list">
               {claim.evidenceLinks.map((link) => (
                 <SourceRow key={link.workId} link={link} assessment={assessmentsByWork.get(link.workId)}
@@ -86,42 +92,42 @@ export default function EvidenceClaimPage() {
             </div>
           </Section>
 
-          <Section title="Рекомендации" aside={`${claim.recommendationLinks.length}`}>
+          <Section title={t('recommendations')} aside={`${claim.recommendationLinks.length}`}>
             {claim.recommendationLinks.length ? claim.recommendationLinks.map(({ recommendation }) => (
               <Recommendation key={recommendation.id} recommendation={recommendation} isApprover={isApprover} open={openTransition} />
-            )) : <p className="evidence-muted">К этому claim пока нет рекомендаций.</p>}
+            )) : <p className="evidence-muted">{t('noRecommendations')}</p>}
           </Section>
 
-          <Section title="Audit trail" aside={`${claim.audit.length} events`}>
+          <Section title={t('auditTrail')} aside={t('eventCount', { count: claim.audit.length })}>
             {claim.audit.length ? <div className="evidence-audit-list">{claim.audit.map((event) => (
-              <div key={event.id}><span className="evidence-audit-dot" /><div><strong>{event.action}</strong><p>{event.comment || 'Без комментария'}</p><small>{event.actorId} · {formatDate(event.createdAt)}</small></div></div>
-            ))}</div> : <p className="evidence-muted">Событий ревью ещё нет.</p>}
+              <div key={event.id}><span className="evidence-audit-dot" /><div><strong>{event.action}</strong><p>{event.comment || t('noComment')}</p><small>{event.actorId} · {formatDate(event.createdAt, language)}</small></div></div>
+            ))}</div> : <p className="evidence-muted">{t('noAudit')}</p>}
           </Section>
         </div>
 
         <aside className="evidence-detail-aside">
           <Glass padding={20} radius={16} className={claim.approvalBlockers.length ? 'evidence-blockers has-blockers' : 'evidence-blockers'}>
-            <div className="evidence-section-title"><h2>Approval readiness</h2><span>{claim.approvalBlockers.length}</span></div>
+            <div className="evidence-section-title"><h2>{t('approvalReadiness')}</h2><span>{claim.approvalBlockers.length}</span></div>
             {claim.approvalBlockers.length ? (
-              <ul>{claim.approvalBlockers.map((blocker) => <li key={blocker}>{blockerLabel(blocker)}</li>)}</ul>
-            ) : <p className="evidence-ready">Все проверки пройдены. Claim готов к одобрению.</p>}
+              <ul>{claim.approvalBlockers.map((blocker) => <li key={blocker}>{blockerLabel(blocker, language)}</li>)}</ul>
+            ) : <p className="evidence-ready">{t('ready')}</p>}
           </Glass>
 
           <Glass padding={20} radius={16} className="evidence-runtime-card">
-            <div className="evidence-section-title"><h2>Runtime check</h2></div>
-            <p>Проверяет, что именно получит AI-тренер из опубликованного слоя.</p>
-            <Button block variant="secondary" loading={runtime.isFetching} onClick={() => setShowRuntime(true)}>Запустить fail-closed check</Button>
+            <div className="evidence-section-title"><h2>{t('runtimeCheck')}</h2></div>
+            <p>{t('runtimeHint')}</p>
+            <Button block variant="secondary" loading={runtime.isFetching} onClick={() => setShowRuntime(true)}>{t('runCheck')}</Button>
             {showRuntime && runtime.data && <RuntimeResult result={runtime.data} />}
-            {showRuntime && runtime.isError && <p className="evidence-runtime-error">{errorMessage(runtime.error)}</p>}
+            {showRuntime && runtime.isError && <p className="evidence-runtime-error">{errorMessage(runtime.error, language)}</p>}
           </Glass>
 
           <Glass padding={20} radius={16}>
-            <div className="evidence-section-title"><h2>Review metadata</h2></div>
+            <div className="evidence-section-title"><h2>{t('reviewMetadata')}</h2></div>
             <dl className="evidence-side-meta">
-              <div><dt>Review due</dt><dd>{formatDate(claim.reviewDueAt)}</dd></div>
-              <div><dt>Created by</dt><dd>{claim.createdBy}</dd></div>
-              <div><dt>Reviewed by</dt><dd>{claim.reviewedBy || '—'}</dd></div>
-              <div><dt>Version</dt><dd>v{claim.version}</dd></div>
+              <div><dt>{t('reviewDue')}</dt><dd>{formatDate(claim.reviewDueAt, language)}</dd></div>
+              <div><dt>{t('createdBy')}</dt><dd>{claim.createdBy}</dd></div>
+              <div><dt>{t('reviewedBy')}</dt><dd>{claim.reviewedBy || '—'}</dd></div>
+              <div><dt>{t('version')}</dt><dd>v{claim.version}</dd></div>
             </dl>
           </Glass>
         </aside>
@@ -131,19 +137,20 @@ export default function EvidenceClaimPage() {
       {assessmentEdit && <AssessmentDialog assessment={assessmentEdit} busy={action.isPending} onClose={() => setAssessmentEdit(null)} onSave={async (body) => {
         try {
           await action.mutateAsync({ method: 'PATCH', path: `/assessments/${assessmentEdit.id}`, body })
-          toast.show('Assessment обновлён', 'success')
+          toast.show(t('assessmentUpdated'), 'success')
           setAssessmentEdit(null)
-        } catch (error) { toast.show(errorMessage(error)) }
+        } catch (error) { toast.show(errorMessage(error, language)) }
       }} />}
     </EvidenceShell>
   )
 }
 
 function ClaimActions({ claim, isApprover, open }) {
+  const { t } = useEvidenceLocale()
   return <div className="evidence-detail-actions">
-    {claim.status === 'draft' && <Button variant="accent" onClick={() => open('claimSubmit')}>Отправить на ревью</Button>}
-    {claim.status === 'in_review' && isApprover && <Button variant="success" disabled={claim.approvalBlockers.length > 0} onClick={() => open('claimApprove')}>Одобрить</Button>}
-    {['in_review', 'approved'].includes(claim.status) && isApprover && <Button variant="danger" onClick={() => open('claimDispute')}>Оспорить</Button>}
+    {claim.status === 'draft' && <Button variant="accent" onClick={() => open('claimSubmit')}>{t('submitReview')}</Button>}
+    {claim.status === 'in_review' && isApprover && <Button variant="success" disabled={claim.approvalBlockers.length > 0} onClick={() => open('claimApprove')}>{t('approve')}</Button>}
+    {['in_review', 'approved'].includes(claim.status) && isApprover && <Button variant="danger" onClick={() => open('claimDispute')}>{t('dispute')}</Button>}
   </div>
 }
 
@@ -157,51 +164,55 @@ function ListBlock({ title, items }) {
 }
 
 function SourceRow({ link, assessment, isApprover, open, edit, setDialog }) {
+  const { t, term } = useEvidenceLocale()
   const work = link.work
   return <article className="evidence-source-row">
     <div className="evidence-source-body">
-      <div className="evidence-source-labels"><span className={`evidence-relation is-${link.relation}`}>{link.relation}</span><span>{work.workType} · {work.year}</span></div>
+      <div className="evidence-source-labels"><span className={`evidence-relation is-${link.relation}`}>{term(link.relation)}</span><span>{term(work.workType)} · {work.year}</span></div>
       <h3>{work.title}</h3>
-      <p>{work.id} · source {work.status} · correction {work.correctionStatus}</p>
+      <p>{t('sourceState', { id: work.id, status: term(work.status), correction: term(work.correctionStatus) })}</p>
       {assessment ? <div className="evidence-assessment-summary">
         <StatusBadge status={assessment.status} />
-        <span>{assessment.reviewScope.replaceAll('_', ' ')}</span><span>RoB: {assessment.riskOfBias.replaceAll('_', ' ')}</span>
-      </div> : <p className="evidence-warning-text">Assessment не найден</p>}
+        <span>{term(assessment.reviewScope)}</span><span>{t('riskOfBias')}: {term(assessment.riskOfBias)}</span>
+      </div> : <p className="evidence-warning-text">{t('assessmentMissing')}</p>}
     </div>
     <div className="evidence-row-actions">
-      {assessment && ['draft', 'in_review'].includes(assessment.status) && <button onClick={() => edit(assessment)}>Редактировать</button>}
-      {assessment?.status === 'draft' && <button onClick={() => open('assessmentSubmit', assessment)}>Submit</button>}
-      {assessment?.status === 'in_review' && isApprover && <button onClick={() => open('assessmentApprove', assessment)}>Approve</button>}
+      {assessment && ['draft', 'in_review'].includes(assessment.status) && <button onClick={() => edit(assessment)}>{t('edit')}</button>}
+      {assessment?.status === 'draft' && <button onClick={() => open('assessmentSubmit', assessment)}>{t('submit')}</button>}
+      {assessment?.status === 'in_review' && isApprover && <button onClick={() => open('assessmentApprove', assessment)}>{t('approve')}</button>}
       {isApprover && work.correctionStatus !== 'current' && <button onClick={() => setDialog({
-        title: 'Подтвердить актуальность источника?', confirmLabel: 'Отметить current', success: 'Статус источника обновлён',
+        title: t('workCurrentTitle'), confirmLabel: t('workCurrentConfirm'), success: t('workCurrentSuccess'),
         path: `/works/${work.id}/status`, body: { correctionStatus: 'current' },
-      })}>Mark current</button>}
+      })}>{t('markCurrent')}</button>}
     </div>
   </article>
 }
 
 function Recommendation({ recommendation, isApprover, open }) {
+  const { language, t, content, term } = useEvidenceLocale()
   return <article className="evidence-recommendation">
     <div className="evidence-card-top"><span className="evidence-id">{recommendation.id}</span><StatusBadge status={recommendation.status} /></div>
-    <h3>{recommendation.guidance}</h3>
-    <p>{recommendation.implementationHeuristic}</p>
-    <div className="evidence-card-meta"><span>{recommendation.strength}</span><span>{recommendation.surfaces.join(', ')}</span><span>review {formatDate(recommendation.reviewDueAt)}</span></div>
+    <h3>{content(recommendation, 'guidance')}</h3>
+    <p>{content(recommendation, 'implementationHeuristic')}</p>
+    <div className="evidence-card-meta"><span>{term(recommendation.strength)}</span><span>{recommendation.surfaces.map(term).join(', ')}</span><span>{t('reviewLabel', { date: formatDate(recommendation.reviewDueAt, language) })}</span></div>
     <div className="evidence-row-actions">
-      {recommendation.status === 'draft' && <button onClick={() => open('recommendationSubmit', recommendation)}>Submit</button>}
-      {recommendation.status === 'in_review' && isApprover && <button onClick={() => open('recommendationApprove', recommendation)}>Approve</button>}
+      {recommendation.status === 'draft' && <button onClick={() => open('recommendationSubmit', recommendation)}>{t('submit')}</button>}
+      {recommendation.status === 'in_review' && isApprover && <button onClick={() => open('recommendationApprove', recommendation)}>{t('approve')}</button>}
     </div>
   </article>
 }
 
 function RuntimeResult({ result }) {
+  const { t, content, term } = useEvidenceLocale()
   return <div className={`evidence-runtime-result is-${result.answerability}`}>
-    <strong>{result.answerability}</strong>
-    <span>{result.claims.length} eligible claims · {result.recommendations.length} recommendations</span>
-    {result.recommendations.map((recommendation) => <p key={recommendation.id}>{recommendation.guidance}</p>)}
+    <strong>{term(result.answerability)}</strong>
+    <span>{t('eligibleSummary', { claims: result.claims.length, recommendations: result.recommendations.length })}</span>
+    {result.recommendations.map((recommendation) => <p key={recommendation.id}>{content(recommendation, 'guidance')}</p>)}
   </div>
 }
 
 function AssessmentDialog({ assessment, busy, onClose, onSave }) {
+  const { t } = useEvidenceLocale()
   const list = (value) => (value || []).join('\n')
   return <div className="evidence-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <form className="evidence-modal evidence-modal--wide" onSubmit={(event) => {
@@ -214,20 +225,20 @@ function AssessmentDialog({ assessment, busy, onClose, onSave }) {
         limitations: lines('limitations'), cannotSupport: lines('cannotSupport'), comment: data.get('comment').trim(),
       })
     }}>
-      <h2>Редактировать assessment</h2>
+      <h2>{t('editAssessment')}</h2>
       <p>{assessment.id}</p>
       <div className="evidence-form-grid">
-        <Select name="reviewScope" label="Review scope" value={assessment.reviewScope} options={['abstract_only', 'full_text', 'full_text_and_supplements']} />
-        <Select name="directness" label="Directness" value={assessment.directness} options={['high', 'some_concerns', 'low']} />
-        <Select name="riskOfBias" label="Risk of bias" value={assessment.riskOfBias} options={['low', 'some_concerns', 'high', 'not_assessed']} />
+        <Select name="reviewScope" label={t('reviewScope')} value={assessment.reviewScope} options={['abstract_only', 'full_text', 'full_text_and_supplements']} />
+        <Select name="directness" label={t('directness')} value={assessment.directness} options={['high', 'some_concerns', 'low']} />
+        <Select name="riskOfBias" label={t('riskOfBias')} value={assessment.riskOfBias} options={['low', 'some_concerns', 'high', 'not_assessed']} />
       </div>
-      <Field name="population" label="Population" value={assessment.population} required />
-      <Field name="outcomes" label="Outcomes — по одному на строку" value={list(assessment.outcomes)} required />
-      <Field name="mainResults" label="Main results — по одному на строку" value={list(assessment.mainResults)} required />
-      <Field name="limitations" label="Limitations" value={list(assessment.limitations)} />
-      <Field name="cannotSupport" label="Cannot support" value={list(assessment.cannotSupport)} />
-      <Field name="comment" label="Комментарий к изменению" value="" required />
-      <div className="evidence-modal-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit" variant="accent" loading={busy}>Сохранить</Button></div>
+      <Field name="population" label={t('population')} value={assessment.population} required />
+      <Field name="outcomes" label={t('outcomesLines')} value={list(assessment.outcomes)} required />
+      <Field name="mainResults" label={t('mainResultsLines')} value={list(assessment.mainResults)} required />
+      <Field name="limitations" label={t('limitations')} value={list(assessment.limitations)} />
+      <Field name="cannotSupport" label={t('cannotSupport')} value={list(assessment.cannotSupport)} />
+      <Field name="comment" label={t('changeComment')} value="" required />
+      <div className="evidence-modal-actions"><Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button type="submit" variant="accent" loading={busy}>{t('save')}</Button></div>
     </form>
   </div>
 }
@@ -237,5 +248,6 @@ function Field({ name, label, value, required }) {
 }
 
 function Select({ name, label, value, options }) {
-  return <label className="evidence-field"><span>{label}</span><select name={name} defaultValue={value}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>
+  const { term } = useEvidenceLocale()
+  return <label className="evidence-field"><span>{label}</span><select name={name} defaultValue={value}>{options.map((option) => <option key={option} value={option}>{term(option)}</option>)}</select></label>
 }

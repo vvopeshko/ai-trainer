@@ -1,44 +1,38 @@
 export const STATUS_META = {
-  draft: { label: 'Черновик', tone: 'neutral' },
-  in_review: { label: 'На ревью', tone: 'warning' },
-  approved: { label: 'Одобрено', tone: 'success' },
-  disputed: { label: 'Оспорено', tone: 'danger' },
-  superseded: { label: 'Устарело', tone: 'neutral' },
+  ru: { draft: 'Черновик', in_review: 'На ревью', approved: 'Одобрено', disputed: 'Оспорено', superseded: 'Устарело' },
+  en: { draft: 'Draft', in_review: 'In review', approved: 'Approved', disputed: 'Disputed', superseded: 'Superseded' },
 }
 
 export const CERTAINTY_LABELS = {
-  high: 'Высокая',
-  moderate: 'Средняя',
-  low: 'Низкая',
-  very_low: 'Очень низкая',
+  ru: { high: 'Высокая', moderate: 'Средняя', low: 'Низкая', very_low: 'Очень низкая' },
+  en: { high: 'High', moderate: 'Moderate', low: 'Low', very_low: 'Very low' },
 }
 
 export const BLOCKER_LABELS = {
-  claim_not_in_review: 'Claim ещё не отправлен на ревью',
-  claim_review_expired: 'Дата пересмотра claim истекла',
-  claim_has_no_supporting_evidence: 'Нет поддерживающих исследований',
+  ru: { claim_not_in_review: 'Тезис ещё не отправлен на ревью', claim_review_expired: 'Дата пересмотра тезиса истекла', claim_has_no_supporting_evidence: 'Нет поддерживающих исследований' },
+  en: { claim_not_in_review: 'Claim is not in review', claim_review_expired: 'Claim review is overdue', claim_has_no_supporting_evidence: 'Claim has no supporting evidence' },
 }
 
-export function statusMeta(status) {
-  return STATUS_META[status] || { label: status || 'Неизвестно', tone: 'neutral' }
+const TONES = { in_review: 'warning', approved: 'success', disputed: 'danger' }
+
+export function statusMeta(status, language = 'ru') {
+  return { label: STATUS_META[language]?.[status] || status || (language === 'ru' ? 'Неизвестно' : 'Unknown'), tone: TONES[status] || 'neutral' }
 }
 
-export function blockerLabel(blocker) {
-  if (BLOCKER_LABELS[blocker]) return BLOCKER_LABELS[blocker]
+export function blockerLabel(blocker, language = 'ru') {
+  if (BLOCKER_LABELS[language]?.[blocker]) return BLOCKER_LABELS[language][blocker]
   const [code, id] = blocker.split(':')
-  const labels = {
-    work_retracted: 'Источник отозван',
-    work_status_unverified: 'Статус источника не проверен',
-    assessment_not_approved: 'Assessment не одобрен',
-  }
+  const labels = language === 'ru'
+    ? { work_retracted: 'Источник отозван', work_status_unverified: 'Статус источника не проверен', assessment_not_approved: 'Оценка исследования не одобрена' }
+    : { work_retracted: 'Source is retracted', work_status_unverified: 'Source status is not verified', assessment_not_approved: 'Assessment is not approved' }
   return `${labels[code] || code}${id ? ` · ${id}` : ''}`
 }
 
-export function formatDate(value) {
+export function formatDate(value, language = 'ru') {
   if (!value) return '—'
-  return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium' }).format(new Date(value))
+  return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'en-GB', { dateStyle: 'medium' }).format(new Date(value))
 }
 
-export function errorMessage(error) {
-  return error?.payload?.error || error?.message || 'Не удалось выполнить действие'
+export function errorMessage(error, language = 'ru') {
+  return error?.payload?.error || error?.message || (language === 'ru' ? 'Не удалось выполнить действие' : 'Could not complete the action')
 }
