@@ -27,7 +27,7 @@ supporting claim to pass the same gate. Draft fixtures therefore return
 
 - `schemas.js` — Zod contracts and referential-integrity validation;
 - `fixtures.js` — the phase-0 pilot plus the ROM discovery update: 10 questions,
-  27 works, 20 assessments, 18 claims, 10 recommendations, 56 AI tests and
+  38 works, 31 assessments, 18 claims, 10 recommendations, 56 AI tests and
   6 blog outlines;
 - `repository.js` — deterministic read-only retrieval and eligibility explanations;
 - `persistence.js` — Prisma mapping, transactional import and database-backed loader;

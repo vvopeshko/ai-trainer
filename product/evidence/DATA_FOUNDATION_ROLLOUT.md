@@ -69,7 +69,7 @@ Import выполняется одной транзакцией и идемпо�
 - не понижает проверенный correction status работы обратно до `unknown`;
 - перестраивает только evidence/recommendation links изменённого draft.
 
-Ожидаемые counts: 10 questions, 27 works, 20 assessments, 18 claim versions,
+Ожидаемые counts: 10 questions, 38 works, 31 assessments, 18 claim versions,
 10 recommendations, 56 AI tests, 6 blog outlines.
 
 ## 4. Runtime smoke test
@@ -148,3 +148,25 @@ npm run evidence:import-pilot
 запрашивать отсутствующие колонки. Одобренные версии import не перезаписывает; если
 такие версии уже существуют, новые поля должен заполнить reviewer отдельной новой
 версией claim.
+
+## 9. ROM update rollout — 2026-08-08
+
+Обновление вопроса об амплитуде добавляет 11 работ, 11 assessments и новый технический
+статус `preprint_full_text` (плюс `workType: preprint`).
+
+SQL не нужен: `ResearchWork.workType`, `ResearchWork.reviewScope` и
+`ResearchAssessment.reviewScope` — обычные строковые колонки, enum живёт только в Zod и
+в UI. Достаточно повторного импорта:
+
+```bash
+cd server
+npm run evidence:import-pilot:dry
+npm run evidence:import-pilot
+```
+
+Ожидаемые counts после импорта: 10 questions, 38 works, 31 assessments, 18 claim
+versions, 10 recommendations, 56 AI tests, 6 blog outlines.
+
+Проверенный correction status импорт не понижает, поэтому работы, отмеченные `current`
+2026-08-08, останутся `current`. Полный препринт не проходит approval assessment: гейт
+требует опубликованный version of record (`full_text` или `full_text_and_supplements`).

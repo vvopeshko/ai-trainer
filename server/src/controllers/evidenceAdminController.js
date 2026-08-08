@@ -10,7 +10,7 @@ const listClaimsSchema = z.object({
   take: z.coerce.number().int().min(1).max(100).default(50),
 })
 const assessmentPatchSchema = z.object({
-  reviewScope: z.enum(['abstract_only', 'full_text', 'full_text_and_supplements']).optional(),
+  reviewScope: z.enum(['abstract_only', 'preprint_full_text', 'full_text', 'full_text_and_supplements']).optional(),
   population: z.string().trim().min(1).optional(),
   outcomes: z.array(z.string().min(1)).min(1).optional(),
   mainResults: z.array(z.string().trim().min(1)).min(1).optional(),

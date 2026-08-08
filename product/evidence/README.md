@@ -37,6 +37,8 @@
   outcome-specific claims по пяти вопросам.
 - [ROM_REVIEW_PACKET.md](ROM_REVIEW_PACKET.md) — обновлённый поиск, evidence matrix
   и muscle-specific draft claims по полной и частичной амплитуде.
+- [ROM_SEARCH_LEDGER.md](ROM_SEARCH_LEDGER.md) — полный PubMed export: два запроса,
+  дедупликация и причина решения по каждой найденной записи.
 - [AI_REGRESSION_SET.md](AI_REGRESSION_SET.md) — 50 тестовых вопросов для AI.
 - [BLOG_BRIEFS.md](BLOG_BRIEFS.md) — шесть evidence-backed content briefs.
 - [SPIKE_01_FINDINGS.md](SPIKE_01_FINDINGS.md) — что spike изменил в будущей
@@ -70,7 +72,7 @@
 
 ## Дата среза
 
-Первый поиск выполнен 2026-08-02; вопрос об амплитуде обновлён 2026-08-06. Для
+Первый поиск выполнен 2026-08-02; вопрос об амплитуде обновлён 2026-08-08. Для
 каждой цепочки отдельно указаны дата поиска, охват и ограничения. Это rapid
 editorial scan, а не systematic review.
 

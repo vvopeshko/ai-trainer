@@ -89,8 +89,8 @@ describe('evidence persistence mapping', () => {
       dryRun: true,
       counts: {
         questions: 10,
-        works: 27,
-        assessments: 20,
+        works: 38,
+        assessments: 31,
         claims: 18,
         recommendations: 10,
         aiTests: 56,

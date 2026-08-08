@@ -241,7 +241,7 @@ function AssessmentDialog({ assessment, busy, onClose, onSave }) {
       <h2>{t('editAssessment')}</h2>
       <p>{assessment.id}</p>
       <div className="evidence-form-grid">
-        <Select name="reviewScope" label={t('reviewScope')} value={assessment.reviewScope} options={['abstract_only', 'full_text', 'full_text_and_supplements']} />
+        <Select name="reviewScope" label={t('reviewScope')} value={assessment.reviewScope} options={['abstract_only', 'preprint_full_text', 'full_text', 'full_text_and_supplements']} />
         <Select name="directness" label={t('directness')} value={assessment.directness} options={['high', 'some_concerns', 'low']} />
         <Select name="riskOfBias" label={t('riskOfBias')} value={assessment.riskOfBias} options={['low', 'some_concerns', 'high', 'not_assessed']} />
       </div>

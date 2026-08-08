@@ -1,8 +1,21 @@
 import { describe, expect, test } from 'vitest'
-import { getClaimApprovalBlockers, getRecommendationApprovalBlockers } from './reviewService.js'
+import {
+  getClaimApprovalBlockers,
+  getRecommendationApprovalBlockers,
+  isPublishedFullTextScope,
+} from './reviewService.js'
 
 const NOW = new Date('2026-08-02T12:00:00.000Z')
 const currentWork = (id) => ({ id, status: 'screened_in', correctionStatus: 'current' })
+
+describe('isPublishedFullTextScope', () => {
+  test('does not treat a full preprint as an approvable published full text', () => {
+    expect(isPublishedFullTextScope('abstract_only')).toBe(false)
+    expect(isPublishedFullTextScope('preprint_full_text')).toBe(false)
+    expect(isPublishedFullTextScope('full_text')).toBe(true)
+    expect(isPublishedFullTextScope('full_text_and_supplements')).toBe(true)
+  })
+})
 
 describe('getClaimApprovalBlockers', () => {
   const readyClaim = () => ({

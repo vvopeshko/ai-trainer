@@ -56,7 +56,7 @@ id: RA-000
 questionId: EQ-...
 workId: RW-...
 status: draft # draft|in_review|approved|rejected
-reviewScope: abstract_only # abstract_only|full_text|full_text_and_supplements
+reviewScope: abstract_only # abstract_only|preprint_full_text|full_text|full_text_and_supplements
 population:
 intervention:
 comparator:
@@ -79,10 +79,11 @@ assessedBy:
 assessedAt:
 ```
 
-`reviewScope: abstract_only` запрещает использовать assessment для финального
-approval. Для систематического обзора итоговый review должен включать хотя бы full
-text, search date, eligibility, risk-of-bias method, included studies и sensitivity
-analyses.
+`reviewScope: abstract_only` и `reviewScope: preprint_full_text` запрещают использовать
+assessment для финального approval. Полный препринт полезен для проверки методов, но
+не заменяет version of record. Для систематического обзора итоговый review должен
+включать хотя бы опубликованный full text, search date, eligibility, risk-of-bias
+method, included studies и sensitivity analyses.
 
 ## 3. Claim version
 

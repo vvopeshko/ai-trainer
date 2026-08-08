@@ -5,6 +5,9 @@ import { createDatabaseEvidenceRepository } from './persistence.js'
 const snapshot = (value) => value == null ? null : JSON.parse(JSON.stringify(value))
 const isFutureOrToday = (date, now) => date >= new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`)
 
+export const isPublishedFullTextScope = (scope) =>
+  ['full_text', 'full_text_and_supplements'].includes(scope)
+
 function assertStatus(entity, allowed, label) {
   if (!allowed.includes(entity.status)) {
     throw new AppError(409, 'INVALID_EVIDENCE_TRANSITION', `${label}: status ${entity.status} is not allowed`)
@@ -170,7 +173,8 @@ export function createEvidenceReviewService(db = prisma) {
         assessedPublications: assessedIds.size,
         primaryStudies: works.filter(({ workType }) => workType === 'rct').length,
         evidenceSyntheses: works.filter(({ workType }) => ['systematic_review', 'meta_analysis', 'umbrella_review', 'position_stand'].includes(workType)).length,
-        fullTextReviewed: works.filter(({ reviewScope }) => reviewScope !== 'abstract_only').length,
+        fullTextReviewed: works.filter(({ reviewScope }) => isPublishedFullTextScope(reviewScope)).length,
+        preprintFullTextReviewed: works.filter(({ reviewScope }) => reviewScope === 'preprint_full_text').length,
         approvedAssessments: question.assessments.filter(({ status }) => status === 'approved').length,
         currentStatusVerified: works.filter(({ correctionStatus }) => ['current', 'corrected'].includes(correctionStatus)).length,
         includedStudiesReported,
@@ -253,8 +257,8 @@ export function createEvidenceReviewService(db = prisma) {
       const before = await tx.researchAssessment.findUnique({ where: { id } })
       if (!before) notFound('Assessment')
       assertStatus(before, ['in_review'], 'Assessment approval')
-      if (before.reviewScope === 'abstract_only' || before.riskOfBias === 'not_assessed') {
-        throw new AppError(409, 'ASSESSMENT_NOT_READY', 'Full-text scope and risk-of-bias appraisal are required')
+      if (!isPublishedFullTextScope(before.reviewScope) || before.riskOfBias === 'not_assessed') {
+        throw new AppError(409, 'ASSESSMENT_NOT_READY', 'Published full-text scope and risk-of-bias appraisal are required')
       }
       const now = new Date()
       const after = await tx.researchAssessment.update({

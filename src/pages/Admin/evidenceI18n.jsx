@@ -142,11 +142,11 @@ const commonRu = {
 
 const termsRu = {
   supports: 'поддерживает', contradicts: 'противоречит', contextualizes: 'контекст', current: 'актуален', unknown: 'не проверен', corrected: 'исправлен', retracted: 'отозван',
-  screened_in: 'включён', discovered: 'найден', abstract_only: 'только аннотация', full_text: 'полный текст', full_text_and_supplements: 'полный текст и приложения',
+  screened_in: 'включён', discovered: 'найден', abstract_only: 'только аннотация', preprint_full_text: 'полный текст препринта', full_text: 'полный текст', full_text_and_supplements: 'полный текст и приложения',
   low: 'низкий', moderate: 'средний', high: 'высокий', very_low: 'очень низкий', some_concerns: 'есть замечания', not_assessed: 'не оценён',
   conditional: 'условная', strong: 'сильная', insufficient: 'недостаточно данных', supported: 'поддерживается', evidence_only: 'только доказательства', unsupported: 'не поддерживается',
   ai_trainer: 'AI-тренер', program_generation: 'генерация программ', blog: 'блог', weekly_volume: 'недельный объём', proximity_to_failure: 'близость к отказу',
-  position_stand: 'позиционный документ', meta_analysis: 'метаанализ', systematic_review: 'систематический обзор', umbrella_review: 'зонтичный обзор', rct: 'РКИ',
+  position_stand: 'позиционный документ', meta_analysis: 'метаанализ', systematic_review: 'систематический обзор', umbrella_review: 'зонтичный обзор', rct: 'РКИ', preprint: 'препринт',
   load_and_repetitions: 'нагрузка и повторения', frequency: 'частота', inter_set_rest: 'отдых между подходами', progression: 'прогрессия',
   range_of_motion: 'амплитуда движения', exercise_order: 'порядок упражнений', periodization_and_deload: 'периодизация и разгрузка', concurrent_training: 'совмещённые тренировки',
   full: 'полное движение', lengthened_partial: 'растянутая часть движения', shortened_partial: 'сокращённая часть движения', middle_partial: 'средняя часть движения',
