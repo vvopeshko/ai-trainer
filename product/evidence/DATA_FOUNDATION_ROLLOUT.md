@@ -170,3 +170,14 @@ versions, 10 recommendations, 56 AI tests, 6 blog outlines.
 Проверенный correction status импорт не понижает, поэтому работы, отмеченные `current`
 2026-08-08, останутся `current`. Полный препринт не проходит approval assessment: гейт
 требует опубликованный version of record (`full_text` или `full_text_and_supplements`).
+
+### Rollout log — 2026-08-08
+
+- деплой `ac654aa`: Railway `SUCCESS`, Vercel-бандл содержит новые термины;
+- SQL не выполнялся и не требовался;
+- import завершён с фактическими counts: 10 questions, 38 works, 31 assessments,
+  18 claim versions, 10 recommendations, 56 AI tests, 6 blog outlines;
+- `protected claim versions: 0`, `protected recommendations: 0` — approved-сущностей
+  в базе нет, перезаписывать было нечего;
+- `fail-closed runtime questions: 10/10` — retrieval остаётся `unsupported` по всем
+  вопросам, новые works и препринты в runtime не попали.
