@@ -5,7 +5,7 @@ const questionLanguage = {
   'EQ-HYP-004': ['Имеет ли значение частота тренировки мышцы при равном объёме?', 'Сколько раз в неделю нужно тренировать одну мышцу?', 'How many times per week should you train a muscle?'],
   'EQ-HYP-005': ['Сколько отдыхать между рабочими подходами?', 'Сколько отдыхать между подходами, чтобы следующий подход оставался качественным?', 'How long should you rest so the next set stays effective?'],
   'EQ-PRG-001': ['Как прогрессировать нагрузку, повторения и объём?', 'Когда увеличивать вес, повторения или число подходов?', 'When should you add weight, repetitions, or sets?'],
-  'EQ-HYP-006': ['Как полная и частичная амплитуда влияют на адаптацию?', 'Нужно ли всегда делать движение полностью или иногда полезна только его часть?', 'Should you always use the full movement, or can part of it sometimes help?'],
+  'EQ-HYP-006': ['Как полная и частичная амплитуда влияют на адаптацию?', 'Что лучше для роста — делать повторения полностью или только ту часть, где мышца растянута?', 'For muscle growth, is it better to do full repetitions or only the part of the movement where the muscle is stretched?'],
   'EQ-PRG-002': ['Как порядок упражнений влияет на силу и гипертрофию?', 'Какие упражнения лучше ставить в начало тренировки?', 'Which exercises should come first in a workout?'],
   'EQ-PRG-003': ['Улучшают ли периодизация и плановые разгрузки результаты?', 'Нужно ли заранее менять нагрузку и планировать лёгкие недели?', 'Do you need planned training changes and easier weeks?'],
   'EQ-CON-001': ['Когда аэробная нагрузка мешает адаптации к силовым тренировкам?', 'Когда кардио может мешать росту мышц, силы или мощности?', 'When can cardio interfere with muscle, strength, or power gains?'],
