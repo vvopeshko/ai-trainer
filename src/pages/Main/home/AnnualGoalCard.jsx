@@ -11,10 +11,10 @@ export function AnnualGoalCard() {
   const pace = value => !Number.isFinite(value) ? '—' : value.toLocaleString('ru-RU', { maximumFractionDigits: 1, minimumFractionDigits: 1 })
   const percent = data?.target > 0 ? Math.floor(data.done / data.target * 100) : 0
   const metrics = data ? [
-    ['annualGoal.month', data.monthPace, 'barChart'],
-    ['annualGoal.year', data.yearPace, 'calendar'],
+    ['annualGoal.month', data.monthPace],
+    ['annualGoal.year', data.yearPace],
     // Round up so the required pace never understates the effort needed.
-    ['annualGoal.required', Math.ceil(data.requiredPace * 10) / 10, 'target'],
+    ['annualGoal.required', Math.ceil(data.requiredPace * 10) / 10],
   ] : []
 
   return (
@@ -27,7 +27,7 @@ export function AnnualGoalCard() {
             <header className="annual-goal__header">
               <span className="annual-goal__badge"><Icon name="target" size={25} aria-hidden="true" /></span>
               <h2>{t('annualGoal.title')} · {data.year}</h2>
-              <span className="annual-goal__deadline"><Icon name="calendar" size={16} aria-hidden="true" />{t('annualGoal.deadline')}</span>
+              <span className="annual-goal__deadline" aria-label={t('annualGoal.deadline')}><Icon name="calendar" size={16} aria-hidden="true" />{t('annualGoal.deadlineShort')}</span>
             </header>
             <div className="annual-goal__count">
               <strong>{data.done}</strong><span className="annual-goal__target">/ {data.target}</span>
@@ -41,12 +41,14 @@ export function AnnualGoalCard() {
               </div>
               <span className="annual-goal__percent">{percent}%</span>
             </div>
+            <div className="annual-goal__metrics-label">{t('annualGoal.perWeek')}</div>
             <div className="annual-goal__metrics">
-              {metrics.map(([label, value, icon]) => (
+              {metrics.map(([label, value]) => (
                 <div key={label} className="annual-goal__metric">
-                  <div className="annual-goal__metric-heading"><span className="annual-goal__metric-icon"><Icon name={icon} size={19} aria-hidden="true" /></span><span>{t(label)}</span></div>
-                  <strong>{pace(value)}</strong>
-                  <div className="annual-goal__metric-unit">{t('annualGoal.perWeek')}</div>
+                  <div className="annual-goal__metric-top">
+                    <strong>{pace(value)}</strong>
+                    <div className="annual-goal__metric-label">{t(label)}</div>
+                  </div>
                 </div>
               ))}
             </div>
