@@ -125,7 +125,7 @@ export default function HomePage() {
 
   return (
     <div style={{
-      background: 'var(--gd-bg)',
+      background: 'var(--home-bg)',
       minHeight: '100vh',
       position: 'relative',
       zIndex: 1,
@@ -146,6 +146,7 @@ export default function HomePage() {
           onResume={handleResume}
           onCancel={() => setConfirmCancel(true)}
           onPickDay={() => setShowDayPicker(true)}
+          onNotifications={() => navigate('/me')}
           loading={starting}
         />
       )}
