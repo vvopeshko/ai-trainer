@@ -7,7 +7,7 @@ import { WeekCalendar } from './WeekCalendar.jsx'
 import './hero.css'
 
 export function HeroBlock({
-  user, streak, program, nextWorkout, activeWorkout, doneDates,
+  user, annualCount, onShowGoal, program, nextWorkout, activeWorkout, doneDates,
   onStart, onContinue, onResume, onCancel, onPickDay, onNotifications, loading,
 }) {
   const { t } = useTranslation()
@@ -39,10 +39,11 @@ export function HeroBlock({
           <h1>{t('home.greetingName', { name: user?.firstName || t('home.greetingFallback') })}</h1>
         </div>
         <div className="home-hero__header-actions">
-          {streak > 0 && <div className="home-hero__streak">
+          <button type="button" className="home-hero__year-count" onClick={onShowGoal}
+            aria-label={t('home.openAnnualGoal', { n: annualCount ?? '—' })} aria-controls="annual-goal">
             <Icon name="flame" size={21} />
-            <span>{streak} {t(`annualGoal.day.${plural.select(streak)}`)}</span>
-          </div>}
+            <span>{annualCount ?? '—'} {t('home.workoutsShort')}</span>
+          </button>
           <button type="button" className="home-hero__icon-button home-hero__bell" onClick={onNotifications} aria-label={t('a11y.notifications')}>
             <Icon name="bell" size={22} />
           </button>

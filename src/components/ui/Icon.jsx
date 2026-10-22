@@ -23,6 +23,7 @@ export const ICON_PATHS = {
   arrowUpRight: <><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></>,
 
   // Actions
+  barChart: <><rect x="3" y="14" width="4" height="7" rx="1" fill="currentColor" stroke="none" /><rect x="10" y="8" width="4" height="13" rx="1" fill="currentColor" stroke="none" /><rect x="17" y="2" width="4" height="19" rx="1" fill="currentColor" stroke="none" /></>,
   shuffle: <><path d="m18 3 3 3-3 3M18 15l3 3-3 3" /><path d="M3 6h3c4 0 8 12 12 12h3M3 18h3c1.5 0 3-1.7 4.5-4M13.5 10C15 7.7 16.5 6 18 6h3" /></>,
   plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
   minus: <line x1="5" y1="12" x2="19" y2="12" />,

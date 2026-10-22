@@ -154,6 +154,8 @@ export const translations = {
     'home.nextLabel': 'Следующая · День {{n}}',
     'home.startWorkoutCta': 'Начать тренировку',
     'home.greeting': 'Привет,',
+    'home.workoutsShort': 'трен.',
+    'home.openAnnualGoal': '{{n}} тренировок с начала года. Перейти к годовой цели',
     'home.greetingName': '{{name}}!',
     'home.greetingFallback': 'спортсмен',
     'home.weekCalendar': 'Тренировки на этой неделе',

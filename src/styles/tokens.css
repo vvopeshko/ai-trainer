@@ -146,6 +146,14 @@
   --gd-card-shadow: 0 2px 12px rgba(0,0,0,0.30);
   --gd-hero-shadow: 0 18px 44px rgba(7,80,58,0.5);
   --home-bg: #10171c;
+  --goal-surface: linear-gradient(135deg, #222730, #1b2028);
+  --goal-border: rgba(150, 167, 190, .12);
+  --goal-shadow: inset 0 1px 12px rgba(180, 201, 230, .035), 0 14px 32px rgba(0, 0, 0, .2);
+  --goal-tile: rgba(53, 62, 77, .24);
+  --goal-track: #3c4251;
+  --goal-accent: #0fe0a0;
+  --goal-icon-bg: rgba(0, 189, 135, .16);
+  --goal-progress: linear-gradient(90deg, #10d59b, #19e6a2);
   --home-card-bg: #11241f;
   --home-card-border: rgba(101, 215, 172, .22);
   --home-card-shadow: inset 0 1px 0 rgba(155, 255, 215, .12), 0 12px 30px rgba(0, 0, 0, .16);

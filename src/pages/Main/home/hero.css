@@ -4,8 +4,8 @@
 .home-hero__greeting > span { color: var(--gd-accent-ink); font-size: 15px; font-weight: 650; }
 .home-hero__greeting h1 { margin: 2px 0 0; font-size: clamp(28px, 8vw, 36px); font-weight: 800; line-height: 1.12; letter-spacing: -.035em; overflow-wrap: anywhere; }
 .home-hero__header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding-top: 2px; }
-.home-hero__streak { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border: 1px solid var(--home-card-border); border-radius: 24px; background: var(--home-glass); color: var(--gd-sub); font-size: 14px; white-space: nowrap; }
-.home-hero__streak svg { color: var(--gd-warn); }
+.home-hero__year-count { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 13px; border: 1px solid var(--home-card-border); border-radius: 24px; background: var(--home-glass); color: var(--gd-sub); font-family: inherit; font-size: 14px; white-space: nowrap; cursor: pointer; }
+.home-hero__year-count svg { color: var(--gd-warn); }
 .home-hero__icon-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--gd-ink); background: var(--home-glass); border: 1px solid var(--home-card-border); border-radius: 16px; cursor: pointer; backdrop-filter: blur(12px); }
 .home-hero__bell { width: 44px; height: 44px; color: var(--gd-sub); }
 .home-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 20px 0 14px; }
@@ -43,7 +43,7 @@
   .home-hero { padding-inline: 10px; }
   .home-hero__header { gap: 8px; }
   .home-hero__header-actions { gap: 6px; }
-  .home-hero__streak { padding: 10px 8px; gap: 5px; font-size: 12px; }
+  .home-hero__year-count { padding: 10px 8px; gap: 5px; font-size: 12px; }
   .home-hero__workout-content { padding: 18px 13px; }
   .home-hero__start-label { gap: 6px; }
 }

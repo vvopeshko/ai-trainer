@@ -14,7 +14,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMapLazy.jsx'
 import { GlassAINote } from '../../components/ui/GlassAINote.jsx'
-import { useMonthStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight } from '../../hooks/queries.js'
+import { useMonthStats, useYearStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight } from '../../hooks/queries.js'
 import { useCancelWorkout, useResumeWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -34,6 +34,7 @@ export default function HomePage() {
   const { user } = useTelegram()
 
   const { data: monthStats } = useMonthStats()
+  const { data: yearStats } = useYearStats()
   const { data: activeWorkoutData } = useActiveWorkoutQuery()
   const activeWorkout = activeWorkoutData?.workout ?? null
   const { data: program } = useActiveProgram()
@@ -136,7 +137,12 @@ export default function HomePage() {
       ) : (
         <HeroBlock
           user={user}
-          streak={monthStats?.streak || 0}
+          annualCount={yearStats?.done}
+          onShowGoal={() => {
+            const goal = document.getElementById('annual-goal')
+            goal?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
+            goal?.focus({ preventScroll: true })
+          }}
           program={program}
           nextWorkout={nextWorkout}
           activeWorkout={activeWorkout}
