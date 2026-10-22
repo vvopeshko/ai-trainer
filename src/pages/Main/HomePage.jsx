@@ -23,6 +23,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import { HeroBlock, HeroBlockSkeleton } from './home/HeroBlock.jsx'
 import { MyPlanSection } from './home/MyPlanSection.jsx'
 import { MuscleGroupCard, MUSCLE_ICONS } from './home/MuscleGroupCard.jsx'
+import { AnnualGoalCard } from './home/AnnualGoalCard.jsx'
 
 // ─── Main Component ────────────────────────────────────────────────────
 
@@ -148,6 +149,8 @@ export default function HomePage() {
           loading={starting}
         />
       )}
+
+      <AnnualGoalCard />
 
       {/* Coach note (daily insight) */}
       {dailyInsight?.text && (

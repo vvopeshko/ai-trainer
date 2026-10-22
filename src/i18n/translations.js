@@ -5,6 +5,24 @@
 export const translations = {
   ru: {
     'app.title': 'AI Trainer',
+    'annualGoal.title': 'Годовая цель',
+    'annualGoal.deadline': 'До 31 декабря',
+    'annualGoal.workouts': 'тренировок',
+    'annualGoal.month': 'Последние 30 дней',
+    'annualGoal.year': 'С начала года',
+    'annualGoal.required': 'Нужно до цели',
+    'annualGoal.perWeek': 'тренировок / нед.',
+    'annualGoal.remaining': 'До цели: {{count}} {{workoutWord}} · {{days}} {{dayWord}}, включая сегодня',
+    'annualGoal.workout.one': 'тренировка',
+    'annualGoal.workout.few': 'тренировки',
+    'annualGoal.workout.many': 'тренировок',
+    'annualGoal.day.one': 'день',
+    'annualGoal.day.few': 'дня',
+    'annualGoal.day.many': 'дней',
+    'annualGoal.complete': 'Годовая цель достигнута!',
+    'annualGoal.baseline': '{{count}} на {{date}} включительно + {{added}} после',
+    'annualGoal.incompleteMonth': 'Для темпа за 30 дней пока недостаточно подробной истории.',
+    'annualGoal.retry': 'Не удалось загрузить годовую цель. Повторить',
     'app.tagline': 'Твой AI-тренер в Telegram',
 
     // Единицы (компактные аббревиатуры). По правилу проекта даже технические

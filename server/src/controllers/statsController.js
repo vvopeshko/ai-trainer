@@ -1,8 +1,6 @@
 import { getUserTimezone } from '../utils/dateUtils.js'
-import { getMonthStats, getYearStats } from '../services/statsService.js'
-
-// 4 тренировки/неделю × 52 = 208. Переопределяется через env.
-const ANNUAL_WORKOUT_TARGET = Number(process.env.ANNUAL_WORKOUT_TARGET) || 208
+import { getMonthStats } from '../services/statsService.js'
+import { getAnnualGoalStats } from '../services/annualGoalService.js'
 
 /**
  * GET /api/v1/stats/month
@@ -23,6 +21,5 @@ export async function getMonth(req, res) {
  * Годовой прогресс: сколько тренировок сделано / цель.
  */
 export async function getYear(req, res) {
-  const { year, done } = await getYearStats(req.user.id, getUserTimezone(req))
-  res.json({ year, done, target: ANNUAL_WORKOUT_TARGET })
+  res.json(await getAnnualGoalStats(req.user, getUserTimezone(req)))
 }
