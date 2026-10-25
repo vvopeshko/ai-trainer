@@ -171,6 +171,12 @@ function recordHistory(valid) {
     lastImproved: improvedIndex >= 0 ? sessions[improvedIndex] : null,
     sinceImproved: improvedIndex >= 0 ? sessions.length - 1 - improvedIndex : null,
     sessions, // logbook: every day with its sets and the records set that day
+    // Current best level: sets no other set beats on weight AND reps, dated by
+    // the first day reached (the baseline day too). Repeating one is not new.
+    front: sessions.flatMap(session => session.sets.map(s => ({ weightKg: s.weightKg ?? 0, reps: s.reps, time: session.time })))
+      .filter((r, i, all) => all.findIndex(o => o.weightKg === r.weightKg && o.reps === r.reps) === i)
+      .filter(r => !prior.some(p => (p.weightKg ?? 0) >= r.weightKg && p.reps >= r.reps
+        && ((p.weightKg ?? 0) > r.weightKg || p.reps > r.reps))),
   }
 }
 

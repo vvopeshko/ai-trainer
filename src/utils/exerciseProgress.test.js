@@ -178,6 +178,8 @@ it('tracks records across the Smith history', () => {
   expect(result.records).toMatchObject({ latest: [], since: 1, last: { time: Date.parse('2026-10-12'), records: [{ weightKg: 85, reps: 10 }] } })
   expect(result.records.sessions.map(s => s.records.length)).toEqual([0, 1, 0, 1, 0])
   expect(result.records.sessions.at(-1).sets).toHaveLength(4)
+  // 85×10 (12.10) covers 85×8 and 80×10; 19.10 repeats it, so it stays dated 12.10.
+  expect(result.records.front).toEqual([{ weightKg: 85, reps: 10, time: Date.parse('2026-10-12') }])
   expect(exerciseProgress([row('2026-10-12', [80], [10])]).records).toMatchObject({ latest: [], last: null, since: null })
 })
 it('does not call a return to an old level after a long break a record', () => {
@@ -202,4 +204,10 @@ it('does not signal readiness for an incomplete, mixed-load or plan-less session
   expect(exerciseProgress([row('2026-10-25', [60,60], [12,12])], { sets: 3, repsMax: 12 }).ready).toBeNull()
   expect(exerciseProgress([row('2026-10-25', [60,65], [12,12])], { sets: 2, repsMax: 12 }).ready).toBeNull()
   expect(exerciseProgress(history([12,12])).ready).toBeNull()
+})
+it('keeps every undominated best in the record front', () => {
+  // 80×8 from the baseline day is still the best at 80 kg, though that day sets no record.
+  const result = exerciseProgress([row('2026-07-01', [70,80], [8,8]), row('2026-07-08', [95,70], [4,8]), row('2026-07-15', [70,80], [10,8])])
+  expect(result.records.front.map(r => `${r.weightKg}×${r.reps}`)).toEqual(['80×8', '95×4', '70×10'])
+  expect(result.records.front[0].time).toBe(Date.parse('2026-07-01'))
 })

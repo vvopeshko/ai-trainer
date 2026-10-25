@@ -127,6 +127,8 @@ export const translations = {
     'exerciseProgress.volumeShort.unknown': 'мало данных',
     'exerciseProgress.logbook': 'Дневник · последние {{n}}',
     'exerciseProgress.allRecords': 'Все записи · {{n}}',
+    'exerciseProgress.legendNew': 'новый рекорд',
+    'exerciseProgress.legendBest': 'на уровне рекорда {{sets}}',
     'exerciseProgress.askTrainer': 'Спросить тренера',
     'exerciseProgress.weightEvidence': 'На {{reps}} повт.: {{from}} → {{to}} {{unit}}',
     'exerciseProgress.chartWeight': 'Лучший вес на {{reps}} повторений',

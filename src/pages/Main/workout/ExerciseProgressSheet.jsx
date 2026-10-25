@@ -18,10 +18,12 @@ function Tile({ label, value, sub }) {
   </div>
 }
 
-// Sessions as columns, sets as rows: shows which sets reached a new level.
-function Logbook({ sessions, text }) {
+// Sessions as columns, sets as rows: solid — a new record that day,
+// outline — a repeat of the current best level.
+function Logbook({ sessions, front, text }) {
   const rows = Math.max(...sessions.map(s => s.sets.length))
-  const isRecord = (session, s) => session.records.some(r => r.weightKg === (s.weightKg ?? 0) && r.reps === s.reps)
+  const same = s => r => r.weightKg === (s.weightKg ?? 0) && r.reps === s.reps
+  const isRecord = (session, s) => session.records.some(same(s))
   return <div style={{ display: 'grid', gridTemplateColumns: `14px repeat(${sessions.length}, minmax(0, 1fr))`, gap: 3, fontSize: 11 }}>
     <span />
     {sessions.map(session => <span key={session.time} style={{ ...muted, textAlign: 'center' }}>{text.date(session.time)}</span>)}
@@ -30,10 +32,12 @@ function Logbook({ sessions, text }) {
       ...sessions.map(session => {
         const s = session.sets[row]
         const record = s && isRecord(session, s)
+        const best = s && !record && front.some(same(s))
         return <span key={`${session.time}-${row}`} style={{
           textAlign: 'center', padding: '2px 0', borderRadius: 5, whiteSpace: 'nowrap',
           background: record ? 'var(--success-soft)' : s ? 'rgba(236,234,239,0.05)' : 'transparent',
-          color: record ? 'var(--success)' : 'var(--fg-secondary)', fontWeight: record ? 600 : 400,
+          boxShadow: best ? 'inset 0 0 0 1px var(--success)' : 'none',
+          color: record || best ? 'var(--success)' : 'var(--fg-secondary)', fontWeight: record ? 600 : 400,
         }}>{s ? text.set(s) : ''}</span>
       }),
     ])}
@@ -85,7 +89,17 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, dat
         </div>
 
         <div style={heading}>{t('exerciseProgress.logbook', { n: Math.min(6, sessions.length) })}</div>
-        <Logbook sessions={sessions.slice(-6)} text={text} />
+        <Logbook sessions={sessions.slice(-6)} front={records.front} text={text} />
+        {records.front.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 6, fontSize: 11, ...muted }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--success-soft)' }} />{t('exerciseProgress.legendNew')}
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, boxShadow: 'inset 0 0 0 1px var(--success)' }} />
+            {t('exerciseProgress.legendBest', { sets: records.front.toSorted((a, b) => b.weightKg - a.weightKg).slice(0, 3)
+              .map(r => `${text.set(r)} · ${text.date(r.time)}`).join(', ') })}
+          </span>
+        </div>}
 
         {progress.charts.map(chart => <ExerciseTrendChart key={`${chart.kind}-${chart.anchor}`} chart={chart} unit={unit} />)}
 
