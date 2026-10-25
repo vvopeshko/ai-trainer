@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { exerciseProgress, newRecords } from './exerciseProgress.js'
+import { exerciseProgress, newRecords, epley } from './exerciseProgress.js'
 const row = (date, weights, reps) => ({ startedAt: date, sets: weights.map((weightKg, i) => ({ weightKg, reps: reps[i] })) })
 const history = (reps, weights = reps.map(() => 60), spacing = 7) => reps.map((n, i) => row(new Date(Date.UTC(2026, 6, 1 + i * spacing)).toISOString(), [weights[i], weights[i]], [n, n]))
 const plan = { sets: 3, repsMax: 12 }
@@ -151,6 +151,7 @@ it('asks to consolidate a heavier weight reached only in some sets', () => {
   expect(exerciseProgress(data, { sets: 4, repsMin: 8, repsMax: 10 })).toMatchObject({
     trend: 'plateau', stall: { sessions: 4, days: 28 }, plateau: { kind: 'consolidate', weightKg: 85 },
   })
+  expect(exerciseProgress(data, { sets: 4, repsMin: 8, repsMax: 10 }).plateau.bars.map(b => `${b.heavy}/${b.total}`)).toEqual(['0/4', '3/4', '0/4', '2/4'])
 })
 it('shows repetitions for bodyweight and no fitted line for insufficient data', () => {
   const result = exerciseProgress(history([10,10,10,10], [0,0,0,0]))
@@ -210,4 +211,44 @@ it('keeps every undominated best in the record front', () => {
   const result = exerciseProgress([row('2026-07-01', [70,80], [8,8]), row('2026-07-08', [95,70], [4,8]), row('2026-07-15', [70,80], [10,8])])
   expect(result.records.front.map(r => `${r.weightKg}×${r.reps}`)).toEqual(['80×8', '95×4', '70×10'])
   expect(result.records.front[0].time).toBe(Date.parse('2026-07-01'))
+})
+it('charts the best weight at the top of the planned range and marks records on it', () => {
+  const result = exerciseProgress([
+    row('2026-10-19', [80,85,85,85], [10,10,10,6]), row('2026-10-12', [85,85,85,80], [10,8,8,8]),
+    row('2026-09-28', [80,80,80,80], [10,10,10,10]), row('2026-08-31', [80,85,85,85], [10,8,8,8]),
+    row('2026-08-05', [80,80,80,80], [10,10,10,10]),
+  ], { sets: 4, repsMin: 8, repsMax: 10 })
+  const chart = result.charts[0]
+  expect(chart).toMatchObject({ kind: 'weight', anchor: 10, top: true })
+  expect(chart.points.map(p => p.value)).toEqual([80,80,80,85,85])
+  // 85×8 on 31.08 is a record, but not on the 10-rep series; 85×10 on 12.10 is.
+  expect(chart.points.map(p => p.record)).toEqual([false,false,false,true,false])
+})
+it('never charts a series capped by the plan', () => {
+  expect(exerciseProgress(history([10,10,10,10]), { sets: 2, repsMax: 10 }).charts[0]).toMatchObject({ kind: 'weight', top: true })
+  expect(exerciseProgress(history([10,10,10,10]), { sets: 2, repsMax: 12 }).charts.every(c => c.kind === 'weight')).toBe(true)
+  expect(exerciseProgress(history([10,10,10,10], [0,0,0,0]), { sets: 2, repsMax: 10 }).charts).toEqual([])
+})
+it('takes the plateau subtype from recent sessions, not from an older full set', () => {
+  const base = [80,80,80,80], tens = [10,10,10,10]
+  const data = [row('2026-05-04', base, tens), row('2026-05-11', [85,85,85,85], tens),
+    ...[18,25].map(d => row(`2026-05-${d}`, base, tens)), ...[1,8].map(d => row(`2026-06-0${d}`, [80,85,85,80], [10,8,8,8])),
+    ...[15,22].map(d => row(`2026-06-${d}`, base, tens)), row('2026-06-29', [80,85,85,85], [10,10,10,6]), row('2026-07-06', [80,85,85,80], [10,8,8,8])]
+  const result = exerciseProgress(data, { sets: 4, repsMin: 8, repsMax: 10 })
+  expect(result).toMatchObject({ trend: 'plateau', plateau: { kind: 'consolidate', weightKg: 85 } })
+  expect(result.plateau.bars).toHaveLength(6)
+})
+it('offers an estimated 1RM view from sets up to 12 reps', () => {
+  expect(epley(80, 10)).toBeCloseTo(106.67, 2)
+  expect(epley(100, 1)).toBe(100)
+  const result = exerciseProgress([row('2026-07-01', [80,80], [10,10]), row('2026-07-08', [85,60], [10,20]), row('2026-07-15', [80,80], [10,10])])
+  expect(result.views.e1rm).toMatchObject({ kind: 'e1rm' })
+  // 60×20 is ignored (beyond 12 reps); 85×10 is the new best estimate.
+  expect(result.views.e1rm.points.map(p => [p.value, p.record])).toEqual([[106.7, false], [113.3, true], [106.7, false]])
+  expect(exerciseProgress(history([10,10], [0,0])).views.e1rm).toBeNull()
+})
+it('offers per-session volume as a separate view', () => {
+  expect(exerciseProgress(history([10,12,10])).views.volume).toMatchObject({ metric: 'tonnage', points: [{ value: 1200 }, { value: 1440 }, { value: 1200 }] })
+  expect(exerciseProgress(history([8,9], [0,0])).views.volume).toMatchObject({ metric: 'reps', points: [{ value: 16 }, { value: 18 }] })
+  expect(exerciseProgress(history([10,10], [0,5])).views.volume).toBeNull()
 })

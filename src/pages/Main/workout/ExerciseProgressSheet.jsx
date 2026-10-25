@@ -44,11 +44,62 @@ function Logbook({ sessions, front, text }) {
   </div>
 }
 
+// Consolidate plateau: sets per session at the heavier weight, the goal is all of them.
+function HeavySets({ plateau, text, t }) {
+  return <>
+    <div style={heading}>{t('exerciseProgress.heavySets', { weight: text.weight(plateau.weightKg), unit: text.unitLabel })}</div>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+      {plateau.bars.map(b => <div key={b.time} style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 11 }}>
+        <div style={{ height: 36, display: 'flex', alignItems: 'flex-end', borderRadius: 5, background: 'rgba(236,234,239,0.05)', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: `${100 * b.heavy / b.total}%`, background: b.heavy === b.total ? 'var(--success)' : 'var(--warning)', opacity: 0.85 }} />
+        </div>
+        <div style={{ color: 'var(--fg-primary)', marginTop: 3 }}>{b.heavy}/{b.total}</div>
+        <div style={muted}>{text.date(b.time)}</div>
+      </div>)}
+    </div>
+  </>
+}
+
+// Volume per session from zero: equal-looking bars are the honest picture of
+// "≈ the same"; a missed set shows as a dip, not as weakness.
+function VolumeBars({ view, text, unit, t }) {
+  const points = view.points.slice(-12)
+  const toUnit = v => view.metric === 'tonnage' && unit === 'lbs' ? v / 0.45359237 : v
+  const format = v => Math.round(toUnit(v)).toLocaleString('ru-RU')
+  const max = Math.max(...points.map(p => p.value))
+  const unitLabel = view.metric === 'tonnage' ? text.unitLabel : t('units.reps')
+  return <figure style={{ margin: '12px 0' }}>
+    <figcaption style={{ color: 'var(--fg-primary)', fontWeight: 600 }}>
+      {t(view.metric === 'tonnage' ? 'exerciseProgress.chartVolume' : 'exerciseProgress.chartVolumeReps')}
+    </figcaption>
+    <div style={{ ...muted, fontSize: 11, margin: '2px 0 4px' }}>{t('exerciseProgress.volumeMax', { value: format(max), unit: unitLabel })}</div>
+    <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 56 }}>
+      {points.map(p => <div key={p.time} title={`${text.date(p.time)} · ${format(p.value)} ${unitLabel} · ${p.sets}`}
+        style={{ flex: 1, minWidth: 0, height: `${100 * p.value / max}%`, borderRadius: '3px 3px 0 0', background: 'rgba(236,234,239,0.28)' }} />)}
+    </div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', ...muted, fontSize: 11, marginTop: 3 }}>
+      <span>{text.date(points[0].time)}</span><span>{text.date(points.at(-1).time)}</span>
+    </div>
+    <div style={{ ...muted, fontSize: 11, marginTop: 4 }}>{t('exerciseProgress.volumeNote')}</div>
+  </figure>
+}
+
+function Segmented({ options, value, onChange }) {
+  return <div role="tablist" style={{ display: 'flex', gap: 4, padding: 3, marginTop: 16, borderRadius: 10, background: 'rgba(236,234,239,0.05)' }}>
+    {options.map(o => <button key={o.id} role="tab" aria-selected={o.id === value} onClick={() => onChange(o.id)} style={{
+      flex: 1, padding: '6px 4px', borderRadius: 8, border: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+      background: o.id === value ? 'var(--accent-color-soft)' : 'transparent',
+      color: o.id === value ? 'var(--accent-color-strong)' : 'var(--fg-secondary)',
+    }}>{o.label}</button>)}
+  </div>
+}
+
 export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, data, text, unit, timed }) {
   const { t } = useTranslation()
   const { webApp } = useTelegram()
   const [showAll, setShowAll] = useState(false)
   const [asking, setAsking] = useState(false)
+  const [view, setView] = useState('main')
   const workouts = data?.workouts ?? []
   const { records, volume } = progress
   const sessions = records.sessions
@@ -101,7 +152,25 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, dat
           </span>
         </div>}
 
-        {progress.charts.map(chart => <ExerciseTrendChart key={`${chart.kind}-${chart.anchor}`} chart={chart} unit={unit} />)}
+        {progress.plateau?.kind === 'consolidate' && <HeavySets plateau={progress.plateau} text={text} t={t} />}
+        {(() => {
+          const main = progress.charts[0]
+          const options = [
+            main && { id: 'main', label: main.top ? t('exerciseProgress.tab.top', { reps: main.anchor }) : t('exerciseProgress.tab.main') },
+            progress.views.e1rm && { id: 'e1rm', label: t('exerciseProgress.tab.e1rm') },
+            progress.views.volume && { id: 'volume', label: t('exerciseProgress.tab.volume') },
+          ].filter(Boolean)
+          const current = options.some(o => o.id === view) ? view : options[0]?.id
+          return <>
+            {options.length > 1 && <Segmented options={options} value={current} onChange={setView} />}
+            {current === 'main' && <ExerciseTrendChart chart={main} unit={unit} />}
+            {current === 'e1rm' && <>
+              <ExerciseTrendChart chart={progress.views.e1rm} unit={unit} />
+              <div style={{ ...muted, fontSize: 11 }}>{t('exerciseProgress.e1rmNote')}</div>
+            </>}
+            {current === 'volume' && <VolumeBars view={progress.views.volume} text={text} unit={unit} t={t} />}
+          </>
+        })()}
 
         {['plateau', 'down', 'steady'].includes(progress.trend) && (
           <button onClick={askTrainer} disabled={asking} style={{

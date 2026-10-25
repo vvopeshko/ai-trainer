@@ -99,7 +99,7 @@ export function progressChart(benchmark) {
       fit = 'step'
     }
   }
-  return { kind: benchmark.kind, anchor: benchmark.anchor, points, line, fit, trend: benchmark.trend }
+  return { kind: benchmark.kind, anchor: benchmark.anchor, top: benchmark.top ?? false, points, line, fit, trend: benchmark.trend }
 }
 
 function volumeProgress(points) {
@@ -211,9 +211,42 @@ const topWeight = p => Math.max(...p.workout.sets.map(s => s.weightKg ?? 0))
 function plateauKind(stall) {
   const heavy = Math.max(...stall.map(topWeight))
   if (heavy > 0 && stall.some(p => topWeight(p) < heavy)
-    && !stall.some(p => p.workout.sets.every(s => (s.weightKg ?? 0) === heavy))) return { kind: 'consolidate', weightKg: heavy }
+    && !stall.some(p => p.workout.sets.every(s => (s.weightKg ?? 0) === heavy))) {
+    // Progress toward the fix: how many sets per session reached the heavier weight.
+    const bars = stall.map(p => ({ time: p.time, total: p.workout.sets.length,
+      heavy: p.workout.sets.filter(s => (s.weightKg ?? 0) >= heavy).length }))
+    return { kind: 'consolidate', weightKg: heavy, bars }
+  }
   if (stall.every(p => topWeight(p) === heavy)) return { kind: 'stuck', weightKg: heavy }
   return null
+}
+
+// With a plan, chart the progression target: the best weight lifted for at
+// least the top of the rep range. Reps at a fixed weight stop at repsMax by
+// design, so a reps series would chart the plan, not the lifter.
+function topOfRangeSeries(points, repsMax) {
+  const observations = points.flatMap(p => {
+    const sets = p.workout.sets.filter(s => s.reps >= repsMax && (s.weightKg ?? 0) > 0)
+    return sets.length ? [{ time: p.time, value: Math.max(...sets.map(s => s.weightKg)) }] : []
+  })
+  if (observations.length < 2) return null
+  const threshold = Math.max(0.5, median(observations.map(p => p.value)) * 0.01)
+  return { kind: 'weight', anchor: repsMax, top: true, observations, threshold, trend: seriesTrend(observations, threshold) }
+}
+
+// Estimated 1RM (Epley) of the best set per session, only sets of 1–12 reps:
+// beyond that the formula drifts. A model for comparing schemes, not a measured max.
+export const epley = (weightKg, reps) => reps === 1 ? weightKg : weightKg * (1 + reps / 30)
+function e1rmSeries(points) {
+  const observations = points.flatMap(p => {
+    const values = p.workout.sets.filter(s => (s.weightKg ?? 0) > 0 && s.reps <= 12).map(s => epley(s.weightKg, s.reps))
+    return values.length ? [{ time: p.time, value: Math.round(Math.max(...values) * 10) / 10 }] : []
+  })
+  if (observations.length < 2) return null
+  const threshold = Math.max(0.5, median(observations.map(p => p.value)) * 0.01)
+  const chart = progressChart({ kind: 'e1rm', anchor: 0, observations, threshold, trend: seriesTrend(observations, threshold) })
+  // Green dots: a new best estimate within the period.
+  return { ...chart, points: chart.points.map((p, i) => ({ ...p, record: i > 0 && p.value > Math.max(...chart.points.slice(0, i).map(o => o.value)) })) }
 }
 
 export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
@@ -267,14 +300,31 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
     b.observations.length - a.observations.length
     || (a.kind === 'weight' ? 0 : 1) - (b.kind === 'weight' ? 0 : 1) || b.anchor - a.anchor)[0]
   const evidence = trend === 'up' || trend === 'down' ? overall.evidence[trend] : null
-  const charts = [evidence ?? choose(overall.benchmarks)].filter(Boolean).map(progressChart).filter(Boolean)
+  const capped = plan?.repsMax > 0
+  const series = (capped && topOfRangeSeries(points, plan.repsMax))
+    || evidence || choose(overall.benchmarks.filter(b => !capped || b.kind === 'weight'))
+  // Green dots: days whose new record lies on the charted series.
+  const recordsByDay = new Map(records.sessions.map(session => [dayOf(session.time), session.records]))
+  const charts = [series].filter(Boolean).map(progressChart).filter(Boolean).map(chart => ({ ...chart,
+    points: chart.points.map(p => ({ ...p, record: (recordsByDay.get(dayOf(p.time)) ?? []).some(r => chart.kind === 'weight'
+      ? r.weightKg === p.value && (chart.top ? r.reps >= chart.anchor : r.reps === chart.anchor)
+      : r.weightKg === chart.anchor && r.reps === p.value) })) }))
   const candidates = plan?.repsMax > 0 && latest.sets.length === plan.sets ? latest.sets
     .map((s, index) => ({ ...s, index })).filter(s => s.reps < plan.repsMax)
     .sort((a, b) => a.reps - b.reps || a.index - b.index) : []
   const next = candidates[0]
-  return { trend, band, charts, evidence, volume: volumeProgress(points),
+  const volume = volumeProgress(points)
+  // Alternative views for the sheet; the card's sparkline stays on charts[0].
+  const views = {
+    e1rm: e1rmSeries(points),
+    volume: volume.metric && points.length >= 2
+      ? { metric: volume.metric, points: points.map(p => ({ time: p.time, value: p[volume.metric], sets: p.count })) } : null,
+  }
+  return { trend, band, charts, views, evidence, volume,
     days: daysBetween(points[0].time, points.at(-1).time), count: points.length,
-    stall, window, plateau: trend === 'plateau' ? plateauKind(stallPoints) : null,
+    // Subtype from the recent sessions (as in the logbook): an older full set
+    // at the heavier weight does not mean it is held now.
+    stall, window, plateau: trend === 'plateau' ? plateauKind(stallPoints.slice(-6)) : null,
     points: points.map(p => ({ time: p.time, value: p.value })), latestSets: latest.sets,
     goal: next ? { set: next.index + 1, from: next.reps, to: next.reps + 1, weightKg: next.weightKg ?? 0 } : null,
     ready, records,
