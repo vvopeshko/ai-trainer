@@ -59,6 +59,11 @@ cd server && npm run seed:exercises && npm run seed:dev
 # Seed упражнений (924 штуки, idempotent upsert по slug)
 cd server && npm run seed:exercises
 
+# Исправления русских названий упражнений (data/exercise-name-fixes.json) — только nameRu
+# перечисленных slug и только если в базе ещё старое значение; по умолчанию dry run
+cd server && node --env-file=.env scripts/fixExerciseNames.js            # dry run (dev)
+cd server && DATABASE_URL="<prod url>" node scripts/fixExerciseNames.js --apply
+
 # Seed биллинга (планы week/month/lifetime + цены по регион-корзинам, idempotent)
 cd server && npm run seed:billing
 

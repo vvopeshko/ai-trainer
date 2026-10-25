@@ -462,7 +462,7 @@
   {
     "slug": "alternating-cable-shoulder-press",
     "nameEn": "Alternating Cable Shoulder Press",
-    "nameRu": "Поочередный жим гантелей сидя",
+    "nameRu": "Поочерёдный жим на плечи в кроссовере стоя",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -1928,7 +1928,7 @@
   {
     "slug": "barbell-incline-shoulder-raise",
     "nameEn": "Barbell Incline Shoulder Raise",
-    "nameRu": "Жим штанги лёжа на наклонной скамье с подъёмом плеч",
+    "nameRu": "Подъём плеч со штангой лёжа на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -2832,7 +2832,7 @@
   {
     "slug": "bent-arm-dumbbell-pullover",
     "nameEn": "Bent-Arm Dumbbell Pullover",
-    "nameRu": "Пуловер с гантелью прямыми руками",
+    "nameRu": "Пуловер с гантелью на согнутых руках",
     "bodyweight": false,
     "primaryMuscles": [
       "chest"
@@ -4243,7 +4243,7 @@
   {
     "slug": "cable-incline-pushdown",
     "nameEn": "Cable Incline Pushdown",
-    "nameRu": "Тяга верхнего блока в наклоне лёжа",
+    "nameRu": "Тяга блока прямыми руками лёжа на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "lats"
@@ -4739,7 +4739,7 @@
   {
     "slug": "cable-seated-lateral-raise",
     "nameEn": "Cable Seated Lateral Raise",
-    "nameRu": "Разведение рук в наклоне в кроссовере сидя",
+    "nameRu": "Махи в стороны в кроссовере сидя",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -4779,7 +4779,7 @@
   {
     "slug": "cable-shoulder-press",
     "nameEn": "Cable Shoulder Press",
-    "nameRu": "Жим гантелей сидя",
+    "nameRu": "Жим на плечи в кроссовере стоя",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -8306,7 +8306,7 @@
   {
     "slug": "dumbbell-incline-shoulder-raise",
     "nameEn": "Dumbbell Incline Shoulder Raise",
-    "nameRu": "Жим гантелей сидя на наклонной скамье",
+    "nameRu": "Подъём плеч с гантелями сидя на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -8381,7 +8381,7 @@
   {
     "slug": "dumbbell-lying-one-arm-rear-lateral-raise",
     "nameEn": "Dumbbell Lying One-Arm Rear Lateral Raise",
-    "nameRu": "Подъем гантели в наклоне лежа на одной руке",
+    "nameRu": "Отведение гантели одной рукой лёжа на животе (задняя дельта)",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -12162,7 +12162,7 @@
   {
     "slug": "incline-barbell-triceps-extension",
     "nameEn": "Incline Barbell Triceps Extension",
-    "nameRu": "Жим штанги лежа на наклонной скамье на трицепс",
+    "nameRu": "Разгибание рук со штангой лёжа на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "triceps"
@@ -12273,7 +12273,7 @@
   {
     "slug": "incline-cable-flye",
     "nameEn": "Incline Cable Flye",
-    "nameRu": "Жим гантелей на наклонной скамье",
+    "nameRu": "Сведение рук в кроссовере на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "chest"
@@ -12384,7 +12384,7 @@
   {
     "slug": "incline-dumbbell-flyes",
     "nameEn": "Incline Dumbbell Flyes",
-    "nameRu": "Жим гантелей лежа на наклонной скамье",
+    "nameRu": "Разводка гантелей на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "chest"
@@ -12421,7 +12421,7 @@
   {
     "slug": "incline-dumbbell-flyes-with-a-twist",
     "nameEn": "Incline Dumbbell Flyes - With A Twist",
-    "nameRu": "Жим гантелей лежа на наклонной скамье с разворотом",
+    "nameRu": "Разводка гантелей на наклонной скамье с разворотом",
     "bodyweight": false,
     "primaryMuscles": [
       "chest"
@@ -12677,7 +12677,7 @@
   {
     "slug": "incline-push-up-medium",
     "nameEn": "Incline Push-Up Medium",
-    "nameRu": "Жим от пола с наклоном (средний хват)",
+    "nameRu": "Отжимания от возвышения (средний хват)",
     "bodyweight": true,
     "primaryMuscles": [
       "chest"
@@ -12964,7 +12964,7 @@
   {
     "slug": "iron-cross",
     "nameEn": "Iron Cross",
-    "nameRu": "Жим гантелей лёжа (Iron Cross)",
+    "nameRu": "Подъём гантелей вперёд и в стороны (Iron Cross)",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -15001,7 +15001,7 @@
   {
     "slug": "leverage-deadlift",
     "nameEn": "Leverage Deadlift",
-    "nameRu": "Жим ногами в тренажёре",
+    "nameRu": "Становая тяга в рычажном тренажёре",
     "bodyweight": false,
     "primaryMuscles": [
       "quadriceps"
@@ -15866,7 +15866,7 @@
   {
     "slug": "lying-close-grip-barbell-triceps-extension-behind-the-head",
     "nameEn": "Lying Close-Grip Barbell Triceps Extension Behind The Head",
-    "nameRu": "Жим штанги лёжа узким хватом за голову на трицепс",
+    "nameRu": "Разгибание рук со штангой лёжа узким хватом за голову",
     "bodyweight": false,
     "primaryMuscles": [
       "triceps"
@@ -16208,7 +16208,7 @@
   {
     "slug": "lying-machine-squat",
     "nameEn": "Lying Machine Squat",
-    "nameRu": "Жим ногами лёжа в тренажёре",
+    "nameRu": "Приседания лёжа в тренажёре",
     "bodyweight": false,
     "primaryMuscles": [
       "quadriceps"
@@ -17552,7 +17552,7 @@
   {
     "slug": "one-arm-incline-lateral-raise",
     "nameEn": "One-Arm Incline Lateral Raise",
-    "nameRu": "Жим гантели одной рукой лёжа на наклонной скамье",
+    "nameRu": "Мах гантелью в сторону лёжа боком на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -22573,7 +22573,7 @@
   {
     "slug": "seated-bent-over-one-arm-dumbbell-triceps-extension",
     "nameEn": "Seated Bent-Over One-Arm Dumbbell Triceps Extension",
-    "nameRu": "Тяга гантели к поясу сидя в наклоне с разгибанием на трицепс",
+    "nameRu": "Разгибание руки с гантелью сидя в наклоне",
     "bodyweight": false,
     "primaryMuscles": [
       "triceps"
@@ -22788,7 +22788,7 @@
   {
     "slug": "seated-calf-raise",
     "nameEn": "Seated Calf Raise",
-    "nameRu": "Жим ногами в тренажёре сидя (икры)",
+    "nameRu": "Подъёмы на носки сидя в тренажёре",
     "bodyweight": false,
     "primaryMuscles": [
       "calves"
@@ -25182,7 +25182,7 @@
   {
     "slug": "smith-incline-shoulder-raise",
     "nameEn": "Smith Incline Shoulder Raise",
-    "nameRu": "Жим штанги в наклоне в тренажере Смита",
+    "nameRu": "Подъём плеч в тренажёре Смита на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -27791,7 +27791,7 @@
   {
     "slug": "standing-leg-curl",
     "nameEn": "Standing Leg Curl",
-    "nameRu": "Сгибание ног лёжа в тренажёре",
+    "nameRu": "Сгибание ноги стоя в тренажёре",
     "bodyweight": false,
     "primaryMuscles": [
       "hamstrings"
@@ -27863,7 +27863,7 @@
   {
     "slug": "standing-low-pulley-deltoid-raise",
     "nameEn": "Standing Low-Pulley Deltoid Raise",
-    "nameRu": "Тяга нижнего блока стоя на дельты",
+    "nameRu": "Подъём руки в сторону с нижнего блока стоя",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -28121,7 +28121,7 @@
   {
     "slug": "standing-overhead-barbell-triceps-extension",
     "nameEn": "Standing Overhead Barbell Triceps Extension",
-    "nameRu": "Жим штанги из-за головы стоя",
+    "nameRu": "Разгибание рук со штангой из-за головы стоя",
     "bodyweight": false,
     "primaryMuscles": [
       "triceps"
@@ -28802,7 +28802,7 @@
   {
     "slug": "straight-raises-on-incline-bench",
     "nameEn": "Straight Raises on Incline Bench",
-    "nameRu": "Тяга штанги на наклонной скамье",
+    "nameRu": "Подъём штанги перед собой лёжа на наклонной скамье",
     "bodyweight": false,
     "primaryMuscles": [
       "shoulders"
@@ -29484,7 +29484,7 @@
   {
     "slug": "thigh-abductor",
     "nameEn": "Thigh Abductor",
-    "nameRu": "Сведение ног в тренажёре",
+    "nameRu": "Разведение ног в тренажёре",
     "bodyweight": false,
     "primaryMuscles": [
       "abductors"
