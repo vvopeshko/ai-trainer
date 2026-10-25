@@ -200,7 +200,7 @@ function StatusBadge({ actual, target, t }) {
 
 // ─── MuscleGroupCard ────────────────────────────────────────────────────
 
-export function MuscleGroupCard({ group, onTap }) {
+export function MuscleGroupCard({ group, onTap, style }) {
   const { t } = useTranslation()
   const iconName = MUSCLE_ICONS[group.group] || 'activity'
   const hasTarget = group.setsTarget != null && group.setsTarget > 0
@@ -215,6 +215,9 @@ export function MuscleGroupCard({ group, onTap }) {
         padding: 16,
         boxShadow: 'var(--gd-card-shadow)',
         cursor: onTap ? 'pointer' : undefined,
+        boxSizing: 'border-box',
+        minWidth: 0,
+        ...style,
       }}
       onClick={onTap ? () => onTap(group) : undefined}
     >

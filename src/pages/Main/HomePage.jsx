@@ -1,7 +1,7 @@
 /**
  * Home Page — главный экран мини-аппа (GD redesign).
  *
- * Секции: HeroBlock → QuickActions → MyPlanSection → MonthStatsTiles.
+ * Секции: HeroBlock → AnnualGoalCard → инсайт → MyPlanSection → слайдер подходов по мышцам.
  * Данные: HomeDataContext + ProgressDataContext.
  */
 import { useState } from 'react'
@@ -182,24 +182,44 @@ export default function HomePage() {
         />
       )}
 
-      {/* Muscle volume */}
+      {/* Muscle volume — горизонтальный слайдер, виден край следующей карточки */}
       {progressLoaded && visibleMuscles.length > 0 && (
-        <div style={{ padding: '0 18px', marginTop: 22 }}>
+        <div style={{ marginTop: 22 }}>
           <div style={{
             fontSize: 11, fontWeight: 700,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: 'var(--gd-faint)',
-            marginBottom: 10,
+            margin: '0 18px 10px',
           }}>
             {t('progress.muscle.sectionTitle')}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div
+            role="region"
+            aria-label={t('progress.muscle.sectionTitle')}
+            tabIndex={0}
+            style={{
+              display: 'flex',
+              alignItems: 'stretch',
+              gap: 10,
+              overflowX: 'auto',
+              scrollSnapType: 'x mandatory',
+              scrollPaddingInline: 18,
+              padding: '0 18px 4px',
+              scrollbarWidth: 'none',
+              WebkitOverflowScrolling: 'touch',
+              outline: 'none',
+            }}
+          >
             {visibleMuscles.map(g => (
               <MuscleGroupCard
                 key={g.group}
                 group={g}
                 onTap={g.exercises?.length > 0 ? setSelectedMuscle : undefined}
+                style={{
+                  flex: visibleMuscles.length > 1 ? '0 0 86%' : '1 0 100%',
+                  scrollSnapAlign: 'start',
+                }}
               />
             ))}
           </div>

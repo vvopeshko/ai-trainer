@@ -54,32 +54,38 @@ export function HeroBlock({
         <img className="home-hero__photo" src="/workout-hero.jpg" alt="" fetchPriority="high" />
         <div className="home-hero__shade" />
         <div className="home-hero__workout-content">
-          {program && (!isActive || activeWorkout.programId) && <div className="home-hero__program">
+          {program && <div className="home-hero__program">
             <Icon name="sparkles" size={13} />
             <span>{program.name}{dayIndex != null && ` · ${t('home.dayN', { n: dayIndex + 1 })}`}</span>
           </div>}
-          {isActive && <div className={`home-hero__status${isPaused ? ' home-hero__status--paused' : ''}`}>
-            {isPaused ? t('home.workoutPaused') : t('home.workoutActive')}
-          </div>}
           <h2 className="home-hero__title">{day?.title || t('home.pickFreeform')}</h2>
-          {isActive ? <div className="home-hero__timer">{timer}</div> : day && <div className="home-hero__meta">
-            <span><Icon name="dumbbell" size={18} />{day.exercises?.length || 0} {t(`home.exerciseWord.${plural.select(day.exercises?.length || 0)}`)}</span>
-            {estimatedMin > 0 && <span><Icon name="clock" size={18} />{t('home.estimatedMin', { n: estimatedMin })}</span>}
-          </div>}
+          {/* Статус активной тренировки занимает строку меты — высота карточки не меняется между состояниями */}
+          <div className="home-hero__meta">
+            {isActive ? <span className={`home-hero__status${isPaused ? ' home-hero__status--paused' : ''}`}>
+              <span className="home-hero__status-dot" aria-hidden="true" />
+              {isPaused ? t('home.workoutPaused') : t('home.workoutActive')}
+            </span> : day && <>
+              <span><Icon name="dumbbell" size={18} />{day.exercises?.length || 0} {t(`home.exerciseWord.${plural.select(day.exercises?.length || 0)}`)}</span>
+              {estimatedMin > 0 && <span><Icon name="clock" size={18} />{t('home.estimatedMin', { n: estimatedMin })}</span>}
+            </>}
+          </div>
           <div className="home-hero__actions">
             <button type="button" className="home-hero__start" disabled={loading}
               onClick={isActive ? (isPaused ? onResume : onContinue) : () => onStart(nextWorkout?.programId, nextWorkout?.dayIndex)}>
               <span className="home-hero__start-label">
                 {!loading && <Icon name="play" size={19} fill="currentColor" strokeWidth={1.5} aria-hidden="true" />}
-                <span>{loading ? t('workout.starting') : t(isActive ? 'home.continueWorkoutFull' : 'home.startWorkoutCta')}</span>
+                <span>{loading ? t('workout.starting') : t(isActive ? 'home.continueWorkout' : 'home.startWorkoutCta')}</span>
+                {isActive && <span className="home-hero__timer" role="timer">· {timer}</span>}
               </span>
             </button>
-            {canPickDay && <button type="button" className="home-hero__icon-button home-hero__shuffle"
+            {isActive ? <button type="button" className="home-hero__icon-button home-hero__side-action home-hero__cancel"
+              onClick={onCancel} aria-label={t('home.cancelWorkout')} aria-haspopup="dialog">
+              <Icon name="stop" size={20} fill="currentColor" strokeWidth={1.5} aria-hidden="true" />
+            </button> : canPickDay && <button type="button" className="home-hero__icon-button home-hero__side-action"
               onClick={onPickDay} disabled={loading} aria-label={t('home.pickDayTitle')} aria-haspopup="dialog">
               <Icon name="shuffle" size={23} aria-hidden="true" />
             </button>}
           </div>
-          {isActive && <button type="button" className="home-hero__cancel" onClick={onCancel}>{t('home.cancelWorkout')}</button>}
         </div>
       </Glass>
     </div>
