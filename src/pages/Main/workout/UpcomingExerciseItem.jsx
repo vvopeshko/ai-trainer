@@ -1,9 +1,10 @@
 import { Glass } from '../../../components/ui/Glass.jsx'
 import { Icon } from '../../../components/ui/Icon.jsx'
+import { StatusPill } from './ProgressStatus.jsx'
 
 // ─── UpcomingExerciseItem ───────────────────────────────────────────────
 
-export function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging }) {
+export function UpcomingExerciseItem({ index, name, scheme, weightRange, trend, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging }) {
   // translateY во время драга применяется императивно к wrapper'у в WorkoutPage
   // (через ref, без ре-рендера). Здесь — только «поднятый» вид: scale/тень/opacity.
   return (
@@ -45,11 +46,13 @@ export function UpcomingExerciseItem({ index, name, scheme, expanded, hasPartial
         }}>{name}</div>
         <div style={{ fontSize: 10.5, color: 'rgba(236,234,239,0.5)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{scheme}</span>
+          {weightRange && <span>· {weightRange}</span>}
           {hasAlternatives && (
             <Icon name="swap" size={10} style={{ color: 'hsl(var(--accent-h,158),55%,70%)', flexShrink: 0 }} />
           )}
         </div>
       </div>
+      {trend && trend !== 'first' && <StatusPill trend={trend} />}
       <Icon name={expanded ? 'chevronDown' : 'chevronRight'} size={14} style={{ color: 'rgba(236,234,239,0.35)' }} />
     </Glass>
   )

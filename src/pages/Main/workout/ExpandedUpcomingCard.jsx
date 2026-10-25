@@ -5,7 +5,7 @@ import { DoneSetRow } from './DoneSetRow.jsx'
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-export function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, onStart, onCollapse, onDeletePartialSet, onSwapAlternative, onInfo }) {
+export function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onSwapAlternative, onInfo }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
@@ -69,6 +69,9 @@ export function ExpandedUpcomingCard({ planExercise, index, totalExercises, last
           )}
         </div>
       </div>
+
+      {/* Exercise progress: history loads when the card is expanded */}
+      {progress}
 
       {/* Alternatives swap buttons */}
       {alts.length > 0 && onSwapAlternative && (

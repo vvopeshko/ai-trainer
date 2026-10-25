@@ -45,7 +45,7 @@ import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
 import { newRecords, exerciseProgress } from '../../utils/exerciseProgress.js'
-import { useExerciseHistory } from '../../hooks/queries.js'
+import { useExerciseHistory, useExerciseOverview } from '../../hooks/queries.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
@@ -89,6 +89,10 @@ export default function WorkoutPage() {
   const [exerciseSettings, setExerciseSettingsState] = useState(() => getExerciseSettings(null))
   // Тот же queryKey, что у карточки прогресса — без лишнего запроса.
   const { data: exerciseHistory } = useExerciseHistory(currentExercise?.id)
+  // Statuses for the collapsed upcoming rows: one request for all exercises.
+  const { data: overview } = useExerciseOverview()
+  const trendById = useMemo(() => new Map((overview?.exercises ?? []).map(ex => [ex.id,
+    exerciseProgress(ex.workouts, ex.plan, { experienceLevel: overview.experienceLevel })?.trend])), [overview])
   const [detailExerciseId, setDetailExerciseId] = useState(null)
 
   // Plan state
@@ -331,6 +335,15 @@ export default function WorkoutPage() {
     setIndex: doneSets.length, lastSets: lastResultsCache[currentExercise?.id]?.lastSets,
     plan: currentPlanExercise, progress, readyWeightKg,
   })
+  // Weights of the last session, e.g. "80–85 кг", for the collapsed upcoming rows.
+  const weightRange = (pe) => {
+    const weights = (lastResultsCache[pe.exerciseId]?.lastSets ?? []).map(s => s.weightKg ?? 0).filter(w => w > 0)
+    if (!weights.length) return null
+    const unit = getExerciseSettings(pe.slug).unit
+    const show = kg => unit === 'lbs' ? kgToLbs(kg) : kg
+    const low = show(Math.min(...weights)), high = show(Math.max(...weights))
+    return `${low === high ? low : `${low}–${high}`} ${t(unit === 'lbs' ? 'units.lbs' : 'units.kg')}`
+  }
   const formatSuggestedSet = (set) => {
     const weight = exerciseSettings.unit === 'lbs' ? kgToLbs(set.weightKg) : set.weightKg
     return `${weight} ${t(exerciseSettings.unit === 'lbs' ? 'units.lbs' : 'units.kg')} × ${set.reps}`
@@ -1292,6 +1305,11 @@ export default function WorkoutPage() {
                         totalExercises={planExercises.length}
                         lastResults={lastResultsCache[pe.exerciseId]}
                         partialSets={partial}
+                        progress={(() => {
+                          const settings = getExerciseSettings(pe.slug)
+                          return <ExerciseProgress exerciseId={pe.exerciseId} plan={pe} unit={settings.unit}
+                            step={settings.step} stepUnit={settings.stepUnit} timed={settings.type === 'timer'} />
+                        })()}
                         onCollapse={() => setExpandedExerciseId(null)}
                         onStart={() => {
                           setExpandedExerciseId(null)
@@ -1306,6 +1324,8 @@ export default function WorkoutPage() {
                         index={peIndex}
                         name={pe.nameRu}
                         scheme={scheme}
+                        weightRange={weightRange(pe)}
+                        trend={trendById.get(pe.exerciseId)}
                         expanded={false}
                         hasPartial={!!partial}
                         hasAlternatives={pe.alternatives?.length > 0}

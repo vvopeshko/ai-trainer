@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useExerciseHistory } from '../../../hooks/queries.js'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { exerciseProgress } from '../../../utils/exerciseProgress.js'
-import { Icon } from '../../../components/ui/index.js'
+import { Icon, Skeleton } from '../../../components/ui/index.js'
 import { ExerciseProgressSheet } from './ExerciseProgressSheet.jsx'
 import { StatusPill, Sparkline } from './ProgressStatus.jsx'
 import { useProgressText } from './useProgressText.js'
@@ -15,7 +15,17 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit
   const progress = exerciseProgress(workouts, timed ? null : plan, { experienceLevel: data?.experienceLevel })
   const text = useProgressText(progress, { plan, unit, step, stepUnit })
   const style = { margin: '0 12px 12px', fontSize: 11.5, color: 'var(--fg-secondary)', lineHeight: 1.45 }
-  if (isPending) return <div style={style}>{t('exerciseProgress.loading')}</div>
+  const box = { padding: '9px 11px', borderRadius: 12, border: '1px solid rgba(236,234,239,0.08)', background: 'rgba(236,234,239,0.03)' }
+  // Same footprint as the loaded card: status row + action row, so nothing jumps.
+  if (isPending) return <div aria-busy="true" aria-label={t('exerciseProgress.loading')} style={{ ...style, ...box }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Skeleton width={62} height={20} radius={6} />
+      <Skeleton width="45%" height={11} />
+      <span style={{ flex: 1 }} />
+      <Skeleton width={56} height={18} radius={4} />
+    </div>
+    {plan && !timed && <Skeleton width="75%" height={13} style={{ marginTop: 9 }} />}
+  </div>
   if (isError) return <div style={style}><button onClick={() => refetch()} style={{ color: 'inherit', background: 'none', border: 0, padding: 0 }}>{t('exerciseProgress.retry')}</button></div>
   if (!progress) return <div style={style}>{t('exerciseProgress.empty')}</div>
   // Last session's sets are not repeated here: the set input is prefilled from them.
@@ -24,7 +34,7 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit
   return <>
     <button onClick={() => setOpen(true)} aria-label={t('exerciseProgress.open')} style={{
       ...style, display: 'block', width: 'calc(100% - 24px)', textAlign: 'left', cursor: 'pointer',
-      padding: '9px 11px', borderRadius: 12, border: '1px solid rgba(236,234,239,0.08)', background: 'rgba(236,234,239,0.03)',
+      ...box,
     }}>
       {!timed && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <StatusPill trend={progress.trend} />
