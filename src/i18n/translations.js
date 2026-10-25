@@ -43,6 +43,7 @@ export const translations = {
 
     // Доступность (aria-label для иконочных кнопок)
     'a11y.back': 'Назад',
+    'a11y.close': 'Закрыть',
     'a11y.mainNavigation': 'Основная навигация',
     'a11y.pause': 'Пауза',
     'a11y.resume': 'Продолжить',

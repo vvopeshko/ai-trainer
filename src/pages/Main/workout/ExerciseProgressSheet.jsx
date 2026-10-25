@@ -118,7 +118,17 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
   return createPortal(<BottomSheet open={open} onClose={onClose}>
     <div style={{ padding: '4px 4px 12px', fontSize: 12.5, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
       {/* tabIndex: BottomSheet focuses the first focusable element; keep the sheet at its top. */}
-      <div tabIndex={0} style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8, outline: 'none' }}>{title ?? t('exerciseProgress.sheetTitle')}</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+        <div tabIndex={0} style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 600, color: 'var(--fg-primary)', outline: 'none' }}>{title ?? t('exerciseProgress.sheetTitle')}</div>
+        {/* Swipe-down to close is unreliable inside the Telegram Mini App. */}
+        <button onClick={onClose} aria-label={t('a11y.close')} style={{
+          width: 30, height: 30, marginTop: -3, borderRadius: '50%', border: 0, flexShrink: 0, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(236,234,239,0.08)', color: 'var(--fg-secondary)',
+        }}>
+          <Icon name="x" size={16} />
+        </button>
+      </div>
       {!timed && <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusPill trend={progress.trend} />
