@@ -47,8 +47,9 @@ export function rankAlternatives(target, pool, usage = new Map()) {
     // Catalog duplicates under different slugs and left/right sides: one per name.
     .filter((ex, i, all) => all.findIndex(o => baseName(o.nameRu) === baseName(ex.nameRu)) === i)
   // Within one target muscle, keep the same movement (жим ногами ↔ жим ногами,
-  // not lunges) and what the user already does — when there is any of those.
-  const close = sorted.filter(ex => sameMovement(ex) || ex.usedCount > 0)
+  // not lunges) when there is any; the user's history only orders the list —
+  // doing lunges does not make them a leg press alternative.
+  const close = sorted.filter(sameMovement)
   const ranked = close.length ? close : sorted
   // Variety at the top: at most two of the same tool before the rest.
   const perTool = new Map(), head = [], tail = []

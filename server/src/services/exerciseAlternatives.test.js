@@ -160,14 +160,14 @@ it('refreshes every auto-filled slot with refreshAuto, leaving hand-picked ones'
   expect(saved[1].alternatives).toEqual(['cable'])
 })
 
-it('keeps the same movement within a target muscle, plus what the user already does', () => {
+it('keeps the same movement within a target muscle, whatever else the user does', () => {
   const press = { ...ex('lp', 'Жим ногами', ['quadriceps'], ['machine']), category: 'compound' }
   const list = rankAlternatives(press, [
     { ...ex('lp2', 'Жим ногами в тренажёре Смита', ['quadriceps'], ['machine']), category: 'compound' },
     { ...ex('lunge', 'Болгарские выпады', ['quadriceps'], ['dumbbell']), category: 'compound' },
     { ...ex('goblet', 'Гоблет-приседания', ['quadriceps'], ['kettlebells']), category: 'compound' },
   ], new Map([['goblet', 2]]))
-  expect(list.map(e => e.id)).toEqual(['goblet', 'lp2'])
+  expect(list.map(e => e.id)).toEqual(['lp2'])
   // Tool words are not the movement.
   const thrust = { ...ex('t', 'Ягодичный мостик со штангой', ['glutes'], ['barbell']), category: 'compound' }
   expect(rankAlternatives(thrust, [
