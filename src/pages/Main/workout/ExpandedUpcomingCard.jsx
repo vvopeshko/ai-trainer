@@ -6,14 +6,12 @@ import { ExerciseMuscleHeader } from './ExerciseMuscleHeader.jsx'
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onSwapAlternative, onInfo }) {
+export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onInfo }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
     ? `${planExercise.sets}×${planExercise.repsMin}`
     : `${planExercise.sets}×${planExercise.repsMin}-${planExercise.repsMax}`
-
-  const alts = planExercise.alternatives || []
 
   return (
     <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
@@ -45,43 +43,12 @@ export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partia
           {planExercise.restSec && (
             <span>{t('workout.restSec', { sec: planExercise.restSec })}</span>
           )}
-          {alts.length > 0 && (
-            <span style={{
-              padding: '1px 6px', borderRadius: 5,
-              background: 'hsla(var(--accent-h,158),55%,55%,0.12)',
-              color: 'hsl(var(--accent-h,158),55%,70%)',
-              fontSize: 10, fontWeight: 600,
-              display: 'inline-flex', alignItems: 'center', gap: 3,
-            }}>
-              <Icon name="swap" size={9} />
-              {t('workout.alternatives', { count: alts.length })}
-            </span>
-          )}
+
         </div>
       </div>
 
       {/* Exercise progress: history loads when the card is expanded */}
       {progress}
-
-      {/* Alternatives swap buttons */}
-      {alts.length > 0 && onSwapAlternative && (
-        <div style={{ padding: '0 12px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {alts.map(alt => (
-            <button key={alt.exerciseId} onClick={(e) => { e.stopPropagation(); onSwapAlternative(planExercise, alt) }} style={{
-              padding: '8px 12px', borderRadius: 10, border: 'none',
-              background: 'hsla(var(--accent-h,158),55%,55%,0.08)',
-              display: 'flex', alignItems: 'center', gap: 8,
-              cursor: 'pointer', textAlign: 'left', width: '100%',
-              fontFamily: 'var(--font-sans)',
-            }}>
-              <Icon name="swap" size={12} style={{ color: 'hsl(var(--accent-h,158),55%,70%)', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'hsl(var(--accent-h,158),55%,70%)', flex: 1 }}>
-                {alt.nameRu}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Partial progress (done sets from this session) */}
       {partial && partial.length > 0 && (

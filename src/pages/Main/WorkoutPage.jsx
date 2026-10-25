@@ -867,19 +867,6 @@ export default function WorkoutPage() {
     loadLastResults([alt.exerciseId])
   }
 
-  const handleSwapUpcoming = (planEx, alt) => {
-    rememberInProgram(planEx, alt, false)
-    // Partial sets of the old variant are kept as a finished exercise.
-    const partial = partialSets[planEx.exerciseId]
-    if (partial?.length > 0) {
-      setAllExercises(prev => [...prev, { exercise: { id: planEx.exerciseId, nameRu: planEx.nameRu, slug: planEx.slug }, sets: [...partial] }])
-      setPartialSets(prev => { const next = { ...prev }; delete next[planEx.exerciseId]; return next })
-    }
-    setPlanExercises(prev => prev.map(pe => pe.exerciseId !== planEx.exerciseId ? pe : swapSlot(pe, alt)))
-    setExpandedExerciseId(null)
-    loadLastResults([alt.exerciseId])
-  }
-
   // ── Helper ──
   function exerciseScheme(pe) {
     return pe.repsMin === pe.repsMax
@@ -1298,7 +1285,6 @@ export default function WorkoutPage() {
                           handleSelectFromPlan(pe)
                         }}
                         onDeletePartialSet={partial ? (setIdx) => handleDeletePartialSet(pe.exerciseId, setIdx) : null}
-                        onSwapAlternative={handleSwapUpcoming}
                         onInfo={setDetailExerciseId}
                       />
                     ) : (
