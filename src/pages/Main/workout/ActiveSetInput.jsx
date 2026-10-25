@@ -7,6 +7,7 @@ import { kgToLbs, lbsToKg, stepWeight } from '../../../utils/weightUnit.js'
 export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepUnitProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
   const { t } = useTranslation()
   const prevUnit = useRef(unit)
+  const [edited, setEdited] = useState(false)
   const [weight, setWeight] = useState(() => {
     const raw = lastWeight ?? 0
     return unit === 'lbs' ? kgToLbs(raw) : raw
@@ -18,13 +19,15 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
   const minWeight = minProp ?? 0
   const maxWeight = maxProp ?? (unit === 'lbs' ? 1100 : 500)
 
-  // Reset from lastWeight on exercise / data change
+  // A new exercise/set remounts this input. Late history may seed untouched
+  // fields, but must never overwrite a weight or reps the user has edited.
   useEffect(() => {
+    if (edited) return
     const raw = lastWeight ?? 0
     setWeight(unit === 'lbs' ? kgToLbs(raw) : raw)
     setReps(lastReps ?? plannedReps ?? 10)
     prevUnit.current = unit
-  }, [exercise.id, lastWeight, lastReps, plannedReps]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [exercise.id, lastWeight, lastReps, plannedReps, edited]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Convert displayed weight when unit toggles (without resetting from lastWeight)
   useEffect(() => {
@@ -72,7 +75,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
           background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button onClick={() => setWeight(w => Math.max(minWeight, stepWeight(w, -1, step, stepUnit, unit)))} style={{
+          <button onClick={() => { setEdited(true); setWeight(w => Math.max(minWeight, stepWeight(w, -1, step, stepUnit, unit))) }} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>−</button>
@@ -84,7 +87,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
               {unit === 'lbs' ? t('units.lbs') : t('units.kg')}
             </div>
           </div>
-          <button onClick={() => setWeight(w => Math.min(maxWeight, stepWeight(w, 1, step, stepUnit, unit)))} style={{
+          <button onClick={() => { setEdited(true); setWeight(w => Math.min(maxWeight, stepWeight(w, 1, step, stepUnit, unit))) }} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>+</button>
@@ -95,7 +98,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
           background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button onClick={() => setReps(r => Math.max(1, r - 1))} style={{
+          <button onClick={() => { setEdited(true); setReps(r => Math.max(1, r - 1)) }} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>−</button>
@@ -105,7 +108,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
               {t('units.reps')}
             </div>
           </div>
-          <button onClick={() => setReps(r => Math.min(100, r + 1))} style={{
+          <button onClick={() => { setEdited(true); setReps(r => Math.min(100, r + 1)) }} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>+</button>

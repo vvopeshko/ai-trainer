@@ -38,6 +38,8 @@ import { ActiveSetInput } from './workout/ActiveSetInput.jsx'
 import { UpcomingExerciseItem } from './workout/UpcomingExerciseItem.jsx'
 import { ExpandedUpcomingCard } from './workout/ExpandedUpcomingCard.jsx'
 import { WorkoutSkeleton } from './workout/WorkoutSkeleton.jsx'
+import { getSetSuggestion } from '../../utils/setSuggestion.js'
+import { kgToLbs } from '../../utils/weightUnit.js'
 import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
@@ -295,6 +297,18 @@ export default function WorkoutPage() {
   const totalPlannedSets = hasPlan ? planExercises.reduce((s, e) => s + e.sets, 0) : 0
   const currentExerciseNum = allExercises.length + (currentExercise ? 1 : 0)
   const currentPlanExercise = hasPlan && planIndex < planExercises.length ? planExercises[planIndex] : null
+
+  const suggestionFor = (setIndex) => getSetSuggestion({
+    setIndex,
+    lastSets: lastResultsCache[currentExercise?.id]?.lastSets,
+    doneSets,
+    plannedReps: currentPlanExercise?.repsMin,
+  })
+  const nextSet = suggestionFor(doneSets.length)
+  const formatSuggestedSet = (set) => {
+    const weight = exerciseSettings.unit === 'lbs' ? kgToLbs(set.weightKg) : set.weightKg
+    return `${weight} ${t(exerciseSettings.unit === 'lbs' ? 'units.lbs' : 'units.kg')} × ${set.reps}`
+  }
 
   // Build muscles data for BodyMap (done=low, current=high, upcoming=medium)
   const workoutMuscles = useMemo(() => {
@@ -1077,13 +1091,14 @@ export default function WorkoutPage() {
                         fontFamily: 'var(--font-mono)', fontSize: 12, flex: 1,
                         fontWeight: 600, color: 'rgba(236,234,239,0.7)', textAlign: 'right',
                       }}>
-                        {doneSets.length > 0 ? `${doneSets[doneSets.length - 1].weightKg ?? 0} × ${doneSets[doneSets.length - 1].reps}` : ''}
+                        {formatSuggestedSet(nextSet)}
                       </span>
                     </div>
                   )}
                 </>
               ) : (
                 <ActiveSetInput
+                  key={`${currentExercise.id}:${doneSets.length}`}
                   exercise={currentExercise}
                   unit={exerciseSettings.unit}
                   step={exerciseSettings.step}
@@ -1092,12 +1107,8 @@ export default function WorkoutPage() {
                   maxWeight={exerciseSettings.maxWeight}
                   setOrder={doneSets.length}
                   plannedSets={currentPlanExercise?.sets || null}
-                  lastWeight={doneSets.length > 0
-                    ? doneSets[doneSets.length - 1].weightKg
-                    : lastResultsCache[currentExercise.id]?.lastSets?.[0]?.weightKg ?? null}
-                  lastReps={doneSets.length > 0
-                    ? doneSets[doneSets.length - 1].reps
-                    : lastResultsCache[currentExercise.id]?.lastSets?.[0]?.reps ?? null}
+                  lastWeight={nextSet.weightKg}
+                  lastReps={nextSet.reps}
                   plannedReps={currentPlanExercise?.repsMin || null}
                   onDone={handleSetDone}
                 />
@@ -1109,8 +1120,7 @@ export default function WorkoutPage() {
                   {Array.from({ length: currentPlanExercise.sets - doneSets.length - 1 }, (_, i) => {
                     const setNum = doneSets.length + 2 + i
                     const setIdx = doneSets.length + 1 + i
-                    const lastSets = lastResultsCache[currentExercise.id]?.lastSets
-                    const lastSet = lastSets?.[setIdx] || lastSets?.slice(-1)[0] || (doneSets.length > 0 ? doneSets[doneSets.length - 1] : null)
+                    const suggestion = suggestionFor(setIdx)
                     const repsLabel = currentPlanExercise.repsMin === currentPlanExercise.repsMax
                       ? `${currentPlanExercise.repsMin}`
                       : `${currentPlanExercise.repsMin}–${currentPlanExercise.repsMax}`
@@ -1139,8 +1149,8 @@ export default function WorkoutPage() {
                             fontFamily: 'var(--font-mono)', fontSize: 11, flex: 1,
                             color: 'rgba(236,234,239,0.2)', textAlign: 'right',
                           }}>
-                            {lastSet
-                              ? `${lastSet.weightKg ?? 0} ${t('units.kg')} × ${lastSet.reps}`
+                            {suggestion.source !== 'default'
+                              ? formatSuggestedSet(suggestion)
                               : `${repsLabel} ${t('workout.reps').toLowerCase()}`
                             }
                           </span>
