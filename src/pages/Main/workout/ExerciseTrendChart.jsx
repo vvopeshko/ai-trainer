@@ -11,7 +11,9 @@ export function ExerciseTrendChart({ chart, unit }) {
     ? t('exerciseProgress.chartWeight', { reps: chart.anchor })
     : chart.anchor === 0 ? t('exerciseProgress.chartBodyweight')
       : t('exerciseProgress.chartReps', { weight: (unit === 'lbs' ? chart.anchor / 0.45359237 : chart.anchor).toLocaleString('ru-RU', { maximumFractionDigits: 1 }), unit: weightUnit })
-  const { points, line } = chart
+  const { points } = chart
+  // No trend → only the records: a flat fitted line through 80/85 looks like an error.
+  const line = chart.trend === 'stable' ? [] : chart.line
   const values = [...points, ...line].map(p => p.value)
   const min = Math.min(...values), max = Math.max(...values)
   const padding = Math.max((max - min) * 0.2, chart.kind === 'weight' ? 1 : 0.5)
@@ -34,6 +36,6 @@ export function ExerciseTrendChart({ chart, unit }) {
       <text x="42" y="96" fill="var(--fg-tertiary)" fontSize="10">{date(points[0].time)}</text>
       <text x="312" y="96" textAnchor="end" fill="var(--fg-tertiary)" fontSize="10">{date(points.at(-1).time)}</text>
     </svg>
-    <div style={{ color: 'var(--fg-tertiary)' }}>{t(line.length ? 'exerciseProgress.chartLegend' : 'exerciseProgress.chartInsufficient')}</div>
+    {chart.trend !== 'stable' && <div style={{ color: 'var(--fg-tertiary)' }}>{t(line.length ? 'exerciseProgress.chartLegend' : 'exerciseProgress.chartInsufficient')}</div>}
   </figure>
 }

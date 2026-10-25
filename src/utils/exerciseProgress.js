@@ -160,7 +160,7 @@ function recordHistory(valid) {
   const sessions = [...days.values()].map(day => {
     const records = newRecords(day.sets, prior)
     prior.push(...day.sets)
-    return { time: day.time, records }
+    return { time: day.time, sets: day.sets, records }
   })
   const lastIndex = sessions.findLastIndex(s => s.records.length)
   return {
@@ -168,6 +168,7 @@ function recordHistory(valid) {
     last: lastIndex >= 0 ? sessions[lastIndex] : null,
     // Sessions after the last record; null when no record was ever set.
     since: lastIndex >= 0 ? sessions.length - 1 - lastIndex : null,
+    sessions, // logbook: every day with its sets and the records set that day
   }
 }
 

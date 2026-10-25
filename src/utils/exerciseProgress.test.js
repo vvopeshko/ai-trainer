@@ -158,7 +158,9 @@ it('tracks records across the Smith history', () => {
     row('2026-08-05', [80,80,80,80], [10,10,10,10]),
   ], { sets: 4, repsMax: 10 })
   expect(result.records).toMatchObject({ latest: [], since: 1, last: { time: Date.parse('2026-10-12'), records: [{ weightKg: 85, reps: 10 }] } })
-  expect(exerciseProgress([row('2026-10-12', [80], [10])]).records).toEqual({ latest: [], last: null, since: null })
+  expect(result.records.sessions.map(s => s.records.length)).toEqual([0, 1, 0, 1, 0])
+  expect(result.records.sessions.at(-1).sets).toHaveLength(4)
+  expect(exerciseProgress([row('2026-10-12', [80], [10])]).records).toMatchObject({ latest: [], last: null, since: null })
 })
 it('does not call a return to an old level after a long break a record', () => {
   const data = [...history([10,10,10,10]), row('2026-10-25', [60,60], [10,10])]
