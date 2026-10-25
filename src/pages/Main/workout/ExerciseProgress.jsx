@@ -18,7 +18,13 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false 
   const unitLabel = t(unit === 'lbs' ? 'units.lbs' : 'units.kg')
   const colors = { up: 'var(--success)', plateau: 'var(--warning)', down: 'var(--warning)' }
   const band = progress.band
-  const change = progress.repChange
+  const evidence = progress.evidence
+  const volume = progress.volume
+  const last = volume.latest
+  const number = value => Math.round(value).toLocaleString('ru-RU')
+  const amount = value => number(volume.metric === 'tonnage' && unit === 'lbs' ? value / 0.45359237 : value)
+  const volumeUnit = volume.metric === 'tonnage' ? unitLabel : t('units.reps')
+  const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('ru-RU', { maximumFractionDigits: 1 })}`
   const points = progress.points
   const min = Math.min(...points.map(p => p.value)), max = Math.max(...points.map(p => p.value))
   const x = p => 8 + 284 * (p.time - points[0].time) / Math.max(1, points.at(-1).time - points[0].time)
@@ -32,10 +38,14 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false 
           <strong style={{ color: colors[progress.trend] ?? 'var(--fg-primary)', fontSize: 12 }}>{t(`exerciseProgress.status.${progress.trend}`)}</strong>
           <span>{t('exerciseProgress.period', { n: progress.trend === 'plateau' ? progress.plateauCount : progress.count, days: progress.trend === 'plateau' ? progress.plateauDays : progress.days })}</span>
         </div>
-        {band?.days > 0 && band.high > 0 && <div style={{ color: 'var(--fg-primary)' }}>{t('exerciseProgress.band', {
-          weight: band.low === band.high ? weight(band.low) : `${weight(band.low)}–${weight(band.high)}`, unit: unitLabel, days: band.days,
-        })}</div>}
-        {change && <div>{t('exerciseProgress.repChange', { weight: weight(change.weight), unit: unitLabel, from: change.from, to: change.to })}{!change.confirmed && ` · ${t('exerciseProgress.unconfirmed')}`}</div>}
+        {evidence && progress.trend !== 'mixed' && <div style={{ color: 'var(--fg-primary)' }}>{evidence.kind === 'weight'
+          ? `${weight(evidence.from)} → ${weight(evidence.to)} ${unitLabel} × ${evidence.anchor}`
+          : `${weight(evidence.anchor)} ${unitLabel}: ${evidence.from} → ${evidence.to} ${t('units.reps')}`}</div>}
+        <div>{t(`exerciseProgress.volume.${volume.status}`)}{volume.from != null && ` · ${amount(volume.from)} → ${amount(volume.to)} ${volumeUnit}`}</div>
+        <div>{t('exerciseProgress.last')}: {!last ? t('exerciseProgress.noPrevious')
+          : last.setDelta !== 0 ? t('exerciseProgress.setChange', { delta: signed(last.setDelta) })
+            : last.delta != null ? `${signed(volume.metric === 'tonnage' && unit === 'lbs' ? last.delta / 0.45359237 : last.delta)} ${volumeUnit}${last.percent != null ? ` (${signed(last.percent)}%)` : ''}`
+              : `${signed(last.repDelta)} ${t('units.reps')}`}</div>
         {progress.goal && <div>{t('exerciseProgress.goal', {
           n: progress.goal.set, from: progress.goal.from, to: progress.goal.to,
           weight: weight(progress.goal.weightKg), unit: unitLabel,
@@ -44,6 +54,9 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false 
       <details style={{ marginTop: 3 }}>
         <summary style={{ cursor: 'pointer', color: 'var(--fg-tertiary)' }}>{t('exerciseProgress.history', { n: workouts.length })}</summary>
         {!timed && <>
+          <div style={{ marginTop: 6 }}>{t('exerciseProgress.comparisonNote')}</div>
+          {volume.size && <div>{t('exerciseProgress.volumeWindow', { n: volume.size })}</div>}
+          {band?.days > 0 && band.high > 0 && <div>{t('exerciseProgress.band', { weight: band.low === band.high ? weight(band.low) : `${weight(band.low)}–${weight(band.high)}`, unit: unitLabel, days: band.days })}</div>}
           {points.length > 1 && max > 0 && <figure style={{ margin: '8px 0' }}>
             <figcaption>{t('exerciseProgress.chart')} · {weight(min)}{min !== max ? `–${weight(max)}` : ''} {unitLabel}</figcaption>
             <svg viewBox="0 0 300 60" role="img" aria-label={t('exerciseProgress.chart')} style={{ width: '100%', height: 60, display: 'block' }}>
