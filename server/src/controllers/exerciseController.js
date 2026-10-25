@@ -218,7 +218,8 @@ export async function batchLastResults(req, res) {
 export async function getHistory(req, res) {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
   const setsWhere = { exerciseId: id, isWarmup: false }
-  const workouts = await prisma.workout.findMany({
+  // Experience sets the plateau window on the client; null without a profile.
+  const [workouts, profile] = await Promise.all([prisma.workout.findMany({
     where: { userId: req.user.id, finishedAt: { not: null }, startedAt: { gte: new Date(Date.now() - 183 * 86400000) }, sets: { some: setsWhere } },
     orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
     take: 97,
@@ -230,6 +231,6 @@ export async function getHistory(req, res) {
         select: { weightKg: true, reps: true },
       },
     },
-  })
-  res.json({ workouts: workouts.slice(0, 96), hasMore: workouts.length > 96 })
+  }), prisma.userProfile.findUnique({ where: { userId: req.user.id }, select: { experienceLevel: true } })])
+  res.json({ workouts: workouts.slice(0, 96), hasMore: workouts.length > 96, experienceLevel: profile?.experienceLevel ?? null })
 }

@@ -68,13 +68,9 @@ function evaluate(points) {
   }
   const up = benchmarks.filter(b => b.trend === 'up')
   const down = benchmarks.filter(b => b.trend === 'down')
-  const evidence = [...up, ...down].sort((a, b) =>
+  const strongest = list => list.toSorted((a, b) =>
     (a.kind === 'weight' ? 0 : 1) - (b.kind === 'weight' ? 0 : 1) || b.anchor - a.anchor)[0] ?? null
-  // A stable series must cover the whole window; sparse/changed schemes are
-  // insufficient evidence of plateau. A change in set count also prevents it.
-  const comparable = benchmarks.some(b => b.trend !== 'unknown' && b.observations.length === points.length)
-    && points.every(p => p.count === latest.count)
-  return { benchmarks, up: up.length > 0, down: down.length > 0, comparable, evidence }
+  return { benchmarks, up: up.length > 0, down: down.length > 0, evidence: { up: strongest(up), down: strongest(down) } }
 }
 
 // The chart uses the SAME direct benchmark and period as the conclusion.
@@ -159,15 +155,21 @@ function recordHistory(valid) {
   const prior = []
   const sessions = [...days.values()].map(day => {
     const records = newRecords(day.sets, prior)
+    // Improvement: a record that covers an earlier set (80×10 → 80×11 or 85×10).
+    // A first heavier set with fewer reps (85×8 after 80×10) is a record, not growth.
+    const improved = records.some(r => prior.some(p => r.weightKg >= (p.weightKg ?? 0) && r.reps >= p.reps))
     prior.push(...day.sets)
-    return { time: day.time, sets: day.sets, records }
+    return { time: day.time, sets: day.sets, records, improved }
   })
   const lastIndex = sessions.findLastIndex(s => s.records.length)
+  const improvedIndex = sessions.findLastIndex(s => s.improved)
   return {
     latest: sessions.at(-1).records,
     last: lastIndex >= 0 ? sessions[lastIndex] : null,
     // Sessions after the last record; null when no record was ever set.
     since: lastIndex >= 0 ? sessions.length - 1 - lastIndex : null,
+    lastImproved: improvedIndex >= 0 ? sessions[improvedIndex] : null,
+    sinceImproved: improvedIndex >= 0 ? sessions.length - 1 - improvedIndex : null,
     sessions, // logbook: every day with its sets and the records set that day
   }
 }
@@ -187,7 +189,28 @@ function readyForWeight(points, plan) {
   return { weightKg, reps: plan.repsMax, sessions }
 }
 
-export function exerciseProgress(workouts, plan) {
+// Plateau window by experience: sessions without a record AND elapsed days.
+// Product heuristic (EXERCISE_PROGRESS_SIGNALS.md §3.2), to be calibrated.
+export const PLATEAU_WINDOW = {
+  beginner: { sessions: 3, days: 14 },
+  intermediate: { sessions: 4, days: 21 },
+  advanced: { sessions: 6, days: 42 },
+}
+const dayOf = time => Math.floor(time / DAY)
+const topWeight = p => Math.max(...p.workout.sets.map(s => s.weightKg ?? 0))
+
+// Why the logbook stopped moving, because the action differs:
+// consolidate — the heavier weight was reached in some sets but never in all
+// of them (80↔85); stuck — the same top weight every session.
+function plateauKind(stall) {
+  const heavy = Math.max(...stall.map(topWeight))
+  if (heavy > 0 && stall.some(p => topWeight(p) < heavy)
+    && !stall.some(p => p.workout.sets.every(s => (s.weightKg ?? 0) === heavy))) return { kind: 'consolidate', weightKg: heavy }
+  if (stall.every(p => topWeight(p) === heavy)) return { kind: 'stuck', weightKg: heavy }
+  return null
+}
+
+export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const valid = workouts.filter(w => Number.isFinite(new Date(w.startedAt).getTime())
     && w.sets?.length && w.sets.every(s => Number.isFinite(s.reps) && s.reps > 0 && Number.isFinite(s.weightKg ?? 0) && (s.weightKg ?? 0) >= 0))
     .sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt))
@@ -203,26 +226,26 @@ export function exerciseProgress(workouts, plan) {
   const points = [...daily.values()]
   const latest = valid.at(-1)
   const overall = evaluate(points)
-  let plateau = null
-  for (let i = 0; i <= points.length - 4; i++) {
-    const window = points.slice(i)
-    if (daysBetween(window[0].time, window.at(-1).time) < 21) break
-    const state = evaluate(window)
-    const baselineShift = state.benchmarks.some(b => b.observations.length >= 4
-      && Math.abs(median(b.observations.slice(-3).map(p => p.value)) - b.observations[0].value) >= b.threshold)
-    const noisy = state.benchmarks.some(b => {
-      const values = b.observations.map(p => p.value).sort((a, b) => a - b)
-      return values.length >= 4 && values[Math.floor((values.length - 1) * 0.75)]
-        - values[Math.floor((values.length - 1) * 0.25)] > 4 * b.threshold
-    })
-    if (state.comparable && !state.up && !state.down && !baselineShift && !noisy) {
-      plateau = window
-      break
-    }
-  }
-  const trend = plateau ? 'plateau' : overall.up && !overall.down ? 'up'
-    : overall.down && !overall.up ? 'down' : overall.up && overall.down ? 'mixed'
-      : overall.comparable ? 'same' : points.length >= 4 && daysBetween(points[0].time, points.at(-1).time) >= 21 ? 'changed' : 'first'
+  const records = recordHistory(valid)
+  const ready = readyForWeight(points, plan)
+  // Stall: sessions of this period after the last improvement (or after its
+  // first session, which is only a baseline). Days compare by UTC day.
+  const anchor = Math.max(dayOf(records.lastImproved?.time ?? -Infinity), dayOf(points[0].time))
+  const stallPoints = points.filter(p => dayOf(p.time) > anchor)
+  const gaps = [anchor, ...stallPoints.map(p => dayOf(p.time))].slice(1).map((day, i, all) => day - (i ? all[i - 1] : anchor))
+  const stall = { sessions: stallPoints.length, days: dayOf(points.at(-1).time) - anchor,
+    // Rare training is not evidence of a plateau.
+    rare: gaps.length > 0 && median(gaps) > 14 }
+  const window = PLATEAU_WINDOW[experienceLevel] ?? PLATEAU_WINDOW.intermediate
+  const recentGrowth = records.sinceImproved != null && records.sinceImproved <= 1 && records.lastImproved.time >= points[0].time
+  // A recent stall outranks older growth. All planned sets at the top of the
+  // range is not a plateau: the next weight step was simply not tried yet.
+  const stalled = !ready && !stall.rare && stall.sessions >= window.sessions && stall.days >= window.days
+  const trend = points.length < 3 ? 'first'
+    : overall.down && !overall.up ? 'down'
+      : stalled ? 'plateau'
+        : (overall.up && !overall.down) || recentGrowth ? 'up'
+          : 'steady'
   // A repeated recent load band, not the global min/max: sustained load growth
   // shortens this span. One unprecedented heavy/light day does not widen it.
   const recent = points.slice(-3).map(p => p.value)
@@ -234,26 +257,20 @@ export function exerciseProgress(workouts, plan) {
   const band = points.at(-1).value >= low && points.at(-1).value <= high ? {
     low, high, days: daysBetween(points[bandStart].time, points.at(-1).time), count: points.length - bandStart,
   } : null
-  const chartState = plateau ? evaluate(plateau) : overall
   const choose = benchmarks => benchmarks.filter(b => b.kind === 'reps' || b.observations.some(p => p.value > 0)).sort((a, b) =>
     b.observations.length - a.observations.length
     || (a.kind === 'weight' ? 0 : 1) - (b.kind === 'weight' ? 0 : 1) || b.anchor - a.anchor)[0]
-  const chartBenchmarks = trend === 'mixed'
-    ? ['up', 'down'].map(direction => choose(chartState.benchmarks.filter(b => b.trend === direction)))
-    : [trend === 'up' || trend === 'down' ? overall.evidence
-      : choose(chartState.benchmarks.filter(b => trend !== 'plateau'
-        || (b.trend === 'stable' && b.observations.length === plateau.length)))]
-  const charts = chartBenchmarks.filter(Boolean).map(progressChart).filter(Boolean)
+  const evidence = trend === 'up' || trend === 'down' ? overall.evidence[trend] : null
+  const charts = [evidence ?? choose(overall.benchmarks)].filter(Boolean).map(progressChart).filter(Boolean)
   const candidates = plan?.repsMax > 0 && latest.sets.length === plan.sets ? latest.sets
     .map((s, index) => ({ ...s, index })).filter(s => s.reps < plan.repsMax)
     .sort((a, b) => a.reps - b.reps || a.index - b.index) : []
   const next = candidates[0]
-  return { trend, band, charts, evidence: plateau ? null : overall.evidence, volume: volumeProgress(points),
+  return { trend, band, charts, evidence, volume: volumeProgress(points),
     days: daysBetween(points[0].time, points.at(-1).time), count: points.length,
-    plateauDays: plateau ? daysBetween(plateau[0].time, plateau.at(-1).time) : 0,
-    plateauCount: plateau?.length ?? 0,
+    stall, window, plateau: trend === 'plateau' ? plateauKind(stallPoints) : null,
     points: points.map(p => ({ time: p.time, value: p.value })), latestSets: latest.sets,
     goal: next ? { set: next.index + 1, from: next.reps, to: next.reps + 1, weightKg: next.weightKg ?? 0 } : null,
-    ready: readyForWeight(points, plan), records: recordHistory(valid),
+    ready, records,
   }
 }

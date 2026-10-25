@@ -7,7 +7,6 @@ import { BottomSheet, Icon } from '../../../components/ui/index.js'
 import { ExerciseTrendChart } from './ExerciseTrendChart.jsx'
 import { StatusPill } from './ProgressStatus.jsx'
 
-const DAY = 86400000
 const muted = { color: 'var(--fg-tertiary)' }
 const heading = { fontSize: 12.5, fontWeight: 600, color: 'var(--fg-primary)', margin: '16px 0 6px' }
 
@@ -72,15 +71,15 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, dat
         </div>
         <div style={{ marginTop: 6, fontSize: 14, color: 'var(--fg-primary)' }}>{text.reason}</div>
         {text.action && <div style={{ display: 'flex', gap: 6, marginTop: 8, color: 'var(--fg-primary)' }}>
-          <Icon name="target" size={15} style={{ flexShrink: 0, marginTop: 2, color: progress.ready ? 'var(--success)' : 'var(--accent-color)' }} />
+          <Icon name="target" size={15} style={{ flexShrink: 0, marginTop: 2, color: progress.ready ? 'var(--success)' : progress.plateau ? 'var(--warning)' : 'var(--accent-color)' }} />
           <span>{text.action}</span>
         </div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginTop: 14 }}>
           <Tile label={t('exerciseProgress.tile.record')} value={best ? text.set(best) : '—'} sub={records.last && text.date(records.last.time)} />
           <Tile label={t('exerciseProgress.tile.since')}
-            value={records.since == null ? '—' : t('exerciseProgress.sessions', { n: records.since })}
-            sub={records.since > 0 ? text.span(Math.floor((sessions.at(-1).time - records.last.time) / DAY)) : null} />
+            value={progress.trend === 'first' ? '—' : t('exerciseProgress.sessions', { n: progress.stall.sessions })}
+            sub={progress.stall.sessions > 0 ? text.span(progress.stall.days) : null} />
           <Tile label={t('exerciseProgress.tile.volume')} value={t(`exerciseProgress.volumeShort.${volume.status}`)}
             sub={volume.size && volume.status !== 'changed' ? `${signed(volume.percent)}%` : null} />
         </div>
@@ -90,7 +89,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, dat
 
         {progress.charts.map(chart => <ExerciseTrendChart key={`${chart.kind}-${chart.anchor}`} chart={chart} unit={unit} />)}
 
-        {['plateau', 'down', 'mixed', 'same'].includes(progress.trend) && (
+        {['plateau', 'down', 'steady'].includes(progress.trend) && (
           <button onClick={askTrainer} disabled={asking} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', marginTop: 12,
             padding: '10px 12px', borderRadius: 12, border: 0, cursor: 'pointer',
