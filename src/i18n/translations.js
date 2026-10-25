@@ -43,6 +43,7 @@ export const translations = {
 
     // Доступность (aria-label для иконочных кнопок)
     'a11y.back': 'Назад',
+    'a11y.mainNavigation': 'Основная навигация',
     'a11y.pause': 'Пауза',
     'a11y.resume': 'Продолжить',
     'a11y.exerciseInfo': 'Информация об упражнении',
@@ -521,6 +522,8 @@ export const translations = {
 
     // Навигация: десктопный сайдбар web-версии (остальные nav.* — выше)
     'nav.today': 'Сегодня',
+    'nav.exercises': 'Упражнения',
+    'nav.self': 'Я',
 
     // Push-уведомления (/me, web/PWA)
     'me.pushTitle': 'Уведомления',

@@ -60,7 +60,7 @@ export default function TabLayout({ children }) {
       <div style={{
         position: 'relative',
         paddingTop: 'var(--safe-top, 0px)',
-        paddingBottom: 'calc(96px + var(--safe-bottom, 0px))',
+        paddingBottom: 'calc(112px + var(--safe-bottom, 0px))',
         minHeight: '100vh',
       }}>
         {children}

@@ -1,67 +1,43 @@
 import { Icon } from './Icon.jsx'
+import { useTranslation } from '../../i18n/useTranslation.js'
+import './glassNav.css'
 
 const NAV_ITEMS = [
-  { k: 'home',     l: 'Сегодня',    i: 'home' },
-  { k: 'progress', l: 'Прогресс',   i: 'activity' },
-  { k: 'lib',      l: 'Упражнения', i: 'book' },
-  { k: 'me',       l: 'Я',          i: 'user' },
+  { k: 'home',     l: 'nav.today',     i: 'navHome' },
+  { k: 'progress', l: 'nav.progress',  i: 'navProgress' },
+  { k: 'lib',      l: 'nav.exercises', i: 'navDumbbell' },
+  { k: 'me',       l: 'nav.self',      i: 'bicepsFlexed' },
 ]
 
-/**
- * Bottom nav dock — 4 tabs, GD style (flat, no blur, edge-to-edge).
- */
+/** Floating mobile navigation with dimensional icon tiles. */
 export function GlassNav({ active, onNav, items = NAV_ITEMS }) {
+  const { t } = useTranslation()
+
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 'calc(72px + var(--safe-bottom, 0px))',
-      zIndex: 'var(--z-nav)',
-      background: 'rgba(27,29,38,0.92)',
-      backdropFilter: 'blur(14px)',
-      WebkitBackdropFilter: 'blur(14px)',
-      borderTop: '1px solid var(--gd-line)',
-      paddingBottom: 'var(--safe-bottom, 0px)',
-    }}>
-      <div style={{
-        height: 72,
-        display: 'flex',
-        padding: '0 4px',
-      }}>
-        {items.map(t => {
-          const is = active === t.k
+    <div className="glass-nav-positioner">
+      <nav
+        className="glass-nav"
+        aria-label={t('a11y.mainNavigation')}
+        style={{ '--nav-count': items.length || 1 }}
+      >
+        {items.map(item => {
+          const is = active === item.k
           return (
             <button
-              key={t.k}
-              onClick={() => onNav?.(t.k)}
-              style={{
-                flex: 1,
-                background: 'none',
-                border: 'none',
-                color: is ? 'var(--gd-ink)' : 'var(--gd-faint)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-                cursor: 'pointer',
-                position: 'relative',
-              }}
+              key={item.k}
+              type="button"
+              className="glass-nav__item"
+              aria-current={is ? 'page' : undefined}
+              onClick={() => onNav?.(item.k)}
             >
-              <Icon name={t.i} size={18} strokeWidth={is ? 2.2 : 1.8} />
-              <span style={{
-                fontSize: 'var(--text-xs)',
-                fontWeight: is ? 700 : 500,
-                letterSpacing: 0.2,
-              }}>
-                {t.l}
+              <span className="glass-nav__icon" aria-hidden="true">
+                <Icon name={item.i} size={24} strokeWidth={1.9} />
               </span>
+              <span className="glass-nav__label">{t(item.l)}</span>
             </button>
           )
         })}
-      </div>
+      </nav>
     </div>
   )
 }
