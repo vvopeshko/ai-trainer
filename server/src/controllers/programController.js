@@ -2,6 +2,9 @@ import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { importProgram } from '../services/aiTrainer/importProgram.js'
 import { computeNextDayIndex } from '../services/aiTrainer/programEditor.js'
+import { updateSlot, fillProgramAlternatives } from '../services/exerciseAlternatives.js'
+import { AppError } from '../middleware/errorHandler.js'
+import { track } from '../utils/analytics.js'
 
 /**
  * GET /api/v1/programs
@@ -291,4 +294,31 @@ export async function importProgramHandler(req, res) {
       updatedAt: result.program.updatedAt,
     },
   })
+}
+
+const slotSchema = z.object({
+  dayIndex: z.number().int().nonnegative(),
+  mainExerciseId: z.string().uuid(),
+  exerciseId: z.string().uuid(),
+  makeMain: z.boolean().default(false),
+})
+
+/**
+ * POST /api/v1/programs/active/slot
+ * Remembers an alternative chosen in a workout, or makes it the main exercise.
+ */
+export async function updateActiveSlot(req, res) {
+  const data = slotSchema.parse(req.body)
+  const slot = await updateSlot(req.user.id, data)
+  if (!slot) throw new AppError(404, 'SLOT_NOT_FOUND', 'Program slot not found')
+  track(req.user.id, data.makeMain ? 'alternative_made_main' : 'alternative_remembered', { exerciseId: data.exerciseId })
+  res.json({ slot })
+}
+
+/**
+ * POST /api/v1/programs/active/fill-alternatives
+ * One-time fill of catalog alternatives for slots without any. Idempotent.
+ */
+export async function fillActiveAlternatives(req, res) {
+  res.json(await fillProgramAlternatives(req.user.id))
 }

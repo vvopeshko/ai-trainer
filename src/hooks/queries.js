@@ -221,6 +221,15 @@ export function useExerciseOverview() {
   })
 }
 
+export function useExerciseAlternatives(id, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.exercises.alternatives(id),
+    queryFn: () => apiGet(`/api/v1/exercises/${id}/alternatives`),
+    enabled: enabled && !!id,
+    staleTime: 10 * 60_000,
+  })
+}
+
 export function useExerciseHistory(id) {
   return useQuery({
     queryKey: queryKeys.exercises.history(id),

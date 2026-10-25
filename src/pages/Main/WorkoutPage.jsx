@@ -47,6 +47,22 @@ import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
 import { newRecords, exerciseProgress } from '../../utils/exerciseProgress.js'
 import { useExerciseHistory, useExerciseOverview } from '../../hooks/queries.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
+import { AlternativesSheet } from './workout/AlternativesSheet.jsx'
+
+// A program slot keeps its main exercise while today's variant changes; the
+// previous variant stays selectable among the slot's alternatives.
+function swapSlot(pe, alt) {
+  const others = (pe.alternatives || []).filter(a => a.exerciseId !== alt.exerciseId)
+  return {
+    ...pe,
+    mainExerciseId: pe.mainExerciseId ?? pe.exerciseId,
+    mainNameRu: pe.mainNameRu ?? pe.nameRu,
+    mainSlug: pe.mainSlug ?? pe.slug,
+    exerciseId: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug,
+    alternatives: others.some(a => a.exerciseId === pe.exerciseId) ? others
+      : [...others, { exerciseId: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }],
+  }
+}
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
 
@@ -72,7 +88,8 @@ export default function WorkoutPage() {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showAlternatives, setShowAlternatives] = useState(false)
-  const [pendingSwap, setPendingSwap] = useState(null) // alt object awaiting confirm
+  const [programDayIndex, setProgramDayIndex] = useState(null)
+  const [dismissedHints, setDismissedHints] = useState(() => new Set())
   const [startedAt, setStartedAt] = useState(null)
   const [resting, setResting] = useState(false)
   const [pausedAt, setPausedAt] = useState(null)
@@ -231,6 +248,7 @@ export default function WorkoutPage() {
       setPartialSets(restored.partialSets)
       setPlanExercises(restored.planExercises)
       setPlanDayTitle(data.planDayTitle)
+      setProgramDayIndex(workout.programDayIndex ?? null)
       setPlanIndex(restored.planIndex)
       setAllExercises(restored.allExercises)
       setResting(restored.resting)
@@ -795,36 +813,46 @@ export default function WorkoutPage() {
 
   // ── Swap alternative ──
 
-  const handleSwapAlternative = (alt) => {
-    if (doneSets.length > 0) {
-      setPendingSwap(alt)
-      return
-    }
-    executeSwap(alt)
+  const loadLastResults = (ids) => {
+    const missing = ids.filter(id => !lastResultsCache[id])
+    if (!missing.length) return
+    apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: missing })
+      .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
+      .catch(() => {})
   }
 
-  const executeSwap = (alt) => {
-    // Delete any logged sets for current exercise from backend
-    for (const s of doneSets) {
-      if (s?.id && workoutId) {
-        deleteSetOnServer(s.id)
-      } else if (s?.tempId && !s.id) {
-        pendingDeletionsRef.current.add(s.tempId)
-      }
-    }
+  // Remember the chosen variant in the program slot, or make it the main one.
+  // Fire-and-forget: today's swap never waits for the network.
+  const rememberInProgram = (slot, alt, makeMain) => {
+    if (!slot || programDayIndex == null) return
+    const mainExerciseId = slot.mainExerciseId ?? slot.exerciseId
+    if (alt.exerciseId === mainExerciseId) return
+    apiPost('/api/v1/programs/active/slot', { dayIndex: programDayIndex, mainExerciseId, exerciseId: alt.exerciseId, makeMain })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.programs.active })
+        queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
+        if (makeMain) toast.show(t('workout.madeMain', { name: alt.nameRu }), 'success')
+      })
+      .catch(() => { if (makeMain) toast.show(t('errors.network')) })
+  }
 
-    // Swap in planExercises: current ↔ alternative
+  const handleSwapAlternative = (alt, { makeMain = false } = {}) => {
+    rememberInProgram(currentPlanExercise, alt, makeMain)
+    executeSwap(alt, makeMain)
+  }
+
+  const executeSwap = (alt, makeMain = false) => {
+    // Logged sets are real work: keep them as their own exercise in this
+    // workout (and in its history); the alternative continues the slot.
+    if (currentExercise && doneSets.length > 0) {
+      setAllExercises(prev => [...prev, { exercise: currentExercise, sets: [...doneSets] }])
+    }
     if (hasPlan && currentExercise) {
       setPlanExercises(prev => prev.map(pe => {
         if (pe.exerciseId !== currentExercise.id) return pe
-        const oldAlternatives = (pe.alternatives || []).filter(a => a.exerciseId !== alt.exerciseId)
-        return {
-          ...pe,
-          exerciseId: alt.exerciseId,
-          nameRu: alt.nameRu,
-          slug: alt.slug,
-          alternatives: [...oldAlternatives, { exerciseId: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }],
-        }
+        const swapped = swapSlot(pe, alt)
+        // Made main: the slot's main is this exercise for the rest of the workout too.
+        return makeMain ? { ...swapped, mainExerciseId: alt.exerciseId, mainNameRu: alt.nameRu, mainSlug: alt.slug, suggestMain: undefined } : swapped
       }))
     }
 
@@ -832,54 +860,20 @@ export default function WorkoutPage() {
     setDoneSets([])
     setResting(false)
     setShowAlternatives(false)
-    setPendingSwap(null)
-
-    // Fetch last results for the new exercise
-    if (!lastResultsCache[alt.exerciseId]) {
-      apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: [alt.exerciseId] })
-        .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
-        .catch(() => {})
-    }
-  }
-
-  const confirmSwap = () => {
-    if (pendingSwap) executeSwap(pendingSwap)
+    loadLastResults([alt.exerciseId])
   }
 
   const handleSwapUpcoming = (planEx, alt) => {
-    // For upcoming exercises: swap directly in plan, handle partial sets if any
+    rememberInProgram(planEx, alt, false)
+    // Partial sets of the old variant are kept as a finished exercise.
     const partial = partialSets[planEx.exerciseId]
     if (partial?.length > 0) {
-      // Delete partial sets from backend
-      for (const s of partial) {
-        if (s?.id && workoutId) {
-          deleteSetOnServer(s.id)
-        } else if (s?.tempId && !s.id) {
-          pendingDeletionsRef.current.add(s.tempId)
-        }
-      }
+      setAllExercises(prev => [...prev, { exercise: { id: planEx.exerciseId, nameRu: planEx.nameRu, slug: planEx.slug }, sets: [...partial] }])
       setPartialSets(prev => { const next = { ...prev }; delete next[planEx.exerciseId]; return next })
     }
-
-    setPlanExercises(prev => prev.map(pe => {
-      if (pe.exerciseId !== planEx.exerciseId) return pe
-      const oldAlts = (pe.alternatives || []).filter(a => a.exerciseId !== alt.exerciseId)
-      return {
-        ...pe,
-        exerciseId: alt.exerciseId,
-        nameRu: alt.nameRu,
-        slug: alt.slug,
-        alternatives: [...oldAlts, { exerciseId: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }],
-      }
-    }))
+    setPlanExercises(prev => prev.map(pe => pe.exerciseId !== planEx.exerciseId ? pe : swapSlot(pe, alt)))
     setExpandedExerciseId(null)
-
-    // Fetch last results for the new exercise
-    if (!lastResultsCache[alt.exerciseId]) {
-      apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: [alt.exerciseId] })
-        .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
-        .catch(() => {})
-    }
+    loadLastResults([alt.exerciseId])
   }
 
   // ── Helper ──
@@ -1049,7 +1043,7 @@ export default function WorkoutPage() {
               </div>
               <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {currentPlanExercise && <span>{exerciseScheme(currentPlanExercise)}</span>}
-                {currentPlanExercise?.alternatives?.length > 0 && (
+                {currentExercise && (
                   <button onClick={() => setShowAlternatives(true)} style={{
                     padding: '2px 8px', borderRadius: 6, border: 'none',
                     background: 'hsla(var(--accent-h,158),55%,55%,0.15)',
@@ -1058,11 +1052,34 @@ export default function WorkoutPage() {
                     display: 'flex', alignItems: 'center', gap: 4,
                   }}>
                     <Icon name="swap" size={11} />
-                    {t('workout.alternatives', { count: currentPlanExercise.alternatives.length })}
+                    {currentPlanExercise?.alternatives?.length
+                      ? t('workout.alternatives', { count: currentPlanExercise.alternatives.length })
+                      : t('workout.alternativesShort')}
                   </button>
                 )}
               </div>
             </div>
+
+            {/* Same alternative chosen in the last two workouts of this day */}
+            {currentPlanExercise?.suggestMain && currentExercise.id === (currentPlanExercise.mainExerciseId ?? currentPlanExercise.exerciseId)
+              && !dismissedHints.has(currentPlanExercise.exerciseId) && (
+              <div style={{
+                margin: '0 12px 10px', padding: '10px 12px', borderRadius: 12,
+                background: 'var(--accent-color-soft)', fontSize: 12.5, color: 'var(--fg-primary)', lineHeight: 1.4,
+              }}>
+                {t('workout.suggestMain', { name: currentPlanExercise.suggestMain.nameRu })}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button onClick={() => handleSwapAlternative(currentPlanExercise.suggestMain, { makeMain: true })} style={{
+                    padding: '6px 10px', borderRadius: 8, border: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    background: 'var(--accent-color)', color: 'var(--fg-on-accent)',
+                  }}>{t('workout.makeMain')}</button>
+                  <button onClick={() => setDismissedHints(prev => new Set(prev).add(currentPlanExercise.exerciseId))} style={{
+                    padding: '6px 10px', borderRadius: 8, border: 0, cursor: 'pointer', fontSize: 12,
+                    background: 'rgba(236,234,239,0.08)', color: 'var(--fg-secondary)',
+                  }}>{t('workout.keepMain')}</button>
+                </div>
+              </div>
+            )}
 
             <ExerciseProgress
               key={currentExercise.id}
@@ -1377,79 +1394,19 @@ export default function WorkoutPage() {
         onCancel={() => setConfirmCancel(false)}
       />
 
-      <ConfirmDialog
-        open={!!pendingSwap}
-        title={t('workout.swapConfirmTitle')}
-        message={t('workout.swapConfirmMessage', { count: doneSets.length })}
-        confirmLabel={t('workout.swapConfirmBtn')}
-        variant="danger"
-        onConfirm={confirmSwap}
-        onCancel={() => setPendingSwap(null)}
-      />
 
       {/* Alternatives bottom-sheet */}
-      <BottomSheet open={showAlternatives} onClose={() => setShowAlternatives(false)}>
-        <div style={{ marginBottom: 'var(--space-4)' }}>
-          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--fg-primary)' }}>
-            {t('workout.alternativesTitle')}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          {/* Current exercise (locked) */}
-          {currentExercise && (
-            <div style={{
-              padding: '12px 14px', borderRadius: 12,
-              background: 'hsla(var(--accent-h,158),55%,55%,0.10)',
-              border: '1px solid hsla(var(--accent-h,158),55%,55%,0.25)',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%',
-                background: 'hsl(var(--accent-h,158),55%,55%)', color: '#0a1815',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <Icon name="check" size={11} strokeWidth={3} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)' }}>
-                  {currentExercise.nameRu}
-                </div>
-                <div style={{ fontSize: 10, color: 'hsl(var(--accent-h,158),55%,70%)', marginTop: 2 }}>
-                  {t('workout.currentExercise')}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Alternative exercises */}
-          {currentPlanExercise?.alternatives?.map(alt => (
-            <button key={alt.exerciseId} onClick={() => handleSwapAlternative(alt)} style={{
-              padding: '12px 14px', borderRadius: 12,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'center', gap: 10,
-              cursor: 'pointer', textAlign: 'left', width: '100%',
-              fontFamily: 'var(--font-sans)',
-            }}>
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <Icon name="swap" size={11} style={{ color: 'rgba(236,234,239,0.5)' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)' }}>
-                  {alt.nameRu}
-                </div>
-              </div>
-              <Icon name="chevronRight" size={14} style={{ color: 'rgba(236,234,239,0.35)' }} />
-            </button>
-          ))}
-        </div>
-      </BottomSheet>
+      <AlternativesSheet
+        open={showAlternatives}
+        onClose={() => setShowAlternatives(false)}
+        current={currentExercise}
+        slot={currentPlanExercise}
+        lastResults={lastResultsCache}
+        onNeedLastResults={loadLastResults}
+        trendById={trendById}
+        unit={exerciseSettings.unit}
+        onPick={(alt, { makeMain }) => handleSwapAlternative(alt, { makeMain })}
+      />
 
       {/* Exercise Detail Sheet */}
       <ExerciseDetailSheet

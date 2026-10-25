@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
+import { findAlternatives } from '../services/exerciseAlternatives.js'
 
 /**
  * GET /api/v1/exercises
@@ -292,4 +293,14 @@ export async function getProgressOverview(req, res) {
       id, nameRu: names.get(id).nameRu, slug: names.get(id).slug, plan: plans.get(id) ?? null, workouts: history,
     })),
   })
+}
+
+// Catalog alternatives for one exercise, ranked for this user (same main muscle
+// and category, preferably another tool). The client adds last results itself.
+export async function getAlternatives(req, res) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+  const list = await findAlternatives(req.user.id, id)
+  res.json({ alternatives: list.map(e => ({
+    exerciseId: e.id, nameRu: e.nameRu, slug: e.slug, equipment: e.equipment, usedCount: e.usedCount,
+  })) })
 }

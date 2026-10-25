@@ -24,6 +24,7 @@ export const queryKeys = {
     history: (id) => ['exerciseHistory', id],
     // Under the 'exerciseHistory' prefix: finishing/deleting a workout invalidates it too.
     overview: ['exerciseHistory', 'overview'],
+    alternatives: (id) => ['exercises', 'alternatives', id],
     detail:   (id) => ['exercises', 'detail', id],
     settings: ['exercises', 'settings'],
   },

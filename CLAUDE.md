@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/PRODUCT_PLAN.md](product/PRODUCT_PLAN.md)** | Стратегический план: все фичи по доменам со статусами |
 | **[product/NEXT_PLANS.md](product/NEXT_PLANS.md)** | Живой бэклог: приоритеты, фичи, баги, техдолг |
 | **[product/UPDATES.md](product/UPDATES.md)** | Changelog по датам |
+| **[product/EXERCISE_ALTERNATIVES.md](product/EXERCISE_ALTERNATIVES.md)** | Аналоги упражнений: слоты программы, подбор, переключение без потери прогресса (дизайн) |
 | **[product/machine-scanning.md](product/machine-scanning.md)** | Сканирование тренажёра: архитектура, поток данных |
 | **[product/ARCHITECTURE_WEB_AUTH.md](product/ARCHITECTURE_WEB_AUTH.md)** | Web-версия: Better Auth, мульти-провайдерная авторизация. Фазы 1–2 на проде (gymwithai.me); фаза 3 — план |
 | **[product/NOTIFICATIONS.md](product/NOTIFICATIONS.md)** | Сервис уведомлений: durable-очередь в Postgres, Telegram + Web Push, флаги rollout |

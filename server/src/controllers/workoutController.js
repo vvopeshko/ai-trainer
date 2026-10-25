@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { track } from '../utils/analytics.js'
+import { makeMainHints } from '../services/exerciseAlternatives.js'
 import { sendPostWorkoutSummary } from '../services/aiTrainer/postWorkoutSummary.js'
 import { enqueueNotification } from '../scheduler/notificationPlanner.js'
 
@@ -127,6 +128,14 @@ export async function getActive(req, res) {
       planExercises = override ? override.exercises : day.exercises
       planDayTitle = day.title
 
+      // Slot identity survives a swap during the workout; "make it main?" hint
+      // after the same alternative was chosen in the last two workouts of this day.
+      const hints = await makeMainHints(req.user.id, workout.programId, workout.programDayIndex, planExercises)
+      for (const pe of planExercises) {
+        pe.mainExerciseId = pe.exerciseId
+        if (hints.has(pe.exerciseId)) pe.suggestMain = hints.get(pe.exerciseId)
+      }
+
       // Обогатить alternatives: UUID[] → { exerciseId, nameRu, slug }[]
       const allAltIds = planExercises.flatMap(pe => pe.alternatives || [])
       if (allAltIds.length > 0) {
@@ -136,6 +145,10 @@ export async function getActive(req, res) {
         })
         const altMap = Object.fromEntries(altExercises.map(e => [e.id, e]))
         for (const pe of planExercises) {
+          if (pe.suggestMain) {
+            const alt = altMap[pe.suggestMain]
+            pe.suggestMain = alt ? { exerciseId: alt.id, nameRu: alt.nameRu, slug: alt.slug } : undefined
+          }
           if (pe.alternatives?.length) {
             pe.alternatives = pe.alternatives
               .map(id => altMap[id] ? { exerciseId: altMap[id].id, nameRu: altMap[id].nameRu, slug: altMap[id].slug } : null)
