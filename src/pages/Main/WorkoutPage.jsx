@@ -45,7 +45,9 @@ import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
 import { newRecords, exerciseProgress } from '../../utils/exerciseProgress.js'
-import { useExerciseHistory, useExerciseOverview } from '../../hooks/queries.js'
+import { useExerciseHistory, useExerciseOverview, useExerciseCatalog } from '../../hooks/queries.js'
+import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
+import { ExerciseMuscleHeader } from './workout/ExerciseMuscleHeader.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 import { AlternativesPanel } from './workout/AlternativesPanel.jsx'
 
@@ -108,6 +110,8 @@ export default function WorkoutPage() {
   const { data: exerciseHistory } = useExerciseHistory(currentExercise?.id)
   // Statuses for the collapsed upcoming rows: one request for all exercises.
   const { data: overview } = useExerciseOverview()
+  const { data: catalog } = useExerciseCatalog()
+  const catalogById = useMemo(() => new Map((catalog ?? []).map(ex => [ex.id, ex])), [catalog])
   const trendById = useMemo(() => new Map((overview?.exercises ?? []).map(ex => [ex.id,
     exerciseProgress(ex.workouts, ex.plan, { experienceLevel: overview.experienceLevel })?.trend])), [overview])
   const [detailExerciseId, setDetailExerciseId] = useState(null)
@@ -331,6 +335,7 @@ export default function WorkoutPage() {
   const totalPlannedSets = hasPlan ? planExercises.reduce((s, e) => s + e.sets, 0) : 0
   const currentExerciseNum = allExercises.length + (currentExercise ? 1 : 0)
   const currentPlanExercise = hasPlan && planIndex < planExercises.length ? planExercises[planIndex] : null
+  const currentMuscle = getExerciseMuscle(currentExercise, catalogById, currentPlanExercise)
 
   const suggestionFor = (setIndex) => getSetSuggestion({
     setIndex,
@@ -958,6 +963,7 @@ export default function WorkoutPage() {
                 return (
                   <div key={i}>
                     <CollapsedExercise
+                      muscle={getExerciseMuscle(item.exercise, catalogById)}
                       name={item.exercise.nameRu}
                       summary={exerciseSummary(item.sets)}
                       expanded={isExpanded}
@@ -1000,27 +1006,13 @@ export default function WorkoutPage() {
           <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
             {/* Header */}
             <div style={{ padding: '14px 14px 12px' }}>
-              <div style={{
-                fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
-                color: 'hsl(var(--accent-h,158),55%,75%)',
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}>
-                <span style={{
-                  width: 5, height: 5, borderRadius: '50%',
-                  background: 'hsl(var(--accent-h,158),65%,60%)',
-                  boxShadow: '0 0 6px hsla(var(--accent-h,158),65%,60%,0.7)',
-                }} />
-                {t('workout.now')} · {hasPlan
-                  ? t('workout.exerciseOf', { n: planIndex + 1, total: planExercises.length })
-                  : t('workout.exerciseShort', { n: currentExerciseNum })
-                }
-                <span style={{ flex: 1 }} />
-                {/* Negative margins: the 28px button must not make the caps row taller. */}
+              <ExerciseMuscleHeader muscle={currentMuscle} scheme={currentPlanExercise ? exerciseScheme(currentPlanExercise) : null} marker={t('workout.now')}>
                 <button
+                  type="button"
                   onClick={() => setDetailExerciseId(currentExercise.id)}
                   aria-label={t('a11y.exerciseInfo')}
                   style={{
-                    width: 28, height: 28, borderRadius: 7, flexShrink: 0, margin: '-9px -4px -9px 0',
+                    width: 28, height: 28, borderRadius: 7, flexShrink: 0,
                     background: 'rgba(255,255,255,0.06)',
                     border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1029,19 +1021,9 @@ export default function WorkoutPage() {
                 >
                   <Icon name="info" size={14} />
                 </button>
-              </div>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
-              }}>
-                <div style={{
-                  fontSize: 20, fontWeight: 600, lineHeight: 1.15,
-                  color: '#fff', fontFamily: 'var(--font-display)', flex: 1,
-                }}>
-                  {currentExercise.nameRu}
-                </div>
-              </div>
-              <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                {currentPlanExercise && <span>{exerciseScheme(currentPlanExercise)}</span>}
+              </ExerciseMuscleHeader>
+              <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: 'var(--fg-primary)', fontFamily: 'var(--font-display)', marginTop: 10, overflowWrap: 'anywhere' }}>
+                {currentExercise.nameRu}
               </div>
             </div>
 
@@ -1291,7 +1273,6 @@ export default function WorkoutPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {upcomingExercises.map((pe) => {
                 const isExpanded = expandedExerciseId === pe.exerciseId
-                const peIndex = planExercises.indexOf(pe) + 1
                 const isDragging = draggingId === pe.exerciseId
                 const canDrag = upcomingExercises.length > 1
                 const partial = partialSets[pe.exerciseId]
@@ -1303,8 +1284,7 @@ export default function WorkoutPage() {
                     {isExpanded && !draggingId ? (
                       <ExpandedUpcomingCard
                         planExercise={pe}
-                        index={peIndex}
-                        totalExercises={planExercises.length}
+                        muscle={getExerciseMuscle(pe, catalogById)}
                         lastResults={lastResultsCache[pe.exerciseId]}
                         partialSets={partial}
                         progress={(() => {
@@ -1323,7 +1303,7 @@ export default function WorkoutPage() {
                       />
                     ) : (
                       <UpcomingExerciseItem
-                        index={peIndex}
+                        muscle={getExerciseMuscle(pe, catalogById)}
                         name={pe.nameRu}
                         scheme={scheme}
                         weightRange={weightRange(pe)}

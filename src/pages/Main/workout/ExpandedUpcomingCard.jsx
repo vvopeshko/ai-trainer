@@ -2,10 +2,11 @@ import { useTranslation } from '../../../i18n/useTranslation.js'
 import { Glass } from '../../../components/ui/Glass.jsx'
 import { Icon } from '../../../components/ui/Icon.jsx'
 import { DoneSetRow } from './DoneSetRow.jsx'
+import { ExerciseMuscleHeader } from './ExerciseMuscleHeader.jsx'
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-export function ExpandedUpcomingCard({ planExercise, index, totalExercises, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onSwapAlternative, onInfo }) {
+export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onSwapAlternative, onInfo }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
@@ -18,26 +19,11 @@ export function ExpandedUpcomingCard({ planExercise, index, totalExercises, last
     <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
       {/* Header — like active card */}
       <div style={{ padding: '14px 14px 12px', cursor: 'pointer' }} onClick={onCollapse}>
-        <div style={{
-          fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
-          color: 'rgba(236,234,239,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span>{t('workout.exerciseOf', { n: index, total: totalExercises })} · {scheme}</span>
-          <Icon name="chevronDown" size={13} style={{ color: 'rgba(236,234,239,0.35)' }} />
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
-        }}>
-          <div style={{
-            fontSize: 20, fontWeight: 600, lineHeight: 1.15,
-            color: '#fff', fontFamily: 'var(--font-display)',
-            flex: 1, minWidth: 0,
-          }}>
-            {planExercise.nameRu}
-          </div>
+        <ExerciseMuscleHeader muscle={muscle ?? planExercise.primaryMuscles?.[0]} scheme={scheme}>
           {onInfo && (
             <button
+              type="button"
+              aria-label={t('a11y.exerciseInfo')}
               onClick={(e) => { e.stopPropagation(); onInfo(planExercise.exerciseId) }}
               style={{
                 width: 28, height: 28, borderRadius: 7, flexShrink: 0,
@@ -50,6 +36,10 @@ export function ExpandedUpcomingCard({ planExercise, index, totalExercises, last
               <Icon name="info" size={14} />
             </button>
           )}
+          <Icon name="chevronDown" size={13} style={{ color: 'var(--fg-tertiary)' }} />
+        </ExerciseMuscleHeader>
+        <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: 'var(--fg-primary)', fontFamily: 'var(--font-display)', marginTop: 10, overflowWrap: 'anywhere' }}>
+          {planExercise.nameRu}
         </div>
         <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.45)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
           {planExercise.restSec && (

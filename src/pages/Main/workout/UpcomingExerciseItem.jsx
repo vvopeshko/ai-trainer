@@ -1,10 +1,11 @@
 import { Glass } from '../../../components/ui/Glass.jsx'
 import { Icon } from '../../../components/ui/Icon.jsx'
+import { MuscleIcon } from '../../../components/ui/MuscleIcon.jsx'
 import { StatusPill } from './ProgressStatus.jsx'
 
 // ─── UpcomingExerciseItem ───────────────────────────────────────────────
 
-export function UpcomingExerciseItem({ index, name, scheme, weightRange, trend, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging }) {
+export function UpcomingExerciseItem({ muscle, name, scheme, weightRange, trend, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging }) {
   // translateY во время драга применяется императивно к wrapper'у в WorkoutPage
   // (через ref, без ре-рендера). Здесь — только «поднятый» вид: scale/тень/opacity.
   return (
@@ -28,23 +29,16 @@ export function UpcomingExerciseItem({ index, name, scheme, weightRange, trend, 
           <Icon name="grip" size={16} />
         </div>
       )}
-      <div style={{
-        width: 28, height: 28, borderRadius: '50%',
-        background: hasPartial ? 'hsla(var(--accent-h,158),55%,55%,0.15)' : 'rgba(255,255,255,0.04)',
-        border: hasPartial ? '1.5px solid hsla(var(--accent-h,158),55%,55%,0.5)' : '1px solid rgba(255,255,255,0.07)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 12, fontWeight: 700,
-        color: hasPartial ? 'hsl(var(--accent-h,158),55%,70%)' : 'rgba(236,234,239,0.55)',
-        flexShrink: 0,
-      }}>
-        {index}
-      </div>
+      <MuscleIcon name={muscle} size={36} style={{
+        outline: hasPartial ? '1.5px solid var(--accent-color)' : undefined,
+        outlineOffset: hasPartial ? 2 : undefined,
+      }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 13.5, fontWeight: 600, color: '#ECEAEF',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3,
         }}>{name}</div>
-        <div style={{ fontSize: 10.5, color: 'rgba(236,234,239,0.5)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 10.5, color: 'rgba(236,234,239,0.5)', marginTop: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
           <span>{scheme}</span>
           {weightRange && <span>· {weightRange}</span>}
           {hasAlternatives && (
