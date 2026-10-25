@@ -213,6 +213,14 @@ export function useBillingPlans(enabled = true) {
   })
 }
 
+export function useExerciseOverview() {
+  return useQuery({
+    queryKey: queryKeys.exercises.overview,
+    queryFn: () => apiGet('/api/v1/exercises/progress-overview'),
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useExerciseHistory(id) {
   return useQuery({
     queryKey: queryKeys.exercises.history(id),

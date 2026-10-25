@@ -24,6 +24,7 @@ import { useDeleteWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { apiGet } from '../../utils/api.js'
 import { formatDuration, formatDateLine, WEEKDAYS_RU } from '../../utils/formatters.js'
+import { ExerciseStatusSection } from './progress/ExerciseStatusSection.jsx'
 
 // ─── Month Stats Skeleton ─────────────────────────────────────────────
 
@@ -541,6 +542,9 @@ export default function ProgressPage() {
         <StatTile label={t('home.streak')} value={monthStats?.streak ?? 0} icon="flame" />
         <StatTile label={t('home.records')} value="—" icon="trophy" />
       </div>
+
+      {/* Exercise progress statuses */}
+      <ExerciseStatusSection />
 
       {/* Muscle volume body map */}
       {flatMuscles.length > 0 && (

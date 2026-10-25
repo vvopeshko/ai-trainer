@@ -94,7 +94,7 @@ function Segmented({ options, value, onChange }) {
   </div>
 }
 
-export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, data, text, unit, timed }) {
+export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progress, data, text, unit, timed }) {
   const { t } = useTranslation()
   const { webApp } = useTelegram()
   const [showAll, setShowAll] = useState(false)
@@ -118,7 +118,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, progress, dat
   return createPortal(<BottomSheet open={open} onClose={onClose}>
     <div style={{ padding: '4px 4px 12px', fontSize: 12.5, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
       {/* tabIndex: BottomSheet focuses the first focusable element; keep the sheet at its top. */}
-      <div tabIndex={0} style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8, outline: 'none' }}>{t('exerciseProgress.sheetTitle')}</div>
+      <div tabIndex={0} style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8, outline: 'none' }}>{title ?? t('exerciseProgress.sheetTitle')}</div>
       {!timed && <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusPill trend={progress.trend} />

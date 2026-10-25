@@ -223,11 +223,14 @@ function plateauKind(stall) {
 
 // With a plan, chart the progression target: the best weight lifted for at
 // least the top of the rep range. Reps at a fixed weight stop at repsMax by
-// design, so a reps series would chart the plan, not the lifter.
+// design, so a reps series would chart the plan, not the lifter. A session
+// counts only if its heaviest weight reached the top: after a weight jump
+// (160×8) the 10-rep set is a warm-up (120×10), not a drop in strength.
 function topOfRangeSeries(points, repsMax) {
   const observations = points.flatMap(p => {
-    const sets = p.workout.sets.filter(s => s.reps >= repsMax && (s.weightKg ?? 0) > 0)
-    return sets.length ? [{ time: p.time, value: Math.max(...sets.map(s => s.weightKg)) }] : []
+    const heaviest = topWeight(p)
+    return heaviest > 0 && p.workout.sets.some(s => (s.weightKg ?? 0) === heaviest && s.reps >= repsMax)
+      ? [{ time: p.time, value: heaviest }] : []
   })
   if (observations.length < 2) return null
   const threshold = Math.max(0.5, median(observations.map(p => p.value)) * 0.01)
@@ -272,9 +275,11 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const anchor = Math.max(dayOf(records.lastImproved?.time ?? -Infinity), dayOf(points[0].time))
   const stallPoints = points.filter(p => dayOf(p.time) > anchor)
   const gaps = [anchor, ...stallPoints.map(p => dayOf(p.time))].slice(1).map((day, i, all) => day - (i ? all[i - 1] : anchor))
+  // Rare training is not evidence of a plateau — rare for THIS exercise: twice
+  // its usual interval (programs with long rotations train it every ~2 weeks).
+  const usual = points.slice(1).map((p, i) => dayOf(p.time) - dayOf(points[i].time))
   const stall = { sessions: stallPoints.length, days: dayOf(points.at(-1).time) - anchor,
-    // Rare training is not evidence of a plateau.
-    rare: gaps.length > 0 && median(gaps) > 14 }
+    rare: gaps.length > 0 && median(gaps) > Math.max(14, 2 * (usual.length ? median(usual) : 0)) }
   const window = PLATEAU_WINDOW[experienceLevel] ?? PLATEAU_WINDOW.intermediate
   const recentGrowth = records.sinceImproved != null && records.sinceImproved <= 1 && records.lastImproved.time >= points[0].time
   // A recent stall outranks older growth. All planned sets at the top of the
@@ -321,7 +326,7 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
       ? { metric: volume.metric, points: points.map(p => ({ time: p.time, value: p[volume.metric], sets: p.count })) } : null,
   }
   return { trend, band, charts, views, evidence, volume,
-    days: daysBetween(points[0].time, points.at(-1).time), count: points.length,
+    days: daysBetween(points[0].time, points.at(-1).time), count: points.length, afterBreak: start > 0,
     // Subtype from the recent sessions (as in the logbook): an older full set
     // at the heavier weight does not mean it is held now.
     stall, window, plateau: trend === 'plateau' ? plateauKind(stallPoints.slice(-6)) : null,

@@ -994,6 +994,21 @@ export default function WorkoutPage() {
                   ? t('workout.exerciseOf', { n: planIndex + 1, total: planExercises.length })
                   : t('workout.exerciseShort', { n: currentExerciseNum })
                 }
+                <span style={{ flex: 1 }} />
+                {/* Negative margins: the 28px button must not make the caps row taller. */}
+                <button
+                  onClick={() => setDetailExerciseId(currentExercise.id)}
+                  aria-label={t('a11y.exerciseInfo')}
+                  style={{
+                    width: 28, height: 28, borderRadius: 7, flexShrink: 0, margin: '-9px -4px -9px 0',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'rgba(236,234,239,0.5)',
+                  }}
+                >
+                  <Icon name="info" size={14} />
+                </button>
               </div>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
@@ -1004,19 +1019,6 @@ export default function WorkoutPage() {
                 }}>
                   {currentExercise.nameRu}
                 </div>
-                <button
-                  onClick={() => setDetailExerciseId(currentExercise.id)}
-                  aria-label={t('a11y.exerciseInfo')}
-                  style={{
-                    width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                    background: 'rgba(255,255,255,0.06)',
-                    border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'rgba(236,234,239,0.5)',
-                  }}
-                >
-                  <Icon name="info" size={14} />
-                </button>
               </div>
               <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {currentPlanExercise && <span>{exerciseScheme(currentPlanExercise)}</span>}
@@ -1032,14 +1034,6 @@ export default function WorkoutPage() {
                     {t('workout.alternatives', { count: currentPlanExercise.alternatives.length })}
                   </button>
                 )}
-                <div style={{ flex: 1 }} />
-                <span style={{
-                  fontSize: 10.5, fontWeight: 600,
-                  color: 'rgba(236,234,239,0.4)',
-                  letterSpacing: '0.02em',
-                }}>
-                  {exerciseSettings.unit === 'lbs' ? t('units.lbsCaps') : t('units.kgCaps')}
-                </span>
               </div>
             </div>
 

@@ -35,8 +35,17 @@ it('needs three sessions and an experience-dependent window before calling a pla
   const data = history([10,10])
   expect(exerciseProgress([...data,...data]).count).toBe(2)
 })
-it('does not call rare training a plateau', () => {
-  expect(exerciseProgress(history([10,10,10,10,10,10], undefined, 20))).toMatchObject({ trend: 'steady', stall: { rare: true } })
+it('judges rare training against the usual interval of this exercise', () => {
+  // Every 20 days is this exercise's normal rhythm: a plateau is still a plateau.
+  expect(exerciseProgress(history([10,10,10,10,10,10], undefined, 20))).toMatchObject({ trend: 'plateau', stall: { rare: false } })
+  // Weekly with a record, then every four weeks: too rare to call it a plateau.
+  const sparse = [...history([10,10,10,10,10,12]), ...[0,1,2,3].map(i => row(new Date(Date.UTC(2026,8,2+i*28)).toISOString(), [60,60], [10,10]))]
+  expect(exerciseProgress(sparse)).toMatchObject({ trend: 'steady', stall: { sessions: 4, rare: true } })
+})
+it('marks a period that restarted after a long break', () => {
+  const data = [...history([10,10,10]), ...[0,1].map(i => row(new Date(Date.UTC(2026,9,1+i*7)).toISOString(), [60,60], [10,10]))]
+  expect(exerciseProgress(data)).toMatchObject({ trend: 'first', count: 2, afterBreak: true })
+  expect(exerciseProgress(history([10,10,10])).afterBreak).toBe(false)
 })
 it('detects sustained repetitions growth, including bodyweight', () => {
   for (const weight of [0,60]) expect(exerciseProgress(history([8,9,10,11], [weight,weight,weight,weight])).trend).toBe('up')
@@ -220,9 +229,9 @@ it('charts the best weight at the top of the planned range and marks records on 
   ], { sets: 4, repsMin: 8, repsMax: 10 })
   const chart = result.charts[0]
   expect(chart).toMatchObject({ kind: 'weight', anchor: 10, top: true })
-  expect(chart.points.map(p => p.value)).toEqual([80,80,80,85,85])
-  // 85×8 on 31.08 is a record, but not on the 10-rep series; 85×10 on 12.10 is.
-  expect(chart.points.map(p => p.record)).toEqual([false,false,false,true,false])
+  // 31.08 reached 85 only for 8 reps: skipped, not drawn as a drop to 80.
+  expect(chart.points.map(p => p.value)).toEqual([80,80,85,85])
+  expect(chart.points.map(p => p.record)).toEqual([false,false,true,false])
 })
 it('never charts a series capped by the plan', () => {
   expect(exerciseProgress(history([10,10,10,10]), { sets: 2, repsMax: 10 }).charts[0]).toMatchObject({ kind: 'weight', top: true })
@@ -251,4 +260,9 @@ it('offers per-session volume as a separate view', () => {
   expect(exerciseProgress(history([10,12,10])).views.volume).toMatchObject({ metric: 'tonnage', points: [{ value: 1200 }, { value: 1440 }, { value: 1200 }] })
   expect(exerciseProgress(history([8,9], [0,0])).views.volume).toMatchObject({ metric: 'reps', points: [{ value: 16 }, { value: 18 }] })
   expect(exerciseProgress(history([10,10], [0,5])).views.volume).toBeNull()
+})
+it('does not chart a warm-up after a weight jump as a drop', () => {
+  const data = [row('2026-07-01', [90,140,140,140], [10,10,10,10]), row('2026-07-08', [90,140,140,140], [10,10,10,10]),
+    row('2026-07-15', [120,160,160,160], [10,8,8,8])]
+  expect(exerciseProgress(data, { sets: 4, repsMin: 8, repsMax: 10 }).charts[0].points.map(p => p.value)).toEqual([140, 140])
 })

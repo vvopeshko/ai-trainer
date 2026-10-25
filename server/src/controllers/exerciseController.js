@@ -234,3 +234,62 @@ export async function getHistory(req, res) {
   }), prisma.userProfile.findUnique({ where: { userId: req.user.id }, select: { experienceLevel: true } })])
   res.json({ workouts: workouts.slice(0, 96), hasMore: workouts.length > 96, experienceLevel: profile?.experienceLevel ?? null })
 }
+
+const OVERVIEW_ACTIVE_DAYS = 42
+const OVERVIEW_LIMIT = 30
+
+// Progress overview for the Progress screen: every exercise trained in the
+// last 6 weeks with the same bounded history as getHistory, plus its plan from
+// the active program. Statuses are computed on the client by exerciseProgress.
+export async function getProgressOverview(req, res) {
+  const [workouts, profile, program] = await Promise.all([
+    prisma.workout.findMany({
+      where: { userId: req.user.id, finishedAt: { not: null }, startedAt: { gte: new Date(Date.now() - 183 * 86400000) } },
+      orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true, startedAt: true,
+        sets: {
+          where: { isWarmup: false },
+          orderBy: [{ setOrder: 'asc' }, { id: 'asc' }],
+          select: { exerciseId: true, weightKg: true, reps: true },
+        },
+      },
+    }),
+    prisma.userProfile.findUnique({ where: { userId: req.user.id }, select: { experienceLevel: true } }),
+    prisma.program.findFirst({ where: { userId: req.user.id, isActive: true }, select: { planJson: true } }),
+  ])
+  const activeSince = Date.now() - OVERVIEW_ACTIVE_DAYS * 86400000
+  const byExercise = new Map()
+  for (const w of workouts) {
+    const sets = new Map()
+    for (const { exerciseId, ...set } of w.sets) {
+      if (!sets.has(exerciseId)) sets.set(exerciseId, [])
+      sets.get(exerciseId).push(set)
+    }
+    for (const [exerciseId, list] of sets) {
+      if (!byExercise.has(exerciseId)) byExercise.set(exerciseId, [])
+      const history = byExercise.get(exerciseId)
+      if (history.length < 96) history.push({ id: w.id, startedAt: w.startedAt, sets: list })
+    }
+  }
+  // Workouts are newest first, so history[0] is the latest session.
+  const active = [...byExercise].filter(([, history]) => new Date(history[0].startedAt).getTime() >= activeSince)
+    .slice(0, OVERVIEW_LIMIT)
+  const plans = new Map()
+  for (const day of program?.planJson?.days ?? []) {
+    for (const ex of day.exercises ?? []) {
+      if (ex.exerciseId && !plans.has(ex.exerciseId)) plans.set(ex.exerciseId, { sets: ex.sets, repsMin: ex.repsMin, repsMax: ex.repsMax })
+    }
+  }
+  const info = active.length ? await prisma.exercise.findMany({
+    where: { id: { in: active.map(([id]) => id) } },
+    select: { id: true, nameRu: true, slug: true },
+  }) : []
+  const names = new Map(info.map(e => [e.id, e]))
+  res.json({
+    experienceLevel: profile?.experienceLevel ?? null,
+    exercises: active.filter(([id]) => names.has(id)).map(([id, history]) => ({
+      id, nameRu: names.get(id).nameRu, slug: names.get(id).slug, plan: plans.get(id) ?? null, workouts: history,
+    })),
+  })
+}

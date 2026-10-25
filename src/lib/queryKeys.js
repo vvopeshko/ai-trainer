@@ -22,6 +22,8 @@ export const queryKeys = {
   exercises: {
     catalog:  ['exercises', 'catalog'],
     history: (id) => ['exerciseHistory', id],
+    // Under the 'exerciseHistory' prefix: finishing/deleting a workout invalidates it too.
+    overview: ['exerciseHistory', 'overview'],
     detail:   (id) => ['exercises', 'detail', id],
     settings: ['exercises', 'settings'],
   },

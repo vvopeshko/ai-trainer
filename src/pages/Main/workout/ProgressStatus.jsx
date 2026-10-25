@@ -8,11 +8,11 @@ const STATUS_COLORS = {
 const NEUTRAL = { fg: 'var(--fg-secondary)', bg: 'rgba(236,234,239,0.08)' }
 const statusColor = trend => STATUS_COLORS[trend] ?? NEUTRAL
 
-export function StatusPill({ trend }) {
+export function StatusPill({ trend, count }) {
   const { t } = useTranslation()
   const { fg, bg } = statusColor(trend)
   return <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 6, background: bg, color: fg, fontSize: 11.5, fontWeight: 600 }}>
-    {t(`exerciseProgress.status.${trend}`)}
+    {t(`exerciseProgress.status.${trend}`)}{count != null && ` · ${count}`}
   </span>
 }
 
