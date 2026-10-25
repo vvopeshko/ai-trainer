@@ -97,6 +97,7 @@ export function useFinishWorkout() {
       queryClient.invalidateQueries({ queryKey: ['stats'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.recent })
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
+      queryClient.invalidateQueries({ queryKey: ['exerciseHistory'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
     },
   })
@@ -125,6 +126,7 @@ export function useDeleteWorkout() {
     onSettled: (_data, _err, id) => {
       queryClient.invalidateQueries({ queryKey: ['stats'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
+      queryClient.invalidateQueries({ queryKey: ['exerciseHistory'] })
       // Удаление сегодняшней тренировки меняет расчёт следующего дня программы.
       queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
       // Детали закэшированы со staleTime: Infinity — убираем мёртвую запись.

@@ -1,0 +1,30 @@
+import { expect, it, vi, beforeEach } from 'vitest'
+const mock = vi.hoisted(() => ({ workout: { findMany: vi.fn() } }))
+vi.mock('../utils/prisma.js', () => ({ default: mock }))
+import { getHistory } from './exerciseController.js'
+const id = '33333333-3333-4333-8333-333333333333'
+beforeEach(() => vi.resetAllMocks())
+it('restricts history to this user, finished workouts and this exercise; bounds results', async () => {
+  const workouts = [{ id: 'w', startedAt: '2026-10-25', sets: [{ weightKg: 20, reps: 10 }] }]
+  mock.workout.findMany.mockResolvedValue(workouts)
+  const res = { json: vi.fn() }
+  await getHistory({ params: { id }, user: { id: 'owner' } }, res)
+  expect(mock.workout.findMany).toHaveBeenCalledWith({
+    where: { userId: 'owner', finishedAt: { not: null }, sets: { some: { exerciseId: id, isWarmup: false } } },
+    orderBy: [{ startedAt: 'desc' }, { id: 'desc' }], take: 8,
+    select: { id: true, startedAt: true, sets: {
+      where: { exerciseId: id, isWarmup: false }, orderBy: [{ setOrder: 'asc' }, { id: 'asc' }],
+      select: { weightKg: true, reps: true },
+    } },
+  })
+  expect(res.json).toHaveBeenCalledWith({ workouts })
+})
+it('returns an empty history and rejects invalid exercise ids before querying', async () => {
+  mock.workout.findMany.mockResolvedValue([])
+  const res = { json: vi.fn() }
+  await getHistory({ params: { id }, user: { id: 'owner' } }, res)
+  expect(res.json).toHaveBeenCalledWith({ workouts: [] })
+  mock.workout.findMany.mockClear()
+  await expect(getHistory({ params: { id: 'invalid' }, user: { id: 'owner' } }, res)).rejects.toThrow()
+  expect(mock.workout.findMany).not.toHaveBeenCalled()
+})

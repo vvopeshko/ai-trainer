@@ -21,6 +21,7 @@ export const queryKeys = {
   },
   exercises: {
     catalog:  ['exercises', 'catalog'],
+    history: (id) => ['exerciseHistory', id],
     detail:   (id) => ['exercises', 'detail', id],
     settings: ['exercises', 'settings'],
   },

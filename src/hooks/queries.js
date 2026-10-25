@@ -215,3 +215,12 @@ export function useBillingPlans(enabled = true) {
     staleTime: 10 * 60_000,
   })
 }
+
+export function useExerciseHistory(id) {
+  return useQuery({
+    queryKey: queryKeys.exercises.history(id),
+    queryFn: () => apiGet(`/api/v1/exercises/${id}/history`),
+    enabled: !!id,
+    staleTime: 60_000,
+  })
+}

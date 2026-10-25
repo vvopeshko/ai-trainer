@@ -42,6 +42,7 @@ import { getSetSuggestion } from '../../utils/setSuggestion.js'
 import { kgToLbs } from '../../utils/weightUnit.js'
 import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
+import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
@@ -1015,6 +1016,14 @@ export default function WorkoutPage() {
                 </span>
               </div>
             </div>
+
+            <ExerciseProgress
+              key={currentExercise.id}
+              exerciseId={currentExercise.id}
+              plan={currentPlanExercise}
+              unit={exerciseSettings.unit}
+              timed={exerciseSettings.type === 'timer'}
+            />
 
             {/* Done sets inline */}
             {doneSets.length > 0 && (

@@ -213,3 +213,23 @@ export async function batchLastResults(req, res) {
 
   res.json({ results })
 }
+
+// Bounded, user-scoped history. In-progress workouts never affect progress.
+export async function getHistory(req, res) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+  const setsWhere = { exerciseId: id, isWarmup: false }
+  const workouts = await prisma.workout.findMany({
+    where: { userId: req.user.id, finishedAt: { not: null }, sets: { some: setsWhere } },
+    orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+    take: 8,
+    select: {
+      id: true, startedAt: true,
+      sets: {
+        where: setsWhere,
+        orderBy: [{ setOrder: 'asc' }, { id: 'asc' }],
+        select: { weightKg: true, reps: true },
+      },
+    },
+  })
+  res.json({ workouts })
+}
