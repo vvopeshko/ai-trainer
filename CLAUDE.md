@@ -56,7 +56,8 @@ cd server && npm install && npm run dev
 # Первый запуск: seed dev-данных (60 тренировок + PPL+Arms программа)
 cd server && npm run seed:exercises && npm run seed:dev
 
-# Seed упражнений (924 штуки, idempotent upsert по slug)
+# Seed упражнений (924 штуки по slug: создаёт недостающие, у существующих заполняет только пустые поля;
+# перезапись конкретных полей — `-- --only=category`)
 cd server && npm run seed:exercises
 
 # Исправления русских названий упражнений (data/exercise-name-fixes.json) — только nameRu

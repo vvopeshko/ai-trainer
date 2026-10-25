@@ -9,7 +9,7 @@
  *
  * Алгоритм:
  * 1. slug-match   — slugify(nameEn) → точное совпадение Exercise.slug
- * 2. alias-search — поиск по Exercise.aliases[] (case-insensitive)
+ * 2. name/alias   — точное совпадение с nameRu/nameEn/aliases[] (регистр, ё/е не важны; детерминированный порядок)
  * 3. auto-create  — INSERT Exercise с source: 'ai_generated'
  *
  * Возвращает { exerciseId, exercise, resolvedBy } или null, если из входа
@@ -58,19 +58,27 @@ export async function resolveExercise(input) {
     }
   }
 
-  // 2. Alias search — ищем в массиве aliases (case-insensitive)
+  // 2. Name/alias search — точное совпадение с nameRu, nameEn или алиасом
+  //    (регистр и ё/е не важны). Один алиас бывает у нескольких упражнений,
+  //    поэтому порядок фиксирован: совпадение по названию → каталог (seed) →
+  //    самое раннее. Иначе LIMIT 1 отдавал бы случайное.
   const searchTerms = [nameEn, nameRu].filter(Boolean)
   for (const term of searchTerms) {
-    const lower = term.toLowerCase()
+    const key = term.toLowerCase().replace(/ё/g, 'е').trim()
 
-    // Prisma не поддерживает case-insensitive array search нативно,
-    // используем raw-запрос с array_to_string + ILIKE
     const found = await prisma.$queryRaw`
       SELECT * FROM "Exercise"
-      WHERE EXISTS (
-        SELECT 1 FROM unnest(aliases) AS a
-        WHERE lower(a) = ${lower}
-      )
+      WHERE replace(lower("nameRu"), 'ё', 'е') = ${key}
+        OR replace(lower(coalesce("nameEn", '')), 'ё', 'е') = ${key}
+        OR EXISTS (
+          SELECT 1 FROM unnest(aliases) AS a
+          WHERE replace(lower(a), 'ё', 'е') = ${key}
+        )
+      ORDER BY
+        (replace(lower("nameRu"), 'ё', 'е') = ${key}
+          OR replace(lower(coalesce("nameEn", '')), 'ё', 'е') = ${key}) DESC,
+        (source = 'seed') DESC,
+        "createdAt", id
       LIMIT 1
     `
 

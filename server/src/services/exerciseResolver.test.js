@@ -62,6 +62,17 @@ describe('exerciseResolver', () => {
         resolvedBy: 'alias',
       })
     })
+
+    it('matches ignoring case and ё, with a fixed order for shared aliases', async () => {
+      mockPrisma.exercise.findUnique.mockResolvedValue(null)
+      mockPrisma.$queryRaw.mockResolvedValue([{ id: 'uuid-4', slug: 'bench-press' }])
+
+      await resolveExercise({ nameRu: '  Жим Лёжа ' })
+
+      const [strings, ...values] = mockPrisma.$queryRaw.mock.calls[0]
+      expect(values.every(v => v === 'жим лежа')).toBe(true)
+      expect(strings.join('?')).toMatch(/ORDER BY[\s\S]*source = 'seed'[\s\S]*"createdAt", id\s+LIMIT 1/)
+    })
   })
 
   describe('auto-create path', () => {

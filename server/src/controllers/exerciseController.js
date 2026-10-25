@@ -51,11 +51,17 @@ export async function getById(req, res) {
   res.json({ exercise: { ...exercise, targetMuscle: targetMuscle(exercise.slug) } })
 }
 
+/** Search text: lower case, ё → е, single spaces (same as src/utils/exerciseSearch.js). */
+export const normalizeSearch = s => (s ?? '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim()
+
 /**
  * GET /api/v1/exercises/search?q=жим
  *
- * Текстовый поиск по nameRu, nameEn, aliases.
- * Используется при добавлении внепланового упражнения.
+ * Текстовый поиск по nameRu, nameEn, aliases: регистр и ё/е не важны, каждое
+ * слово запроса должно встретиться. Ранжирование — как в клиентском поиске
+ * библиотеки (src/utils/exerciseSearch.js): точное имя/алиас → начало имени →
+ * начало слова → подстрока имени → все слова в имени → только nameEn/алиасы;
+ * при равенстве — короче, потом по алфавиту.
  */
 export async function search(req, res) {
   const { q } = z
@@ -64,20 +70,32 @@ export async function search(req, res) {
     })
     .parse(req.query)
 
-  const lower = q.toLowerCase()
+  const phrase = normalizeSearch(q)
+  if (!phrase) return res.json({ exercises: [] })
+  const words = phrase.split(' ')
 
-  // Prisma не поддерживает полнотекстовый поиск по массивам из коробки.
-  // Используем raw SQL: ищем по nameRu, nameEn и aliases (unnest).
+  // position() вместо LIKE: % и _ из запроса не работают как шаблоны.
   const exercises = await prisma.$queryRaw`
-    SELECT * FROM "Exercise"
-    WHERE
-      lower("nameRu") LIKE '%' || ${lower} || '%'
-      OR lower("nameEn") LIKE '%' || ${lower} || '%'
-      OR EXISTS (
-        SELECT 1 FROM unnest(aliases) AS a
-        WHERE lower(a) LIKE '%' || ${lower} || '%'
-      )
-    ORDER BY "nameRu"
+    SELECT e.* FROM "Exercise" e
+    CROSS JOIN LATERAL (SELECT
+      replace(lower(e."nameRu"), 'ё', 'е') AS ru,
+      replace(lower(coalesce(e."nameEn", '')), 'ё', 'е') AS en,
+      ARRAY(SELECT replace(lower(a), 'ё', 'е') FROM unnest(e.aliases) a) AS aliases
+    ) n
+    WHERE NOT EXISTS (
+      SELECT 1 FROM unnest(${words}::text[]) w
+      WHERE position(w IN n.ru || ' | ' || n.en || ' | ' || array_to_string(n.aliases, ' | ')) = 0
+    )
+    ORDER BY
+      CASE
+        WHEN n.ru = ${phrase} OR n.en = ${phrase} OR ${phrase} = ANY(n.aliases) THEN 0
+        WHEN starts_with(n.ru, ${phrase}) THEN 1
+        WHEN position(' ' || ${phrase} IN ' ' || n.ru) > 0 THEN 2
+        WHEN position(${phrase} IN n.ru) > 0 THEN 3
+        WHEN NOT EXISTS (SELECT 1 FROM unnest(${words}::text[]) w WHERE position(w IN n.ru) = 0) THEN 4
+        ELSE 5
+      END,
+      length(e."nameRu"), e."nameRu"
     LIMIT 20
   `
 

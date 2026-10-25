@@ -420,6 +420,9 @@ export const translations = {
     // Category — фактические значения Exercise.category из базы (free-exercise-db)
     'library.cat.compound': 'Базовое',
     'library.cat.isolation': 'Изолирующее',
+    'library.cat.stretch': 'Растяжка',
+    'library.cat.warmup': 'Разминка',
+    'library.cat.mobility': 'Мобильность',
     'library.cat.strength': 'Силовое',
     'library.cat.cardio': 'Кардио',
     'library.cat.stretching': 'Растяжка',

@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../hooks/queries.js'
+import { searchExercises } from '../../utils/exerciseSearch.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { MuscleIcon } from '../../components/ui/MuscleIcon.jsx'
@@ -38,14 +39,6 @@ function useDebounce(value, ms) {
     return () => clearTimeout(id)
   }, [value, ms])
   return debounced
-}
-
-function matchesSearch(ex, q) {
-  const lower = q.toLowerCase()
-  if (ex.nameRu?.toLowerCase().includes(lower)) return true
-  if (ex.nameEn?.toLowerCase().includes(lower)) return true
-  if (ex.aliases?.some(a => a.toLowerCase().includes(lower))) return true
-  return false
 }
 
 // ─── Chip ─────────────────────────────────────────────────────────────
@@ -229,9 +222,9 @@ export default function LibraryPage() {
   const filtered = useMemo(() => {
     let list = allExercises
 
-    // Text search
+    // Text search: ranked, best match first
     if (debouncedQuery.trim()) {
-      list = list.filter(ex => matchesSearch(ex, debouncedQuery.trim()))
+      list = searchExercises(list, debouncedQuery)
     }
 
     // Muscle group filter
