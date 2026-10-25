@@ -28,11 +28,11 @@ const pool = [
   ex('ai', 'Сгибания AI', ['biceps'], ['band'], 'ai_generated'),
 ]
 
-it('ranks used exercises first, then the same movement with another gym tool', () => {
-  const ranked = rankAlternatives(curlMachine, [curlMachine, ...pool], new Map([['hammer', 4]]))
-  // Same "Сгибания" movement and muscles: cable/dumbbells (another tool) > another machine > a band.
-  expect(ranked.map(e => e.id)).toEqual(['hammer', 'cable', 'db', 'machine2', 'ai'])
-  expect(ranked[0].usedCount).toBe(4)
+it('ranks used exercises first among the same movement, then another gym tool', () => {
+  const ranked = rankAlternatives(curlMachine, [curlMachine, ...pool], new Map([['hammer', 4], ['machine2', 1]]))
+  // «Молотки» are done but not a «Сгибания» movement: history orders, never admits.
+  expect(ranked.map(e => e.id)).toEqual(['machine2', 'cable', 'db', 'ai'])
+  expect(ranked[0].usedCount).toBe(1)
 })
 
 it('queries exercises with the same target muscle and category and counts the user’s working sets', async () => {
