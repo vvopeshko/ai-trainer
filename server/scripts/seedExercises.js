@@ -7,9 +7,12 @@
  * Upsert по slug — можно перезапускать безопасно.
  *
  * Запуск: cd server && node scripts/seedExercises.js
+ * Только описания и ошибки существующих записей (без изменения медиа):
+ * node --env-file=.env scripts/seedExercises.js --content-only
  */
 import { createRequire } from 'module'
 import { PrismaClient } from '@prisma/client'
+import { exerciseSeedContent } from '../src/utils/exerciseSeedContent.js'
 
 const require = createRequire(import.meta.url)
 const exercises = require('../data/enriched-exercises.json')
@@ -36,6 +39,7 @@ function mapExercise(ex) {
     slug: ex.slug,
     nameRu: ex.nameRu,
     nameEn: ex.nameEn,
+    ...exerciseSeedContent(ex),
     instructions: Array.isArray(ex.instructions)
       ? ex.instructions.join('\n\n')
       : ex.instructions || null,
@@ -54,6 +58,21 @@ function mapExercise(ex) {
 // ─── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
+  if (process.argv.includes('--content-only')) {
+    let updated = 0
+    for (const raw of exercises) {
+      const data = exerciseSeedContent(raw)
+      if (Object.keys(data).length === 0) continue
+      const result = await prisma.exercise.updateMany({
+        where: { slug: raw.slug },
+        data,
+      })
+      updated += result.count
+    }
+    console.log(`Content updated for ${updated} existing exercises (matched by slug).`)
+    return
+  }
+
   console.log(`Seeding ${exercises.length} exercises...\n`)
 
   let created = 0

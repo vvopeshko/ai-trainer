@@ -514,7 +514,7 @@ function InstructionsTab({ exercise, t }) {
     ? exercise.instructions.split('\n').map(s => s.trim()).filter(Boolean)
     : []
 
-  const hasRuContent = exercise.descriptionRu || exercise.typicalMistakes
+  const hasRuContent = exercise.description || exercise.typicalMistakes
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -528,7 +528,7 @@ function InstructionsTab({ exercise, t }) {
       )}
 
       {/* Russian description */}
-      {exercise.descriptionRu && (
+      {exercise.description && (
         <div>
           <SectionLabel>{t('library.description')}</SectionLabel>
           <Glass radius={12} padding="12px 13px">
@@ -536,7 +536,7 @@ function InstructionsTab({ exercise, t }) {
               fontSize: 12.5, color: 'rgba(236,234,239,0.85)',
               lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
             }}>
-              {exercise.descriptionRu}
+              {exercise.description}
             </p>
           </Glass>
         </div>
