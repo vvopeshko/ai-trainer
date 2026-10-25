@@ -219,9 +219,9 @@ export async function getHistory(req, res) {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
   const setsWhere = { exerciseId: id, isWarmup: false }
   const workouts = await prisma.workout.findMany({
-    where: { userId: req.user.id, finishedAt: { not: null }, sets: { some: setsWhere } },
+    where: { userId: req.user.id, finishedAt: { not: null }, startedAt: { gte: new Date(Date.now() - 183 * 86400000) }, sets: { some: setsWhere } },
     orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
-    take: 8,
+    take: 97,
     select: {
       id: true, startedAt: true,
       sets: {
@@ -231,5 +231,5 @@ export async function getHistory(req, res) {
       },
     },
   })
-  res.json({ workouts })
+  res.json({ workouts: workouts.slice(0, 96), hasMore: workouts.length > 96 })
 }

@@ -1,52 +1,65 @@
 import { expect, it } from 'vitest'
 import { exerciseProgress } from './exerciseProgress.js'
 const row = (date, weights, reps) => ({ startedAt: date, sets: weights.map((weightKg, i) => ({ weightKg, reps: reps[i] })) })
-const plan = { sets: 3, repsMin: 8, repsMax: 12 }
-it('reports repetitions at an unchanged ordered weight pattern and bounds the streak', () => {
+const history = (reps, weights = reps.map(() => 60), spacing = 7) => reps.map((n, i) => row(new Date(Date.UTC(2026, 6, 1 + i * spacing)).toISOString(), [weights[i], weights[i]], [n, n]))
+const plan = { sets: 3, repsMax: 12 }
+it('shows the real screenshot: 75 days in the load band, with a new unconfirmed rep improvement', () => {
   const result = exerciseProgress([
-    row('2026-10-25', [20, 60, 40], [12, 10, 12]),
-    row('2026-10-18', [20, 60, 40], [10, 8, 12]),
-    row('2026-10-11', [20, 60, 35], [10, 8, 12]),
-  ], plan)
-  expect(result).toMatchObject({ streak: 2, days: 7, delta: 4, trend: 'up', goal: { set: 2, from: 10, to: 11, weightKg: 60 } })
+    row('2026-10-19', [80,85,85,85], [10,10,10,6]),
+    row('2026-10-12', [85,85,85,80], [10,8,8,8]),
+    row('2026-09-28', [80,80,80,80], [10,10,10,10]),
+    row('2026-09-15', [80,80,80,80], [10,10,10,10]),
+    row('2026-08-31', [80,85,85,85], [10,8,8,8]),
+    row('2026-08-17', [80,80,80,80], [10,10,10,10]),
+    row('2026-08-10', [80,80,80,80], [10,10,10,8]),
+    row('2026-08-05', [80,80,80,80], [10,10,10,10]),
+  ], { sets: 4, repsMax: 10 })
+  expect(result).toMatchObject({ trend: 'pending', band: { low: 80, high: 85, days: 75 }, repChange: { weight: 85, from: 8, to: 10, confirmed: false }, goal: { set: 4, from: 6, to: 7 } })
 })
-it('does not label added sets or a changed pyramid as progress', () => {
-  const current = row('2026-10-25', [20, 60, 40], [12, 10, 12])
-  for (const previous of [row('2026-10-18', [20, 60], [12, 10]), row('2026-10-18', [40, 60, 20], [12, 10, 12])]) {
-    expect(exerciseProgress([current, previous], plan)).toMatchObject({ streak: 1, trend: 'changed', delta: null })
-  }
+it('recognizes plateau despite fluctuations and ignores the order of sets', () => {
+  const data = history([10,9,11,10,9,10])
+  expect(exerciseProgress(data).trend).toBe('plateau')
+  const shuffled = data.map(w => ({ ...w, sets: [...w.sets, { weightKg: 20, reps: 12 }].reverse() }))
+  expect(exerciseProgress(shuffled).trend).toBe('plateau')
+  expect(exerciseProgress(shuffled).points).toEqual(exerciseProgress(data).points)
 })
-it('handles empty, first and bodyweight histories without inventing a trend', () => {
-  expect(exerciseProgress([], plan)).toBeNull()
-  expect(exerciseProgress([row('2026-10-25', [null], [8])], plan)).toMatchObject({ trend: 'first', goal: null })
-  expect(exerciseProgress([row('2026-10-25', [null], [8]), row('2026-10-18', [0], [8])])).toMatchObject({ trend: 'same', delta: 0 })
+it('requires four separate dates and 21 elapsed days', () => {
+  expect(exerciseProgress(history([10,10,10])).trend).toBe('first')
+  expect(exerciseProgress(history([10,10,10,10], undefined, 6)).trend).toBe('first')
+  expect(exerciseProgress(history([10,10,10,10])).trend).toBe('plateau')
+  const data = history([10,10])
+  expect(exerciseProgress([...data,...data]).count).toBe(2)
 })
-it('reports a decrease without diagnosing a plateau or automatically increasing weight', () => {
-  expect(exerciseProgress([row('2026-10-25', [60], [8]), row('2026-10-18', [60], [10])])).toMatchObject({ trend: 'down', delta: -2 })
-  expect(exerciseProgress([row('2026-10-25', [20, 60, 40], [12, 12, 12])], plan)).toMatchObject({ goal: null })
+it('detects sustained repetitions growth, including bodyweight', () => {
+  for (const weight of [0,60]) expect(exerciseProgress(history([8,9,10,11], [weight,weight,weight,weight])).trend).toBe('up')
 })
-it('requires at least four identical results spanning at least 21 days', () => {
-  const history = ['2026-10-25', '2026-10-18', '2026-10-11', '2026-10-04'].map(date => row(date, [20, 60], [12, 8]))
-  expect(exerciseProgress(history.slice(0, 2))).toMatchObject({ trend: 'same', unchanged: 2 })
-  expect(exerciseProgress(history.slice(0, 3))).toMatchObject({ trend: 'same' })
-  expect(exerciseProgress(history)).toMatchObject({ trend: 'plateau', unchanged: 4, unchangedDays: 21 })
+it('detects sustained load growth and decline but not a weight/reps tradeoff', () => {
+  expect(exerciseProgress(history([10,10,10,10], [60,62.5,65,67.5])).trend).toBe('up')
+  expect(exerciseProgress(history([10,10,10,10], [67.5,65,62.5,60])).trend).toBe('down')
+  expect(exerciseProgress(history([12,10,8,6], [60,62.5,65,67.5])).trend).toBe('mixed')
+  expect(exerciseProgress(history([12,11,10,9])).trend).toBe('down')
 })
-it('recognizes higher weights without lost reps and refuses mixed tradeoffs', () => {
-  expect(exerciseProgress([row('2026-10-25', [65], [10]), row('2026-10-18', [60], [10])])).toMatchObject({ trend: 'up', reason: 'weightUp' })
-  expect(exerciseProgress([row('2026-10-25', [65], [8]), row('2026-10-18', [60], [10])])).toMatchObject({ trend: 'changed', reason: 'mixed' })
-  expect(exerciseProgress([row('2026-10-25', [20, 60], [15, 7]), row('2026-10-18', [20, 60], [10, 8])])).toMatchObject({ trend: 'changed', reason: 'mixed' })
+it('does not turn an isolated record or deload into a sustained trend', () => {
+  expect(exerciseProgress(history([10,10,10,10,12])).trend).toBe('pending')
+  expect(exerciseProgress(history([10,10,10,10,8])).trend).toBe('plateau')
+  expect(exerciseProgress(history([10,10,10,10,10], [60,60,60,80,60])).trend).toBe('plateau')
 })
-it('does not call a long run at the same weight a plateau when reps are growing', () => {
-  expect(exerciseProgress([row('2026-10-25', [60], [12]), row('2026-10-18', [60], [10]), row('2026-10-11', [60], [8])])).toMatchObject({ trend: 'up', streak: 3, unchanged: 1 })
+it('finds a recent plateau after earlier growth', () => {
+  expect(exerciseProgress(history([6,7,8,9,10,10,10,10]))).toMatchObject({ trend: 'plateau', plateauDays: 21, plateauCount: 4 })
+})
+it('starts again after a long break and ignores invalid rows', () => {
+  const data = [...history([10,10,10,10]), row('2026-10-25', [60], [10])]
+  expect(exerciseProgress(data)).toMatchObject({ trend: 'first', count: 1, days: 0 })
+  expect(exerciseProgress([row('invalid', [60], [10]), { startedAt: '2026-10-25', sets: [] }])).toBeNull()
+  expect(exerciseProgress([])).toBeNull()
+})
+it('offers only one extra rep within the plan and never raises weight automatically', () => {
+  expect(exerciseProgress([row('2026-10-25', [60,60,60], [10,10,8])], plan).goal).toEqual({ set: 3, from: 8, to: 9, weightKg: 60 })
+  expect(exerciseProgress([row('2026-10-25', [60,60,60], [12,12,12])], plan).goal).toBeNull()
+  expect(exerciseProgress([row('2026-10-25', [60], [8])], plan).goal).toBeNull()
 })
 
-it('does not call frequent repeats or three widely spaced sessions a plateau', () => {
-  const history = ['2026-10-25', '2026-10-20', '2026-10-15', '2026-10-05'].map(d => row(d, [60], [10]))
-  expect(exerciseProgress(history)).toMatchObject({ trend: 'same', unchangedDays: 20 })
-  expect(exerciseProgress([history[0], history[1], row('2026-09-01', [60], [10])])).toMatchObject({ trend: 'same' })
-})
-it('offers only one extra rep within the plan for the weakest set', () => {
-  expect(exerciseProgress([row('2026-10-25', [60, 60, 60], [10, 10, 8])], plan).goal)
-    .toEqual({ set: 3, from: 8, to: 9, weightKg: 60 })
-  expect(exerciseProgress([row('2026-10-25', [60, 60, 60], [12, 12, 11])], plan).goal.to).toBe(12)
+it('recognizes two confirmed new levels after a long flat baseline', () => {
+  expect(exerciseProgress(history([10,10,10,10,10,10,12,12])).trend).toBe('up')
+  expect(exerciseProgress(history([10,10,10,10,10,10,8,8])).trend).toBe('down')
 })
