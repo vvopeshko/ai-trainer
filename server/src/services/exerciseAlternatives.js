@@ -15,8 +15,10 @@ const NOT_A_SWAP = /растяж|релиз|мфр|самомасс|размин
 const baseName = name => name.replace(/\s*\((лев|прав|left|right)[^)]*\)/gi, '').trim().toLowerCase()
 const STOP = new Set(['рук', 'руки', 'ног', 'стоя', 'сидя', 'лежа', 'лёжа', 'для', 'при', 'одной', 'двумя', 'хватом', 'тренажере', 'тренажёре'])
 // Name stems approximate the movement ("Сгибания…", "Разгибания ног…", "Тяга…").
-const stems = name => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
-  .filter(w => w.length >= 3 && !STOP.has(w)).map(w => w.slice(0, 5)))
+// Tool words are not the movement: «…со штангой» must not pair a squat with a hip thrust.
+const TOOL = /^(штанг|гантел|гир|блок|тренаж|кабел|канат|кроссовер|смит|фитбол|медбол|эспандер|петл|скамь)/
+const stems = (name, { tools = true } = {}) => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
+  .filter(w => w.length >= 3 && !STOP.has(w) && (tools || !TOOL.test(w))).map(w => w.slice(0, 5)))
 
 /**
  * Pure ranking of catalog candidates for one exercise ("суть одна"): the same
@@ -26,7 +28,9 @@ const stems = name => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a
  */
 export function rankAlternatives(target, pool, usage = new Map()) {
   const own = stems(target.nameRu)
+  const ownMovement = stems(target.nameRu, { tools: false })
   const sharedStems = ex => [...stems(ex.nameRu)].filter(w => own.has(w)).length
+  const sameMovement = ex => [...stems(ex.nameRu, { tools: false })].some(w => ownMovement.has(w))
   const score = ex => {
     const shared = sharedStems(ex)
     return 2 * Math.min(shared, 2)
@@ -35,13 +39,17 @@ export function rankAlternatives(target, pool, usage = new Map()) {
       + (sameSet(ex.equipment, target.equipment) ? 0 : 1)
       + (ex.source === 'seed' ? 0.5 : 0)
   }
-  const ranked = pool
+  const sorted = pool
     .filter(ex => ex.id !== target.id && baseName(ex.nameRu) !== baseName(target.nameRu) && !NOT_A_SWAP.test(ex.nameRu))
     .map(ex => ({ ...ex, usedCount: usage.get(ex.id) ?? 0, score: score(ex) }))
     .sort((a, b) => (b.usedCount > 0) - (a.usedCount > 0) || b.score - a.score
       || b.usedCount - a.usedCount || a.nameRu.localeCompare(b.nameRu, 'ru'))
     // Catalog duplicates under different slugs and left/right sides: one per name.
     .filter((ex, i, all) => all.findIndex(o => baseName(o.nameRu) === baseName(ex.nameRu)) === i)
+  // Within one target muscle, keep the same movement (жим ногами ↔ жим ногами,
+  // not lunges) and what the user already does — when there is any of those.
+  const close = sorted.filter(ex => sameMovement(ex) || ex.usedCount > 0)
+  const ranked = close.length ? close : sorted
   // Variety at the top: at most two of the same tool before the rest.
   const perTool = new Map(), head = [], tail = []
   for (const ex of ranked) {
@@ -63,8 +71,13 @@ export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
   const target = await prisma.exercise.findUnique({ where: { id: exerciseId }, select: SELECT })
   const muscle = target && targetMuscle(target.slug)
   if (!muscle) return []
+  // The kind (compound/isolation) is reliable for catalog exercises only:
+  // exercises created later get the default 'compound'.
   const pool = await prisma.exercise.findMany({
-    where: { id: { not: target.id }, category: target.category, slug: { in: slugsWithTarget(muscle) } },
+    where: {
+      id: { not: target.id }, slug: { in: slugsWithTarget(muscle) },
+      ...(target.source === 'seed' ? { category: target.category } : { category: { in: ['compound', 'isolation'] } }),
+    },
     select: SELECT,
   })
   if (!pool.length) return []

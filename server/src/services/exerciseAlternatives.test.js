@@ -159,3 +159,29 @@ it('refreshes every auto-filled slot with refreshAuto, leaving hand-picked ones'
   expect(saved[0].alternatives).toEqual(['db'])
   expect(saved[1].alternatives).toEqual(['cable'])
 })
+
+it('keeps the same movement within a target muscle, plus what the user already does', () => {
+  const press = { ...ex('lp', 'Жим ногами', ['quadriceps'], ['machine']), category: 'compound' }
+  const list = rankAlternatives(press, [
+    { ...ex('lp2', 'Жим ногами в тренажёре Смита', ['quadriceps'], ['machine']), category: 'compound' },
+    { ...ex('lunge', 'Болгарские выпады', ['quadriceps'], ['dumbbell']), category: 'compound' },
+    { ...ex('goblet', 'Гоблет-приседания', ['quadriceps'], ['kettlebells']), category: 'compound' },
+  ], new Map([['goblet', 2]]))
+  expect(list.map(e => e.id)).toEqual(['goblet', 'lp2'])
+  // Tool words are not the movement.
+  const thrust = { ...ex('t', 'Ягодичный мостик со штангой', ['glutes'], ['barbell']), category: 'compound' }
+  expect(rankAlternatives(thrust, [
+    { ...ex('sq', 'Коленный присед со штангой', ['glutes'], ['barbell']), category: 'compound' },
+    { ...ex('ball', 'Ягодичный мостик на фитболе', ['glutes'], ['exercise ball']), category: 'compound' },
+  ]).map(e => e.id)).toEqual(['ball'])
+  // Nothing with the same movement: the whole target group stays.
+  const curl = ex('c', 'Сгибания в тренажёре', ['biceps'], ['machine'])
+  expect(rankAlternatives(curl, [ex('h', 'Молотки', ['biceps'], ['dumbbell'])]).map(e => e.id)).toEqual(['h'])
+})
+
+it('does not trust the default kind of exercises created outside the catalog', async () => {
+  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, source: 'ai_generated' })
+  mock.exercise.findMany.mockResolvedValue([])
+  await findAlternatives('u1', 'machine')
+  expect(mock.exercise.findMany.mock.calls[0][0].where.category).toEqual({ in: ['compound', 'isolation'] })
+})
