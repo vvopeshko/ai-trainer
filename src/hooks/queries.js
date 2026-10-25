@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiGet } from '../utils/api.js'
 import { syncSettingsFromServer } from '../utils/weightUnit.js'
+import { activeWorkoutQueryOptions } from '../lib/activeWorkoutQuery.js'
 import { queryKeys } from '../lib/queryKeys.js'
 
 // ─── Stats ───────────────────────────────────────────────────────────
@@ -34,11 +35,7 @@ export function useRecentWorkouts() {
 }
 
 export function useActiveWorkoutQuery() {
-  return useQuery({
-    queryKey: queryKeys.workouts.active,
-    queryFn: () => apiGet('/api/v1/workouts/active'),
-    staleTime: 30_000, // 30 sec — critical for resume
-  })
+  return useQuery(activeWorkoutQueryOptions())
 }
 
 export function useWorkoutDetail(id) {

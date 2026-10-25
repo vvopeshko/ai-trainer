@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
 import { openTrainerChat } from '../../utils/askTrainer.js'
-import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
+import { apiPost, apiDelete } from '../../utils/api.js'
 import TopBar from '../../components/ui/TopBar.jsx'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
@@ -27,6 +27,7 @@ import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheetLazy
 import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useQueryClient } from '@tanstack/react-query'
+import { fetchActiveWorkout } from '../../lib/activeWorkoutQuery.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { useFinishWorkout, useCancelWorkout } from '../../hooks/mutations.js'
 import { useActiveWorkout } from '../../contexts/ActiveWorkoutContext.jsx'
@@ -240,15 +241,21 @@ export default function WorkoutPage() {
     setLoading(true)
     setLoadError(false)
     // The cache may predate the last recorded set or a pause made on Home.
-    apiGet('/api/v1/workouts/active')
+    fetchActiveWorkout(queryClient)
       .then(data => {
         if (!cancelled) {
-          queryClient.setQueryData(queryKeys.workouts.active, data)
           applyData(data)
           setLoading(false)
         }
       })
-      .catch(() => { if (!cancelled) { setLoadError(true); setLoading(false) } })
+      .catch(error => {
+        if (!cancelled) {
+          // No tokens, response bodies or workout data in diagnostics.
+          console.warn('[workout] active load failed', { name: error?.name, status: error?.status })
+          setLoadError(true)
+          setLoading(false)
+        }
+      })
 
     return () => { cancelled = true }
   }, [loadAttempt]) // eslint-disable-line react-hooks/exhaustive-deps
