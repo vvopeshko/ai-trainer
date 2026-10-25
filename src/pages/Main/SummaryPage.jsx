@@ -4,78 +4,42 @@
  * Показывает: зелёную галочку, "Готово!", 2×2 stat-tiles (подходы, время, упражнения, тоннаж),
  * мышечные группы как chips, CTA "К программе".
  *
- * Данные: location.state (мгновенно, после финиша тренировки) с фолбэком на
- * GET /workouts/:id через useWorkoutDetail — чтобы прямое открытие /summary/:id
- * (перезагрузка, диплинк) показывало реальные цифры, а не нули.
+ * Данные: серверный ответ завершения в query cache или GET /workouts/:id.
  */
 import { useEffect, useMemo } from 'react'
-import { useNavigate, useLocation, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { MuscleTile } from '../../components/ui/MuscleTile.jsx'
 import { MUSCLE_GROUP } from '../../utils/muscleMapping.js'
+import { summarizeWorkout } from '../../utils/workoutSummary.js'
 import { useWorkoutDetail } from '../../hooks/queries.js'
-
-/** Считает сводку по данным GET /workouts/:id (workout.sets c include exercise). */
-function summarizeWorkout(workout) {
-  if (!workout) return null
-
-  const sets = workout.sets ?? []
-  const exerciseIds = new Set()
-  const muscleSet = new Set()
-  let tonnageKg = 0
-
-  for (const s of sets) {
-    exerciseIds.add(s.exerciseId)
-    if (s.weightKg && s.reps) tonnageKg += s.weightKg * s.reps
-    for (const m of s.exercise?.primaryMuscles ?? []) muscleSet.add(m)
-  }
-
-  // Чистое время: finished − started − суммарные паузы
-  let elapsedSec = 0
-  if (workout.startedAt) {
-    const end = workout.finishedAt ? new Date(workout.finishedAt) : new Date()
-    const ms = end - new Date(workout.startedAt) - (workout.totalPausedMs ?? 0)
-    elapsedSec = Math.max(0, Math.floor(ms / 1000))
-  }
-
-  tonnageKg = Math.round(tonnageKg)
-
-  return {
-    totalSets: sets.length,
-    totalExercises: exerciseIds.size,
-    elapsedSec,
-    tonnageKg: tonnageKg || null,
-    muscles: [...muscleSet],
-  }
-}
 
 export default function SummaryPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { state } = useLocation()
   const { id } = useParams()
 
-  // location.state — приоритет (мгновенно после финиша); без него грузим воркаут
-  const hasState = !!state
-  const { data: detailData } = useWorkoutDetail(hasState ? null : id)
+  // Finish seeds this query with the server response. Reloads fetch the same data.
+  const { data: detailData, isPending, isError, refetch } = useWorkoutDetail(id)
   const fetched = useMemo(
     () => summarizeWorkout(detailData?.workout),
     [detailData?.workout],
   )
 
-  const totalSets = state?.totalSets ?? fetched?.totalSets ?? 0
-  const totalExercises = state?.totalExercises ?? fetched?.totalExercises ?? 0
-  const elapsedSec = state?.elapsedSec ?? fetched?.elapsedSec ?? 0
-  const tonnageKg = state?.tonnageKg ?? fetched?.tonnageKg ?? null
-  const muscles = state?.muscles ?? fetched?.muscles ?? []
+  const totalSets = fetched?.totalSets ?? 0
+  const totalExercises = fetched?.totalExercises ?? 0
+  const elapsedSec = fetched?.elapsedSec ?? 0
+  const tonnageKg = fetched?.tonnageKg ?? null
+  const muscles = fetched?.muscles ?? []
 
   // Deduplicate muscles by group name for display
   const muscleGroups = [...new Set(muscles.map(m => MUSCLE_GROUP[m]).filter(Boolean))]
 
   const formatTime = (sec) => {
+    if (sec < 60) return t('summary.timeSec', { s: sec })
     const h = Math.floor(sec / 3600)
     const m = Math.floor((sec % 3600) / 60)
     if (h > 0) return t('summary.timeHm', { h, hUnit: t('units.hoursShort'), m, mUnit: t('units.minsShort') })
@@ -102,6 +66,13 @@ export default function SummaryPage() {
     fontWeight: 'var(--weight-bold)',
     color: 'var(--fg-primary)',
   }
+
+  if (isPending || isError || !fetched) return (
+    <div style={{ padding: 24, color: 'var(--fg-primary)' }}>
+      <p>{t(isPending ? 'common.loading' : 'errors.network')}</p>
+      {!isPending && <Button onClick={() => refetch()}>{t('common.retry')}</Button>}
+    </div>
+  )
 
   return (
     <div style={{

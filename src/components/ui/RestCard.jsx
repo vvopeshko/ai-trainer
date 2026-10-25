@@ -1,3 +1,4 @@
+import { restElapsedSeconds } from '../../utils/workoutState.js'
 import { useState, useEffect } from 'react'
 import { Glass } from './Glass.jsx'
 import { Icon } from './Icon.jsx'
@@ -7,19 +8,21 @@ import { useTranslation } from '../../i18n/useTranslation.js'
  * Rest timer between sets. Counts UP to show elapsed rest time.
  * Shows recommended rest as reference. "Идём дальше" button to continue.
  */
-export function RestCard({ seconds = 90, onSkip }) {
+export function RestCard({ seconds = 90, onSkip, startedAt, pausedAt = null }) {
   const { t: tr } = useTranslation()
-  const [elapsed, setElapsed] = useState(0)
+  const [fallbackStart] = useState(Date.now)
+  const start = startedAt ?? fallbackStart
+  const [elapsed, setElapsed] = useState(() => restElapsedSeconds(start, pausedAt))
 
   useEffect(() => {
-    const start = Date.now()
-    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000))
+    const tick = () => setElapsed(restElapsedSeconds(start, pausedAt))
+    tick()
     const id = setInterval(tick, 1000)
     // Catch up after app was in background
     const onVisible = () => { if (document.visibilityState === 'visible') tick() }
     document.addEventListener('visibilitychange', onVisible)
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
-  }, [])
+  }, [start, pausedAt])
 
   const mm = Math.floor(elapsed / 60)
   const ss = String(elapsed % 60).padStart(2, '0')

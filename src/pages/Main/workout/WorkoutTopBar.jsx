@@ -13,7 +13,7 @@ function calcElapsed(startedAt, totalPausedMs, pausedAt) {
 
 // Таймер тикает ВНУТРИ топбара (как в HeroBlock): секундный setState в корне
 // WorkoutPage ре-рендерил всю страницу (~1400 строк) каждую секунду тренировки.
-export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum, totalExercises, doneSetCount, totalSetCount, onBack, onFinish, onCancel, hasAnySets, onPause, onResume }) {
+export function WorkoutTopBar({ busy = false, startedAt, pausedAt, totalPausedMs, exerciseNum, totalExercises, doneSetCount, totalSetCount, onBack, onFinish, onCancel, hasAnySets, onPause, onResume }) {
   const { t } = useTranslation()
   const paused = pausedAt != null
 
@@ -36,7 +36,7 @@ export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum,
   return (
     <div style={{ position: 'relative', zIndex: 1, padding: 'calc(12px + var(--safe-top, 0px)) 12px 8px' }}>
       <Glass variant="strong" padding="8px 8px 8px 6px" radius={12} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onBack} aria-label={t('a11y.back')} style={{
+        <button disabled={busy} onClick={onBack} aria-label={t('a11y.back')} style={{
           width: 32, height: 32, borderRadius: 9,
           background: 'rgba(255,255,255,0.04)', border: 'none',
           color: '#ECEAEF', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -68,7 +68,7 @@ export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum,
         </div>
 
         {/* Pause / Resume button */}
-        <button onClick={paused ? onResume : onPause} aria-label={paused ? t('a11y.resume') : t('a11y.pause')} style={{
+        <button disabled={busy} onClick={paused ? onResume : onPause} aria-label={paused ? t('a11y.resume') : t('a11y.pause')} style={{
           width: 32, height: 32, borderRadius: 9,
           background: paused ? 'hsla(var(--accent-h,158),55%,55%,0.15)' : 'rgba(255,255,255,0.04)',
           border: 'none',
@@ -79,7 +79,7 @@ export function WorkoutTopBar({ startedAt, pausedAt, totalPausedMs, exerciseNum,
           <Icon name={paused ? 'play' : 'pause'} size={14} />
         </button>
 
-        <button onClick={hasAnySets ? onFinish : onCancel} style={{
+        <button disabled={busy} onClick={hasAnySets ? onFinish : onCancel} style={{
           height: 32, padding: '0 13px', borderRadius: 9, border: 'none',
           background: hasAnySets ? 'hsl(var(--accent-h,158),55%,55%)' : 'rgba(255,255,255,0.06)',
           color: hasAnySets ? '#0a1815' : 'var(--danger, hsl(0,65%,60%))',

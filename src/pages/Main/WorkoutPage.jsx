@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
 import { openTrainerChat } from '../../utils/askTrainer.js'
-import { apiGet, apiPost, apiPatch, apiDelete } from '../../utils/api.js'
+import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
 import TopBar from '../../components/ui/TopBar.jsx'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
@@ -38,15 +38,9 @@ import { ActiveSetInput } from './workout/ActiveSetInput.jsx'
 import { UpcomingExerciseItem } from './workout/UpcomingExerciseItem.jsx'
 import { ExpandedUpcomingCard } from './workout/ExpandedUpcomingCard.jsx'
 import { WorkoutSkeleton } from './workout/WorkoutSkeleton.jsx'
+import { changeWorkoutPause } from '../../utils/workoutPause.js'
+import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
-
-// Чистое время тренировки на момент вызова (для Summary): таймер живёт
-// внутри WorkoutTopBar, чтобы секундный тик не ре-рендерил страницу.
-function calcElapsedSec(startedAt, pausedAt, totalPausedMs) {
-  if (!startedAt) return 0
-  const end = pausedAt ?? Date.now()
-  return Math.max(0, Math.floor((end - startedAt - totalPausedMs) / 1000))
-}
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
 
@@ -54,10 +48,6 @@ export default function WorkoutPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const cachedData = queryClient.getQueryData(queryKeys.workouts.active)
-  const cachedWorkout = cachedData?.workout ?? null
-  const cachedPlan = cachedData?.planExercises ?? null
-  const cachedPlanTitle = cachedData?.planDayTitle ?? null
 
   const toast = useToast()
   const { webApp } = useTelegram()
@@ -69,6 +59,11 @@ export default function WorkoutPage() {
   const [allExercises, setAllExercises] = useState([])
   const [picking, setPicking] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [changingPause, setChangingPause] = useState(false)
+  const operationRef = useRef(false)
+  const closedRef = useRef(false)
+  const [loadError, setLoadError] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showAlternatives, setShowAlternatives] = useState(false)
   const [pendingSwap, setPendingSwap] = useState(null) // alt object awaiting confirm
@@ -217,144 +212,67 @@ export default function WorkoutPage() {
       setTotalPausedMs(workout.totalPausedMs || 0)
       if (workout.pausedAt) setPausedAt(new Date(workout.pausedAt).getTime())
 
-      // Try to restore saved ephemeral state (from previous navigation away)
       const saved = restoreWorkoutState(workout.id)
-      if (saved) {
-        setCurrentExercise(saved.currentExercise)
-        setDoneSets(saved.doneSets)
-        setPartialSets(saved.partialSets)
-        if (saved.planExercises) setPlanExercises(saved.planExercises)
-        else if (data.planExercises) setPlanExercises(data.planExercises)
-        setPlanIndex(saved.planIndex)
-        setAllExercises(saved.allExercises)
-        setResting(saved.resting)
-        if (data.planExercises) setPlanDayTitle(data.planDayTitle)
-
-        // Still fetch last results for plan exercises
-        const planEx = saved.planExercises || data.planExercises
-        if (planEx) {
-          const ids = planEx.map(pe => pe.exerciseId)
-          apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: ids })
-            .then(r => { if (!cancelled) setLastResultsCache(r.results) })
-            .catch(() => {})
-        }
-        return
-      }
-
-      if (data.planExercises) {
-        setPlanExercises(data.planExercises)
-        setPlanDayTitle(data.planDayTitle)
-
-        // Batch-fetch last results for all plan exercises
-        const ids = data.planExercises.map(pe => pe.exerciseId)
+      const restored = restoreWorkoutSnapshot(data, saved)
+      setCurrentExercise(restored.currentExercise)
+      setDoneSets(restored.doneSets)
+      setPartialSets(restored.partialSets)
+      setPlanExercises(restored.planExercises)
+      setPlanDayTitle(data.planDayTitle)
+      setPlanIndex(restored.planIndex)
+      setAllExercises(restored.allExercises)
+      setResting(restored.resting)
+      setPicking(restored.picking)
+      const ids = [...new Set([
+        ...(restored.planExercises ?? []).map(pe => pe.exerciseId),
+        ...(restored.currentExercise ? [restored.currentExercise.id] : []),
+      ])]
+      if (ids.length) {
         apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: ids })
           .then(r => { if (!cancelled) setLastResultsCache(r.results) })
           .catch(() => {})
       }
-
-      if (workout.sets?.length > 0) {
-        const grouped = {}
-        const order = []
-        for (const s of workout.sets) {
-          if (!grouped[s.exerciseId]) {
-            grouped[s.exerciseId] = { exercise: s.exercise, sets: [] }
-            order.push(s.exerciseId)
-          }
-          grouped[s.exerciseId].sets.push(s)
-        }
-
-        if (data.planExercises) {
-          // Восстановление partial progress после перезапуска приложения:
-          // упражнение с 2/4 подходами — не «сделано», а «в процессе».
-          // Раньше все залогированные упражнения помечались завершёнными.
-          const byPlan = new Map(data.planExercises.map(pe => [pe.exerciseId, pe]))
-          const done = []
-          const partial = {}
-          for (const exId of order) {
-            const pe = byPlan.get(exId)
-            if (pe && grouped[exId].sets.length < pe.sets) partial[exId] = grouped[exId].sets
-            else done.push(grouped[exId])
-          }
-          setAllExercises(done)
-          if (Object.keys(partial).length > 0) setPartialSets(partial)
-
-          const doneIds = new Set(done.map(d => d.exercise.id))
-          // Текущее: первое незатронутое; если остались только partial — первое из них.
-          const nextIdx = data.planExercises.findIndex(
-            pe => !doneIds.has(pe.exerciseId) && !partial[pe.exerciseId],
-          )
-          if (nextIdx >= 0) {
-            setPlanIndex(nextIdx)
-            setCurrentExercise({ id: data.planExercises[nextIdx].exerciseId, nameRu: data.planExercises[nextIdx].nameRu, slug: data.planExercises[nextIdx].slug })
-          } else {
-            const partialIdx = data.planExercises.findIndex(pe => partial[pe.exerciseId])
-            if (partialIdx >= 0) {
-              const pe = data.planExercises[partialIdx]
-              setPlanIndex(partialIdx)
-              setCurrentExercise({ id: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug })
-              setDoneSets(partial[pe.exerciseId])
-              setPartialSets(prev => { const n = { ...prev }; delete n[pe.exerciseId]; return n })
-            } else {
-              setPlanIndex(data.planExercises.length)
-            }
-          }
-        } else {
-          setAllExercises(order.map(id => grouped[id]))
-        }
-      } else if (data.planExercises) {
-        // Fresh start with plan — auto-select first exercise
-        const first = data.planExercises[0]
-        setPlanIndex(0)
-        setCurrentExercise({ id: first.exerciseId, nameRu: first.nameRu, slug: first.slug })
-      } else {
-        setPicking(true)
-      }
     }
 
-    // Use cached data from HomeDataProvider if available (skips network call)
-    const source = cachedWorkout
-      ? Promise.resolve({ workout: cachedWorkout, planExercises: cachedPlan, planDayTitle: cachedPlanTitle })
-      : apiGet('/api/v1/workouts/active')
-
-    source
-      .then(data => { if (!cancelled) { applyData(data); setLoading(false) } })
-      .catch(() => { if (!cancelled) { setPicking(true); setLoading(false) } })
+    setLoading(true)
+    setLoadError(false)
+    // The cache may predate the last recorded set or a pause made on Home.
+    apiGet('/api/v1/workouts/active')
+      .then(data => {
+        if (!cancelled) {
+          queryClient.setQueryData(queryKeys.workouts.active, data)
+          applyData(data)
+          setLoading(false)
+        }
+      })
+      .catch(() => { if (!cancelled) { setLoadError(true); setLoading(false) } })
 
     return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadAttempt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Save state on unmount for navigation persistence ──
-  const workoutStateRef = useRef()
-  workoutStateRef.current = { workoutId, currentExercise, doneSets, partialSets, planExercises, planIndex, allExercises, resting }
-
+  // Persist only after loading server truth; clearing on finish must not be
+  // undone by an unmount cleanup or a late save.
   useEffect(() => {
-    return () => {
-      const s = workoutStateRef.current
-      if (s.workoutId) {
-        saveWorkoutState({
-          workoutId: s.workoutId,
-          currentExercise: s.currentExercise,
-          doneSets: s.doneSets,
-          partialSets: s.partialSets,
-          planExercises: s.planExercises,
-          planIndex: s.planIndex,
-          allExercises: s.allExercises,
-          resting: s.resting,
-        })
-      }
+    if (workoutId && !loading && !loadError && !closedRef.current) {
+      saveWorkoutState({ workoutId, currentExercise, doneSets, partialSets,
+        planExercises, planIndex, allExercises, resting, picking })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [workoutId, currentExercise, doneSets, partialSets, planExercises, planIndex,
+    allExercises, resting, picking, loading, loadError, saveWorkoutState])
 
   // ── Удаление сета на сервере ──
   // Молчаливый .catch(() => {}) оставлял сет в БД (портил статистику), а юзер
   // не узнавал. Теперь: toast + очередь неудавшихся, ретрай перед финишем.
   const failedDeletionsRef = useRef([]) // setId, которые не удалось удалить
+  const pendingDeletesRef = useRef(new Set())
   const deleteSetOnServer = (setId) => {
     if (!setId || !workoutId) return
-    apiDelete(`/api/v1/workouts/${workoutId}/sets/${setId}`).catch(() => {
+    const request = apiDelete(`/api/v1/workouts/${workoutId}/sets/${setId}`).catch(() => {
       failedDeletionsRef.current.push(setId)
       toast.show(t('errors.network'))
     })
+    pendingDeletesRef.current.add(request)
+    request.finally(() => pendingDeletesRef.current.delete(request))
   }
 
   // ── Ensure workout exists ──
@@ -462,14 +380,16 @@ export default function WorkoutPage() {
   }
 
   const handleSetDone = ({ weight, reps }) => {
-    if (!workoutId || !currentExercise) return
+    if (!workoutId || !currentExercise || pausedAt || operationRef.current) return
 
     const tempId = crypto.randomUUID()
     const newSet = { weightKg: weight, reps, exerciseId: currentExercise.id, tempId }
     setDoneSets(prev => [...prev, newSet])
 
     try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
-    setResting(true)
+    // Event handler only: capture the actual time the approach was recorded.
+    // eslint-disable-next-line react-hooks/purity
+    setResting(Date.now() - totalPausedMs)
 
     const postSet = async () => {
       try {
@@ -710,126 +630,88 @@ export default function WorkoutPage() {
     }
   }
 
-  const handlePause = async () => {
-    if (!workoutId || pausedAt) return
-    setPausedAt(Date.now())
-    apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'pause' })
-      .catch(err => console.error('Failed to pause workout:', err))
+  const changePause = async (action) => {
+    if (!workoutId || operationRef.current) return
+    operationRef.current = true
+    setChangingPause(true)
+    try {
+      const { workout, failed } = await changeWorkoutPause(workoutId, action, [...pendingSetPostsRef.current])
+      if (workout) {
+        setPausedAt(workout.pausedAt ? new Date(workout.pausedAt).getTime() : null)
+        setTotalPausedMs(workout.totalPausedMs || 0)
+        queryClient.setQueryData(queryKeys.workouts.active, old => ({ ...old, workout }))
+      }
+      if (failed) toast.show(t('errors.network'))
+      return !failed
+    } finally {
+      operationRef.current = false
+      setChangingPause(false)
+    }
   }
-
-  const handleResume = async () => {
-    if (!workoutId || !pausedAt) return
-    const pauseDuration = Date.now() - pausedAt
-    setTotalPausedMs(prev => prev + pauseDuration)
-    setPausedAt(null)
-    try { await apiPatch(`/api/v1/workouts/${workoutId}`, { action: 'resume' }) }
-    catch { /* optimistic update already applied */ }
-  }
+  const handlePause = () => changePause('pause')
+  const handleResume = () => changePause('resume')
 
   const handleFinish = async () => {
-    if (!workoutId) return
+    if (!workoutId || operationRef.current) return
+    operationRef.current = true
     setFinishing(true)
-
-    // Save current exercise sets if any
-    if (currentExercise && doneSets.length > 0) {
-      setAllExercises(prev => [...prev, { exercise: currentExercise, sets: [...doneSets] }])
-    }
-
-    const totalSets = allExercises.reduce((sum, ex) => sum + ex.sets.length, 0) + doneSets.length + partialSetCount
-    const totalExercises = allExercises.length + (doneSets.length > 0 ? 1 : 0) + Object.keys(partialSets).length
-
-    // Compute tonnage and muscles from all exercises
-    let tonnageKg = 0
-    const muscleSet = new Set()
-
-    const collectSets = (sets) => {
-      for (const s of sets) {
-        if (s.weightKg && s.reps) tonnageKg += s.weightKg * s.reps
-      }
-    }
-    // У упражнений из плана нет primaryMuscles ({id, nameRu, slug}) — мышцы
-    // добираем из planExercises по exerciseId, иначе чипы Summary пустые.
-    const musclesFor = (exercise) =>
-      exercise?.primaryMuscles ??
-      planExercises?.find(pe => pe.exerciseId === exercise?.id)?.primaryMuscles
-    const collectMuscles = (exercise) => {
-      musclesFor(exercise)?.forEach(m => muscleSet.add(m))
-    }
-
-    for (const ex of allExercises) {
-      collectSets(ex.sets)
-      collectMuscles(ex.exercise)
-    }
-    collectSets(doneSets)
-    if (currentExercise) collectMuscles(currentExercise)
-    for (const [exId, sets] of Object.entries(partialSets)) {
-      collectSets(sets)
-      collectMuscles({ id: exId })
-    }
-
-    tonnageKg = Math.round(tonnageKg)
-
     try {
-      // Дожидаемся in-flight POST сетов: типичный кейс — залогировал последний
-      // подход и сразу жмёшь «Готово». Без ожидания finish обгонит POST:
-      // сервер посчитает сеты без последнего (а при 0 сетов удалит тренировку).
-      if (pendingSetPostsRef.current.size > 0) {
-        await Promise.allSettled([...pendingSetPostsRef.current])
-      }
+      await Promise.allSettled([...pendingSetPostsRef.current])
+      await Promise.allSettled([...pendingDeletesRef.current])
+      // Keep failed deletions queued and don't finish until they are confirmed.
+      const failed = []
+      await Promise.all(failedDeletionsRef.current.map(async id => {
+        try { await apiDelete(`/api/v1/workouts/${workoutId}/sets/${id}`) }
+        catch { failed.push(id) }
+      }))
+      failedDeletionsRef.current = failed
+      if (failed.length) throw new Error('Set deletions are not saved')
 
-      // Ретраим неудавшиеся удаления: иначе удалённые в UI сеты останутся
-      // в БД и попадут в статистику финиша.
-      if (failedDeletionsRef.current.length > 0) {
-        const ids = [...failedDeletionsRef.current]
-        failedDeletionsRef.current = []
-        await Promise.allSettled(
-          ids.map(id => apiDelete(`/api/v1/workouts/${workoutId}/sets/${id}`)),
-        )
-      }
-
-      // Мутация даёт optimistic (active → null) и инвалидацию stats/recent/
-      // progress/programs.next — без неё Home до 5 мин показывал бы старые данные.
       const result = await finishWorkoutMutation.mutateAsync(workoutId)
-      try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
-
+      closedRef.current = true
       clearWorkoutState()
       if (result.deleted) { navigate('/'); return }
-
-      navigate(`/summary/${workoutId}`, {
-        state: {
-          totalSets,
-          totalExercises,
-          elapsedSec: calcElapsedSec(startedAt, pausedAt, totalPausedMs),
-          tonnageKg: tonnageKg || null,
-          muscles: [...muscleSet],
-        },
-      })
+      // Summary reads the exact server response, including its authoritative
+      // sets, finishedAt and totalPausedMs; no optimistic totals survive here.
+      queryClient.setQueryData(queryKeys.workouts.detail(workoutId), result)
+      navigate(`/summary/${workoutId}`)
     } catch (err) {
       console.error('Failed to finish workout:', err)
       toast.show(t('errors.workoutFinish'))
+    } finally {
+      operationRef.current = false
       setFinishing(false)
     }
   }
 
-  const handleCancel = async () => {
-    clearWorkoutState()
-    if (workoutId) {
-      try { await apiPatch(`/api/v1/workouts/${workoutId}`, {}) } catch {}
-    }
-    navigate('/')
-  }
-
   const handleCancelWorkout = async () => {
+    if (operationRef.current) return
+    operationRef.current = true
+    setFinishing(true)
     setConfirmCancel(false)
-    clearWorkoutState()
-    if (workoutId) {
-      // Мутация optimistic-обнуляет workouts.active — Home сразу без тренировки.
-      try { await cancelWorkoutMutation.mutateAsync(workoutId) } catch {}
+    try {
+      await Promise.allSettled([...pendingSetPostsRef.current])
+      await Promise.allSettled([...pendingDeletesRef.current])
+      if (workoutId) await cancelWorkoutMutation.mutateAsync(workoutId)
+      closedRef.current = true
+      clearWorkoutState()
+      navigate('/')
+    } catch {
+      toast.show(t('errors.network'))
+    } finally {
+      operationRef.current = false
+      setFinishing(false)
     }
-    navigate('/')
   }
 
-  const handleBack = () => {
+  const handleBack = async () => {
+    if (operationRef.current) return
+    operationRef.current = true
+    setChangingPause(true)
+    await Promise.allSettled([...pendingSetPostsRef.current])
+    await Promise.allSettled([...pendingDeletesRef.current])
+    operationRef.current = false
+    setChangingPause(false)
     navigate('/')
   }
 
@@ -949,6 +831,12 @@ export default function WorkoutPage() {
 
   // ── Render: Loading skeleton ──
   if (loading) return <WorkoutSkeleton />
+  if (loadError) return (
+    <div style={{ padding: 24 }}>
+      <TopBar title={t('errors.network')} onBack={handleBack} />
+      <Button onClick={() => setLoadAttempt(n => n + 1)}>{t('common.retry')}</Button>
+    </div>
+  )
 
   // ── Render: ExercisePicker (full-screen) ──
   if (picking) {
@@ -958,9 +846,9 @@ export default function WorkoutPage() {
           title={t('workout.selectExercise')}
           onBack={hasPlan ? () => setPicking(false) : handleBack}
           rightLabel={hasAnySets ? t('workout.finish') : workoutId ? t('workout.cancel') : undefined}
-          onRight={hasAnySets ? handleFinish : workoutId ? handleCancel : undefined}
+          onRight={hasAnySets ? handleFinish : workoutId ? handleCancelWorkout : undefined}
         />
-        <ExercisePicker onSelect={handleSelectExercise} />
+        <div inert={finishing || changingPause || undefined}><ExercisePicker onSelect={handleSelectExercise} /></div>
       </div>
     )
   }
@@ -974,6 +862,7 @@ export default function WorkoutPage() {
     <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
       {/* WorkoutTopBar */}
       <WorkoutTopBar
+        busy={finishing || changingPause}
         startedAt={startedAt}
         pausedAt={pausedAt}
         totalPausedMs={totalPausedMs}
@@ -989,7 +878,7 @@ export default function WorkoutPage() {
         onResume={handleResume}
       />
 
-      <div style={{ position: 'relative', zIndex: 1, overflow: 'auto', padding: '4px 12px 22px' }}>
+      <div inert={finishing || changingPause || undefined} style={{ position: 'relative', zIndex: 1, overflow: 'auto', padding: '4px 12px 22px' }}>
 
         {/* ── Collapsed done exercises ── */}
         {allExercises.length > 0 && (
@@ -1166,6 +1055,8 @@ export default function WorkoutPage() {
               {resting ? (
                 <>
                   <RestCard
+                    startedAt={resting + totalPausedMs}
+                    pausedAt={pausedAt}
                     seconds={currentPlanExercise?.restSec || 90}
                     onSkip={handleRestComplete}
                   />
