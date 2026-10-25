@@ -131,7 +131,7 @@ function Header({ exercise, onClose }) {
 
 const TABS = ['instructions', 'muscles', 'settings']
 
-function SegTabs({ active, onChange, t }) {
+function SegTabs({ tabs = TABS, active, onChange, t }) {
   return (
     <div style={{
       display: 'flex', gap: 4, padding: 4, margin: '0 16px 12px',
@@ -139,7 +139,7 @@ function SegTabs({ active, onChange, t }) {
       background: 'rgba(255,255,255,0.04)',
       border: '1px solid rgba(255,255,255,0.06)',
     }}>
-      {TABS.map(tab => {
+      {tabs.map(tab => {
         const isActive = tab === active
         return (
           <button
@@ -917,7 +917,11 @@ function DetailSkeleton() {
 
 // ─── ExerciseDetailSheet ─────────────────────────────────────────────
 
-export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange }) {
+/**
+ * `alternatives` (optional node) adds an "Аналоги" tab — the workout passes its
+ * swap panel for the current exercise; other screens don't.
+ */
+export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange, alternatives }) {
   const { t } = useTranslation()
   const { webApp } = useTelegram()
   const [activeTab, setActiveTab] = useState('instructions')
@@ -1051,7 +1055,8 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
       <Header exercise={exercise} onClose={onClose} />
 
       {/* Tabs */}
-      <SegTabs active={activeTab} onChange={handleTabChange} t={t} />
+      <SegTabs tabs={alternatives ? ['instructions', 'muscles', 'alternatives', 'settings'] : TABS}
+        active={activeTab} onChange={handleTabChange} t={t} />
 
       {/* Content */}
       <div style={{
@@ -1064,6 +1069,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
           <div key={tabKey} style={{ animation: 'fadeUp .35s ease-out' }}>
             {activeTab === 'instructions' && <InstructionsTab exercise={exercise} t={t} />}
             {activeTab === 'muscles' && <MusclesTab exercise={exercise} t={t} />}
+            {activeTab === 'alternatives' && alternatives}
             {activeTab === 'settings' && settings && (
               <SettingsTab
                 exercise={exercise}

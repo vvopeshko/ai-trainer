@@ -47,7 +47,7 @@ import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
 import { newRecords, exerciseProgress } from '../../utils/exerciseProgress.js'
 import { useExerciseHistory, useExerciseOverview } from '../../hooks/queries.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
-import { AlternativesSheet } from './workout/AlternativesSheet.jsx'
+import { AlternativesPanel } from './workout/AlternativesPanel.jsx'
 
 // A program slot keeps its main exercise while today's variant changes; the
 // previous variant stays selectable among the slot's alternatives.
@@ -87,7 +87,6 @@ export default function WorkoutPage() {
   const [loadError, setLoadError] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [confirmCancel, setConfirmCancel] = useState(false)
-  const [showAlternatives, setShowAlternatives] = useState(false)
   const [programDayIndex, setProgramDayIndex] = useState(null)
   const [dismissedHints, setDismissedHints] = useState(() => new Set())
   const [startedAt, setStartedAt] = useState(null)
@@ -859,7 +858,6 @@ export default function WorkoutPage() {
     setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug })
     setDoneSets([])
     setResting(false)
-    setShowAlternatives(false)
     loadLastResults([alt.exerciseId])
   }
 
@@ -1043,20 +1041,6 @@ export default function WorkoutPage() {
               </div>
               <div style={{ fontSize: 11.5, color: 'rgba(236,234,239,0.55)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {currentPlanExercise && <span>{exerciseScheme(currentPlanExercise)}</span>}
-                {currentExercise && (
-                  <button onClick={() => setShowAlternatives(true)} style={{
-                    padding: '2px 8px', borderRadius: 6, border: 'none',
-                    background: 'hsla(var(--accent-h,158),55%,55%,0.15)',
-                    color: 'hsl(var(--accent-h,158),55%,70%)',
-                    fontSize: 10.5, fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                    <Icon name="swap" size={11} />
-                    {currentPlanExercise?.alternatives?.length
-                      ? t('workout.alternatives', { count: currentPlanExercise.alternatives.length })
-                      : t('workout.alternativesShort')}
-                  </button>
-                )}
               </div>
             </div>
 
@@ -1395,18 +1379,6 @@ export default function WorkoutPage() {
       />
 
 
-      {/* Alternatives bottom-sheet */}
-      <AlternativesSheet
-        open={showAlternatives}
-        onClose={() => setShowAlternatives(false)}
-        current={currentExercise}
-        slot={currentPlanExercise}
-        lastResults={lastResultsCache}
-        onNeedLastResults={loadLastResults}
-        trendById={trendById}
-        unit={exerciseSettings.unit}
-        onPick={(alt, { makeMain }) => handleSwapAlternative(alt, { makeMain })}
-      />
 
       {/* Exercise Detail Sheet */}
       <ExerciseDetailSheet
@@ -1414,6 +1386,17 @@ export default function WorkoutPage() {
         open={!!detailExerciseId}
         onClose={() => setDetailExerciseId(null)}
         onSettingsChange={handleExerciseSettingsChange}
+        alternatives={currentExercise && detailExerciseId === currentExercise.id ? (
+          <AlternativesPanel
+            current={currentExercise}
+            slot={currentPlanExercise}
+            lastResults={lastResultsCache}
+            onNeedLastResults={loadLastResults}
+            trendById={trendById}
+            unit={exerciseSettings.unit}
+            onPick={(alt, { makeMain }) => { setDetailExerciseId(null); handleSwapAlternative(alt, { makeMain }) }}
+          />
+        ) : null}
       />
     </div>
   )

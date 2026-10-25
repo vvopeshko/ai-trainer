@@ -56,6 +56,39 @@ beforeEach(() => {
 })
 
 describe('editDayExercises', () => {
+  it('replace: keeps the slot alternatives without the new main', async () => {
+    findUnique.mockResolvedValue({ id: ID_CROSS, slug: 'standing-cable-crossover', nameRu: 'Кроссовер стоя' })
+    const day = sampleDay()
+    day[1].alternatives = [ID_CROSS, ID_PUSHUP]
+    const { exercises } = await editDayExercises(day, 'replace', { fromExercise: 'Сведение в бабочке', toExerciseId: ID_CROSS })
+    expect(exercises[1].alternatives).toEqual([ID_FLY, ID_PUSHUP])
+  })
+
+  it('alternatives: adds, removes by name and makes one main', async () => {
+    const day = sampleDay()
+    day[0].alternatives = [ID_FLY]
+    findUnique.mockImplementation(({ where }) => Promise.resolve(
+      where.id === ID_CROSS ? { id: ID_CROSS, slug: 'cross', nameRu: 'Кроссовер стоя' }
+        : where.id === ID_PUSHUP ? { id: ID_PUSHUP, slug: 'push-up', nameRu: 'Отжимания' } : null))
+    resolveExerciseReadonly.mockResolvedValue({ id: ID_FLY, nameRu: 'Сведение в бабочке' })
+    const { exercises, summary } = await editDayExercises(day, 'alternatives', {
+      exercise: 'Жим гантелей лёжа', add: [ID_CROSS, ID_PUSHUP], remove: ['бабочка'], makeMain: ID_PUSHUP,
+    })
+    expect(exercises[0]).toMatchObject({ exerciseId: ID_PUSHUP, nameRu: 'Отжимания', sets: 4, alternatives: [ID_BENCH, ID_CROSS] })
+    expect(summary).toContain('сделал основным «Отжимания»')
+  })
+
+  it('alternatives: refuses to remove what is not an alternative and caps the list', async () => {
+    resolveExerciseReadonly.mockResolvedValue({ id: ID_CROSS, nameRu: 'Кроссовер стоя' })
+    await expect(editDayExercises(sampleDay(), 'alternatives', { exercise: 'Жим гантелей лёжа', remove: ['кроссовер'] }))
+      .rejects.toThrow('нет среди аналогов')
+    const day = sampleDay()
+    day[0].alternatives = ['a', 'b', 'c', 'd', 'e', 'f']
+    findUnique.mockResolvedValue({ id: ID_CROSS, slug: 'cross', nameRu: 'Кроссовер стоя' })
+    await expect(editDayExercises(day, 'alternatives', { exercise: 'Жим гантелей лёжа', add: [ID_CROSS] }))
+      .rejects.toThrow('не больше 6')
+  })
+
   it('replace: меняет упражнение, сохраняя подходы/повторы/отдых', async () => {
     findUnique.mockResolvedValue({ id: ID_CROSS, slug: 'standing-cable-crossover', nameRu: 'Кроссовер стоя' })
 
@@ -73,7 +106,8 @@ describe('editDayExercises', () => {
     expect(replaced.repsMin).toBe(12)
     expect(replaced.repsMax).toBe(15)
     expect(replaced.restSec).toBe(60)
-    expect(replaced.alternatives).toEqual([])
+    // Slot model: the replaced exercise stays as an alternative.
+    expect(replaced.alternatives).toEqual([ID_FLY])
     expect(summary).toContain('Кроссовер стоя')
     // первое упражнение не тронуто
     expect(exercises[0].exerciseId).toBe(ID_BENCH)

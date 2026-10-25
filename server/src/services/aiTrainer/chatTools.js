@@ -199,6 +199,26 @@ export const CHAT_TOOLS = [
     },
   },
   {
+    name: 'edit_exercise_alternatives',
+    description:
+      'Изменить аналоги упражнения в дне программы — варианты, которые юзер может выбрать на ' +
+      'тренировке вместо основного (прогресс у каждого упражнения свой). Можно добавить ' +
+      '(addExerciseIds — id из search_exercises), убрать (removeExercises — названия/id аналогов) и ' +
+      'сделать аналог основным (makeMainExerciseId; старое основное станет аналогом). Меняет шаблон ' +
+      'программы. ВЫЗЫВАЙ ТОЛЬКО после явного подтверждения юзера.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        dayIndex: { type: 'integer', description: 'Индекс дня (0-based).' },
+        exercise: { type: 'string', description: 'Основное упражнение слота (название/slug как в программе).' },
+        addExerciseIds: { type: 'array', items: { type: 'string' }, description: 'id упражнений из search_exercises.' },
+        removeExercises: { type: 'array', items: { type: 'string' }, description: 'Какие аналоги убрать (название или id).' },
+        makeMainExerciseId: { type: 'string', description: 'id упражнения, которое станет основным.' },
+      },
+      required: ['dayIndex', 'exercise'],
+    },
+  },
+  {
     name: 'remove_exercise',
     description:
       'Убрать упражнение из дня программы. ВЫЗЫВАЙ ТОЛЬКО после явного подтверждения юзера.',
@@ -304,7 +324,7 @@ async function runProgramEdit(userId, op, input, params, writeOps) {
   // След выполненной write-операции: chat.js сохранит его в историю, если
   // финальный ответ LLM не родился — иначе модель не узнает о применённой правке.
   writeOps?.push({
-    tool: `${op}_exercise`,
+    tool: op === 'alternatives' ? 'edit_exercise_alternatives' : `${op}_exercise`,
     scope: out.scope,
     dayIndex: out.dayIndex,
     summary: out.summary,
@@ -368,6 +388,10 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ, writeOps = null) {
         })
         if (!prog) return { note: 'У юзера нет активной программы.' }
         const rawDays = prog.planJson?.days || []
+        const altIds = [...new Set(rawDays.flatMap(d => (d.exercises || []).flatMap(e => e.alternatives || [])))]
+        const altNames = new Map(altIds.length ? (await prisma.exercise.findMany({
+          where: { id: { in: altIds } }, select: { id: true, nameRu: true },
+        })).map(e => [e.id, e.nameRu]) : [])
         const days = rawDays.map((d, i) => ({
           dayIndex: i, // 0-based — передавать в write-инструменты (replace/adjust/...)
           day: i + 1,
@@ -376,6 +400,7 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ, writeOps = null) {
             name: e.nameRu,
             sets: e.sets ?? null,
             reps: formatReps(e),
+            alternatives: (e.alternatives || []).map(id => altNames.get(id)).filter(Boolean),
           })),
         }))
         // Какой день будет следующим — критично для scope: 'next': без этого
@@ -443,6 +468,15 @@ export function buildToolExecutor(userId, tz = DEFAULT_TZ, writeOps = null) {
 
       case 'remove_exercise':
         return runProgramEdit(userId, 'remove', input, { exercise: input.exercise }, writeOps)
+
+      case 'edit_exercise_alternatives':
+        // Alternatives live in the program template only: a one-off override has no use for them.
+        return runProgramEdit(userId, 'alternatives', { ...input, scope: 'program' }, {
+          exercise: input.exercise,
+          add: input.addExerciseIds,
+          remove: input.removeExercises,
+          makeMain: input.makeMainExerciseId,
+        }, writeOps)
 
       default:
         return { error: `Неизвестный инструмент: ${name}` }

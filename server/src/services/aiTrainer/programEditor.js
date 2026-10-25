@@ -5,7 +5,8 @@
  *   - replace — заменить упражнение X на Y (сохраняя sets/reps/rest);
  *   - adjust  — скорректировать sets/repsMin/repsMax/restSec;
  *   - add     — добавить новое упражнение;
- *   - remove  — убрать упражнение.
+ *   - remove  — убрать упражнение;
+ *   - alternatives — аналоги слота: добавить / убрать / сделать аналог основным.
  *
  * Принципы:
  *   - «Новое» упражнение резолвится ТОЛЬКО из существующего каталога: по exerciseId
@@ -23,6 +24,7 @@ import { resolveExerciseReadonly } from './chatTools.js'
 import { planExerciseSchema } from '../../controllers/programController.js'
 
 const DEFAULT_REST_SEC = 90
+const MAX_ALTERNATIVES = 6
 
 function normalize(s) {
   return String(s ?? '').trim().toLowerCase()
@@ -110,6 +112,10 @@ export async function editDayExercises(dayExercises, op, params = {}) {
         repsMax: old.repsMax,
         restSec: old.restSec,
       })
+      // Slot model: the replaced exercise stays selectable as an alternative,
+      // and the slot keeps its other alternatives (and the history of each).
+      replaced.alternatives = [old.exerciseId, ...(old.alternatives ?? [])]
+        .filter((id, i, all) => id && id !== ex.id && all.indexOf(id) === i).slice(0, MAX_ALTERNATIVES)
       list[idx] = replaced
       return {
         exercises: list,
@@ -159,6 +165,49 @@ export async function editDayExercises(dayExercises, op, params = {}) {
       return {
         exercises: list,
         summary: `Добавил «${ex.nameRu}» (${added.sets}×${added.repsMin}–${added.repsMax}).`,
+      }
+    }
+
+    case 'alternatives': {
+      const idx = findExerciseIndex(list, params.exercise)
+      if (idx === -1) {
+        throw new Error(`Упражнение "${params.exercise}" не найдено в этом дне.`)
+      }
+      const cur = { ...list[idx] }
+      let alternatives = [...(cur.alternatives ?? [])]
+      const done = []
+      for (const ref of params.remove ?? []) {
+        const ex = alternatives.includes(ref) ? { id: ref } : await resolveExerciseReadonly(ref)
+        if (!ex || !alternatives.includes(ex.id)) {
+          throw new Error(`«${ref}» нет среди аналогов «${cur.nameRu}».`)
+        }
+        alternatives = alternatives.filter(a => a !== ex.id)
+        done.push(`убрал ${ex.nameRu ? `«${ex.nameRu}»` : 'аналог'}`)
+      }
+      for (const id of params.add ?? []) {
+        const ex = await resolveCatalogExercise({ exerciseId: id })
+        if (ex.id === cur.exerciseId || alternatives.includes(ex.id)) continue
+        alternatives.push(ex.id)
+        done.push(`добавил «${ex.nameRu}»`)
+      }
+      if (params.makeMain) {
+        const ex = await resolveCatalogExercise({ exerciseId: params.makeMain })
+        if (ex.id !== cur.exerciseId) {
+          alternatives = [cur.exerciseId, ...alternatives.filter(a => a !== ex.id)]
+          done.push(`сделал основным «${ex.nameRu}» (вместо «${cur.nameRu}», оно осталось аналогом)`)
+          cur.exerciseId = ex.id
+          cur.slug = ex.slug
+          cur.nameRu = ex.nameRu
+        }
+      }
+      if (alternatives.length > MAX_ALTERNATIVES) {
+        throw new Error(`У упражнения не больше ${MAX_ALTERNATIVES} аналогов — сначала убери лишние.`)
+      }
+      cur.alternatives = alternatives
+      list[idx] = planExerciseSchema.parse(cur)
+      return {
+        exercises: list,
+        summary: done.length ? `Аналоги «${list[idx].nameRu}»: ${done.join(', ')}.` : 'Аналоги не изменились.',
       }
     }
 

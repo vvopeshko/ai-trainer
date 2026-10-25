@@ -27,6 +27,7 @@ import { getMuscleName } from '../../utils/muscleMapping.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { computeMuscleVolume, computeSubMuscleVolume, estimateDayMin, clonePlan } from './program/programHelpers.js'
 import { Stepper } from './program/Stepper.jsx'
+import { ProgramAlternatives } from './program/ProgramAlternatives.jsx'
 
 // ─── Main component ────────────────────────────────────────────────────
 
@@ -772,6 +773,7 @@ export default function ProgramEditPage() {
                             fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', marginTop: 1,
                           }}>
                             {ex.sets}×{ex.repsMax || ex.repsMin}{ex.rir && ` RIR ${ex.rir}`}
+                            {ex.alternatives?.length > 0 && ` · ${t('program.alternativesCount', { n: ex.alternatives.length })}`}
                             {(ex.primaryMuscles?.length > 0 || ex.secondaryMuscles?.length > 0) && (
                               <span style={{ opacity: 0.5 }}> · {
                                 [...(ex.primaryMuscles || []), ...(ex.secondaryMuscles || [])]
@@ -996,6 +998,13 @@ export default function ProgramEditPage() {
                 ))}
               </div>
             </div>
+
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+            <ProgramAlternatives
+              exercise={editEx}
+              onChange={updates => handleUpdateExercise(editingExercise.dayIdx, editingExercise.exIdx, updates)}
+            />
 
             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginBottom: 'var(--space-4)' }} />
 
