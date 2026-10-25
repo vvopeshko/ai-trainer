@@ -77,12 +77,42 @@ function evaluate(points) {
   return { benchmarks, up: up.length > 0, down: down.length > 0, comparable, evidence }
 }
 
+// The chart uses the SAME direct benchmark and period as the conclusion.
+// Raw observations stay visible as dots; the fitted line is deliberately separate.
+export function progressChart(benchmark) {
+  const points = benchmark.observations
+  if (points.length < 2) return null
+  let line = []
+  let fit = 'none'
+  if (benchmark.trend !== 'unknown') {
+    const first = points[0].time, last = points.at(-1).time
+    const slopes = points.flatMap((a, i) => points.slice(i + 1)
+      .filter(b => b.time > a.time).map(b => (b.value - a.value) / ((b.time - a.time) / DAY)))
+    const slope = median(slopes)
+    const intercept = median(points.map(p => p.value - slope * ((p.time - first) / DAY)))
+    line = [{ time: first, value: intercept }, { time: last, value: intercept + slope * ((last - first) / DAY) }]
+    fit = 'robust'
+    // seriesTrend also recognizes a repeated new level after a long baseline.
+    // Render that as a step, not a falsely flat regression or gradual ramp.
+    if ((benchmark.trend === 'up' && line[1].value - line[0].value < benchmark.threshold)
+      || (benchmark.trend === 'down' && line[0].value - line[1].value < benchmark.threshold)) {
+      const baseline = median(points.slice(0, -2).map(p => p.value))
+      const level = median(points.slice(-2).map(p => p.value))
+      line = [{ time: first, value: baseline }, { time: points.at(-2).time, value: baseline },
+        { time: points.at(-2).time, value: level }, { time: last, value: level }]
+      fit = 'step'
+    }
+  }
+  return { kind: benchmark.kind, anchor: benchmark.anchor, points, line, fit, trend: benchmark.trend }
+}
+
 function volumeProgress(points) {
   const allSets = points.flatMap(p => p.workout.sets)
   const metric = allSets.every(s => (s.weightKg ?? 0) > 0) ? 'tonnage'
     : allSets.every(s => (s.weightKg ?? 0) === 0) ? 'reps' : null
   const last = points.at(-1), previous = points.at(-2)
   const latest = previous ? {
+    from: metric ? previous[metric] : null, to: metric ? last[metric] : null,
     setDelta: last.count - previous.count, repDelta: last.reps - previous.reps,
     delta: metric ? last[metric] - previous[metric] : null,
     percent: metric && previous[metric] > 0 ? (last[metric] / previous[metric] - 1) * 100 : null,
@@ -98,8 +128,62 @@ function volumeProgress(points) {
   const tolerance = Math.max(2, 100 * median(values.map(v => Math.abs(v - center))) / center)
   const sameSets = points.every(p => p.count === last.count)
   return { metric, from, to, percent, size, tolerance, latest,
+    fromPeriod: [points[0].time, points[size - 1].time], toPeriod: [points[points.length - size].time, last.time],
     status: !sameSets ? 'changed' : Math.abs(percent) < tolerance ? 'same' : percent > 0 ? 'up' : 'down',
   }
+}
+
+// Record front: a set is a record when no earlier set had at least the same
+// weight AND at least the same reps. No e1RM, so 85×8 after 80×10 counts only
+// as the first set at 85 kg, not as "stronger". Without prior sets there is
+// nothing to beat. Returns the session's undominated records, deduplicated.
+export function newRecords(sets, priorSets) {
+  if (!priorSets.length) return []
+  const covers = (a, b) => (a.weightKg ?? 0) >= (b.weightKg ?? 0) && a.reps >= b.reps
+  const fresh = sets.filter(s => !priorSets.some(p => covers(p, s)))
+    .map(s => ({ weightKg: s.weightKg ?? 0, reps: s.reps }))
+    .filter((s, i, all) => all.findIndex(o => o.weightKg === s.weightKg && o.reps === s.reps) === i)
+  return fresh.filter(s => !fresh.some(o => o !== s && covers(o, s)))
+}
+
+// Records over the whole loaded history (not reset by a long break: coming
+// back to an old level is not a new record). Sets of one UTC day are merged.
+function recordHistory(valid) {
+  const days = new Map()
+  for (const w of valid) {
+    const day = new Date(w.startedAt).toISOString().slice(0, 10)
+    const entry = days.get(day) ?? { time: new Date(w.startedAt).getTime(), sets: [] }
+    entry.sets.push(...w.sets)
+    days.set(day, entry)
+  }
+  const prior = []
+  const sessions = [...days.values()].map(day => {
+    const records = newRecords(day.sets, prior)
+    prior.push(...day.sets)
+    return { time: day.time, records }
+  })
+  const lastIndex = sessions.findLastIndex(s => s.records.length)
+  return {
+    latest: sessions.at(-1).records,
+    last: lastIndex >= 0 ? sessions[lastIndex] : null,
+    // Sessions after the last record; null when no record was ever set.
+    since: lastIndex >= 0 ? sessions.length - 1 - lastIndex : null,
+  }
+}
+
+// Double progression: every planned set reached the top of the rep range at
+// one weight. A cue to try the next step, not a plateau; weight is never
+// raised automatically. `sessions` counts consecutive such trainings.
+function readyForWeight(points, plan) {
+  if (!(plan?.repsMax > 0) || !plan.sets) return null
+  const atTop = p => p.workout.sets.length === plan.sets && p.workout.sets.every(s => s.reps >= plan.repsMax)
+    && p.workout.sets.every(s => (s.weightKg ?? 0) === (p.workout.sets[0].weightKg ?? 0))
+  const last = points.at(-1)
+  if (!atTop(last)) return null
+  const weightKg = last.workout.sets[0].weightKg ?? 0
+  let sessions = 0
+  for (let i = points.length - 1; i >= 0 && atTop(points[i]) && (points[i].workout.sets[0].weightKg ?? 0) === weightKg; i--) sessions++
+  return { weightKg, reps: plan.repsMax, sessions }
 }
 
 export function exerciseProgress(workouts, plan) {
@@ -149,15 +233,26 @@ export function exerciseProgress(workouts, plan) {
   const band = points.at(-1).value >= low && points.at(-1).value <= high ? {
     low, high, days: daysBetween(points[bandStart].time, points.at(-1).time), count: points.length - bandStart,
   } : null
+  const chartState = plateau ? evaluate(plateau) : overall
+  const choose = benchmarks => benchmarks.filter(b => b.kind === 'reps' || b.observations.some(p => p.value > 0)).sort((a, b) =>
+    b.observations.length - a.observations.length
+    || (a.kind === 'weight' ? 0 : 1) - (b.kind === 'weight' ? 0 : 1) || b.anchor - a.anchor)[0]
+  const chartBenchmarks = trend === 'mixed'
+    ? ['up', 'down'].map(direction => choose(chartState.benchmarks.filter(b => b.trend === direction)))
+    : [trend === 'up' || trend === 'down' ? overall.evidence
+      : choose(chartState.benchmarks.filter(b => trend !== 'plateau'
+        || (b.trend === 'stable' && b.observations.length === plateau.length)))]
+  const charts = chartBenchmarks.filter(Boolean).map(progressChart).filter(Boolean)
   const candidates = plan?.repsMax > 0 && latest.sets.length === plan.sets ? latest.sets
     .map((s, index) => ({ ...s, index })).filter(s => s.reps < plan.repsMax)
     .sort((a, b) => a.reps - b.reps || a.index - b.index) : []
   const next = candidates[0]
-  return { trend, band, evidence: plateau ? null : overall.evidence, volume: volumeProgress(points),
+  return { trend, band, charts, evidence: plateau ? null : overall.evidence, volume: volumeProgress(points),
     days: daysBetween(points[0].time, points.at(-1).time), count: points.length,
     plateauDays: plateau ? daysBetween(plateau[0].time, plateau.at(-1).time) : 0,
     plateauCount: plateau?.length ?? 0,
     points: points.map(p => ({ time: p.time, value: p.value })), latestSets: latest.sets,
     goal: next ? { set: next.index + 1, from: next.reps, to: next.reps + 1, weightKg: next.weightKg ?? 0 } : null,
+    ready: readyForWeight(points, plan), records: recordHistory(valid),
   }
 }

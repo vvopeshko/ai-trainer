@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useExerciseHistory } from '../../../hooks/queries.js'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { exerciseProgress } from '../../../utils/exerciseProgress.js'
-import { kgToLbs } from '../../../utils/weightUnit.js'
+import { ExerciseTrendChart } from './ExerciseTrendChart.jsx'
+import { kgToLbs, stepWeight } from '../../../utils/weightUnit.js'
 
-export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false }) {
+export function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit, timed = false }) {
   const { t } = useTranslation()
   const [expandedId, setExpandedId] = useState(null)
   const { data, isPending, isError, refetch } = useExerciseHistory(exerciseId)
@@ -17,7 +18,6 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false 
   const weight = kg => unit === 'lbs' ? kgToLbs(kg ?? 0) : (kg ?? 0)
   const unitLabel = t(unit === 'lbs' ? 'units.lbs' : 'units.kg')
   const colors = { up: 'var(--success)', plateau: 'var(--warning)', down: 'var(--warning)' }
-  const band = progress.band
   const evidence = progress.evidence
   const volume = progress.volume
   const last = volume.latest
@@ -25,27 +25,32 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false 
   const amount = value => number(volume.metric === 'tonnage' && unit === 'lbs' ? value / 0.45359237 : value)
   const volumeUnit = volume.metric === 'tonnage' ? unitLabel : t('units.reps')
   const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('ru-RU', { maximumFractionDigits: 1 })}`
-  const points = progress.points
-  const min = Math.min(...points.map(p => p.value)), max = Math.max(...points.map(p => p.value))
-  const x = p => 8 + 284 * (p.time - points[0].time) / Math.max(1, points.at(-1).time - points[0].time)
-  const y = p => max === min ? 30 : 52 - 44 * (p.value - min) / (max - min)
   const date = time => new Date(time).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+  const { records, ready } = progress
+  const recordSets = sets => sets.map(s => s.weightKg > 0 ? `${weight(s.weightKg)} ${unitLabel} × ${s.reps}` : `${s.reps} ${t('units.reps')}`).join(', ')
   return (
     <div style={style}>
       {timed && <div>{progress.latestSets.map(s => s.reps).join(' / ')} {t('exerciseProgress.seconds')}</div>}
       {!timed && <>
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'baseline' }}>
           <strong style={{ color: colors[progress.trend] ?? 'var(--fg-primary)', fontSize: 12 }}>{t(`exerciseProgress.status.${progress.trend}`)}</strong>
-          <span>{t('exerciseProgress.period', { n: progress.trend === 'plateau' ? progress.plateauCount : progress.count, days: progress.trend === 'plateau' ? progress.plateauDays : progress.days })}</span>
+          <span>{progress.trend === 'plateau' ? t('exerciseProgress.noGrowthDays', { days: progress.plateauDays }) : t('exerciseProgress.period', { n: progress.count, days: progress.days })}</span>
         </div>
         {evidence && progress.trend !== 'mixed' && <div style={{ color: 'var(--fg-primary)' }}>{evidence.kind === 'weight'
-          ? `${weight(evidence.from)} → ${weight(evidence.to)} ${unitLabel} × ${evidence.anchor}`
+          ? t('exerciseProgress.weightEvidence', { reps: evidence.anchor, from: weight(evidence.from), to: weight(evidence.to), unit: unitLabel })
           : `${weight(evidence.anchor)} ${unitLabel}: ${evidence.from} → ${evidence.to} ${t('units.reps')}`}</div>}
-        <div>{t(`exerciseProgress.volume.${volume.status}`)}{volume.from != null && ` · ${amount(volume.from)} → ${amount(volume.to)} ${volumeUnit}`}</div>
-        <div>{t('exerciseProgress.last')}: {!last ? t('exerciseProgress.noPrevious')
+        {records.last && <div>{records.latest.length
+          ? <strong style={{ color: 'var(--success)' }}>{t('exerciseProgress.recordNew', { sets: recordSets(records.latest) })}</strong>
+          : t('exerciseProgress.record', { sets: recordSets(records.last.records), date: date(records.last.time), n: records.since })}</div>}
+        <div>{t(`exerciseProgress.volume.${volume.status}`)}</div>
+        <div>{!last ? t('exerciseProgress.noPrevious')
           : last.setDelta !== 0 ? t('exerciseProgress.setChange', { delta: signed(last.setDelta) })
-            : last.delta != null ? `${signed(volume.metric === 'tonnage' && unit === 'lbs' ? last.delta / 0.45359237 : last.delta)} ${volumeUnit}${last.percent != null ? ` (${signed(last.percent)}%)` : ''}`
-              : `${signed(last.repDelta)} ${t('units.reps')}`}</div>
+            : last.percent != null ? t('exerciseProgress.lastVolume', { percent: signed(last.percent) })
+              : t('exerciseProgress.lastReps', { delta: signed(last.repDelta) })}</div>
+        {ready && <div style={{ color: 'var(--success)' }}>{ready.weightKg > 0 && step
+          ? t('exerciseProgress.ready', { reps: ready.reps, weight: stepWeight(weight(ready.weightKg), 1, step, stepUnit ?? unit, unit), unit: unitLabel })
+          : t('exerciseProgress.readyHarder', { reps: ready.reps })}
+          {ready.sessions > 1 && ` · ${t('exerciseProgress.readySessions', { n: ready.sessions })}`}</div>}
         {progress.goal && <div>{t('exerciseProgress.goal', {
           n: progress.goal.set, from: progress.goal.from, to: progress.goal.to,
           weight: weight(progress.goal.weightKg), unit: unitLabel,
@@ -54,18 +59,19 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', timed = false 
       <details style={{ marginTop: 3 }}>
         <summary style={{ cursor: 'pointer', color: 'var(--fg-tertiary)' }}>{t('exerciseProgress.history', { n: workouts.length })}</summary>
         {!timed && <>
-          <div style={{ marginTop: 6 }}>{t('exerciseProgress.comparisonNote')}</div>
-          {volume.size && <div>{t('exerciseProgress.volumeWindow', { n: volume.size })}</div>}
-          {band?.days > 0 && band.high > 0 && <div>{t('exerciseProgress.band', { weight: band.low === band.high ? weight(band.low) : `${weight(band.low)}–${weight(band.high)}`, unit: unitLabel, days: band.days })}</div>}
-          {points.length > 1 && max > 0 && <figure style={{ margin: '8px 0' }}>
-            <figcaption>{t('exerciseProgress.chart')} · {weight(min)}{min !== max ? `–${weight(max)}` : ''} {unitLabel}</figcaption>
-            <svg viewBox="0 0 300 60" role="img" aria-label={t('exerciseProgress.chart')} style={{ width: '100%', height: 60, display: 'block' }}>
-              <polyline points={points.map(p => `${x(p)},${y(p)}`).join(' ')} fill="none" stroke="var(--fg-secondary)" strokeWidth="1.5" />
-              {points.map(p => <circle key={p.time} cx={x(p)} cy={y(p)} r="2.5" fill="var(--accent, #54d9ae)"><title>{date(p.time)} · {weight(p.value)} {unitLabel}</title></circle>)}
-            </svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{date(points[0].time)}</span><span>{date(points.at(-1).time)}</span></div>
-          </figure>}
-          <details style={{ margin: '6px 0' }}><summary style={{ cursor: 'pointer' }}>{t('exerciseProgress.how')}</summary><p>{t('exerciseProgress.method')}</p></details>
+          {progress.charts.map(chart => <ExerciseTrendChart key={`${chart.kind}-${chart.anchor}`} chart={chart} unit={unit} />)}
+          {!progress.charts.length && <p>{t('exerciseProgress.chartInsufficient')}</p>}
+          <details style={{ margin: '6px 0' }}>
+            <summary style={{ cursor: 'pointer' }}>{t('exerciseProgress.how')}</summary>
+            {volume.size && <>
+              <p>{t(volume.metric === 'tonnage' ? 'exerciseProgress.volumeDefinition' : 'exerciseProgress.repsDefinition')}</p>
+              <div>{date(volume.fromPeriod[0])}–{date(volume.fromPeriod[1])}: {amount(volume.from)} {volumeUnit}</div>
+              <div>{date(volume.toPeriod[0])}–{date(volume.toPeriod[1])}: {amount(volume.to)} {volumeUnit}</div>
+              <div>{t('exerciseProgress.volumeSamples', { n: volume.size, percent: signed(volume.percent) })}</div>
+            </>}
+            {last?.from != null && <p>{t('exerciseProgress.lastNumbers', { from: amount(last.from), to: amount(last.to), unit: volumeUnit })}</p>}
+            <p>{t('exerciseProgress.method')}</p>
+          </details>
           {data.hasMore && <p>{t('exerciseProgress.limited')}</p>}
         </>}
         {workouts.slice(0, expandedId === exerciseId ? workouts.length : 8).map(w => (

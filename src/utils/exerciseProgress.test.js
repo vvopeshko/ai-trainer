@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { exerciseProgress } from './exerciseProgress.js'
+import { exerciseProgress, newRecords } from './exerciseProgress.js'
 const row = (date, weights, reps) => ({ startedAt: date, sets: weights.map((weightKg, i) => ({ weightKg, reps: reps[i] })) })
 const history = (reps, weights = reps.map(() => 60), spacing = 7) => reps.map((n, i) => row(new Date(Date.UTC(2026, 6, 1 + i * spacing)).toISOString(), [weights[i], weights[i]], [n, n]))
 const plan = { sets: 3, repsMax: 12 }
@@ -105,4 +105,81 @@ it('reports opposed direct benchmarks as mixed', () => {
 it('keeps confirmed evidence independent of set order', () => {
   const data = history([8,9,10,11]).map(w => ({ ...w, sets: [...w.sets, { weightKg: 20, reps: 12 }] }))
   expect(exerciseProgress(data).evidence).toEqual(exerciseProgress(data.map(w => ({ ...w, sets: w.sets.toReversed() }))).evidence)
+})
+
+it('charts the exact confirmed benchmark rather than the second heaviest set', () => {
+  const result = exerciseProgress(history([10,10,10,10,10,10,10,10], [60,60,60,60,60,60,65,65]))
+  expect(result.charts[0]).toMatchObject({ kind: 'weight', anchor: 10, fit: 'step', trend: 'up' })
+  expect(result.charts[0].line.map(p => p.value)).toEqual([60,60,65,65])
+  expect(result.charts[0].points).toHaveLength(8)
+})
+it('draws a flat robust trend through stable load fluctuations', () => {
+  const result = exerciseProgress(history([10,10,10,10,10,10,10,10], [80,85,80,80,85,80,80,80]))
+  expect(result.trend).toBe('plateau')
+  const chart = result.charts[0]
+  expect(chart).toMatchObject({ kind: 'weight', anchor: 10, fit: 'robust' })
+  expect(chart.line[0].value).toBe(chart.line.at(-1).value)
+  expect(new Set(chart.points.map(p => p.value)).size).toBe(2)
+})
+it('charts only the recent plateau period after earlier growth', () => {
+  const result = exerciseProgress(history([6,7,8,9,10,10,10,10]))
+  expect(result.trend).toBe('plateau')
+  expect(result.charts[0].points).toHaveLength(result.plateauCount)
+  expect(result.charts[0].line.every(p => p.value === result.charts[0].line[0].value)).toBe(true)
+})
+it('shows repetitions for bodyweight and no fitted line for insufficient data', () => {
+  const result = exerciseProgress(history([10,10,10,10], [0,0,0,0]))
+  expect(result.charts[0]).toMatchObject({ kind: 'reps', anchor: 0 })
+  expect(exerciseProgress(history([8,9,10])).charts[0].line).toEqual([])
+})
+it('shows both opposing benchmarks rather than an arbitrary combined trend', () => {
+  const data = [0,1,2,3].map(i => row(new Date(Date.UTC(2026,6,1+i*7)).toISOString(), [60,80], [8+i,12-i]))
+  const result = exerciseProgress(data)
+  expect(result.trend).toBe('mixed')
+  expect(result.charts.map(c => c.trend)).toEqual(['up','down'])
+})
+
+it('treats a set as a record only when no earlier set covers both weight and reps', () => {
+  const prior = [{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 8 }]
+  expect(newRecords([{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 7 }], prior)).toEqual([])
+  expect(newRecords([{ weightKg: 80, reps: 11 }], prior)).toEqual([{ weightKg: 80, reps: 11 }])
+  expect(newRecords([{ weightKg: 87.5, reps: 5 }], prior)).toEqual([{ weightKg: 87.5, reps: 5 }])
+  // The session keeps only its best undominated sets, once each.
+  expect(newRecords([{ weightKg: 85, reps: 9 }, { weightKg: 85, reps: 10 }, { weightKg: 85, reps: 10 }], prior)).toEqual([{ weightKg: 85, reps: 10 }])
+  expect(newRecords([{ weightKg: 0, reps: 12 }], [{ weightKg: 0, reps: 10 }])).toEqual([{ weightKg: 0, reps: 12 }])
+  expect(newRecords([{ weightKg: 80, reps: 10 }], [])).toEqual([])
+})
+it('tracks records across the Smith history', () => {
+  const result = exerciseProgress([
+    row('2026-10-19', [80,85,85,85], [10,10,10,6]),
+    row('2026-10-12', [85,85,85,80], [10,8,8,8]),
+    row('2026-09-28', [80,80,80,80], [10,10,10,10]),
+    row('2026-08-31', [80,85,85,85], [10,8,8,8]),
+    row('2026-08-05', [80,80,80,80], [10,10,10,10]),
+  ], { sets: 4, repsMax: 10 })
+  expect(result.records).toMatchObject({ latest: [], since: 1, last: { time: Date.parse('2026-10-12'), records: [{ weightKg: 85, reps: 10 }] } })
+  expect(exerciseProgress([row('2026-10-12', [80], [10])]).records).toEqual({ latest: [], last: null, since: null })
+})
+it('does not call a return to an old level after a long break a record', () => {
+  const data = [...history([10,10,10,10]), row('2026-10-25', [60,60], [10,10])]
+  expect(exerciseProgress(data)).toMatchObject({ count: 1, records: { latest: [] } })
+})
+it('merges split logs of one day before looking for records', () => {
+  const data = [...history([10,10]), row('2026-07-08T18:00:00Z', [60], [12])]
+  expect(exerciseProgress(data).records.latest).toEqual([{ weightKg: 60, reps: 12 }])
+})
+it('signals readiness for more weight when every planned set reaches the top of the range', () => {
+  const data = history([10,12,12], [60,60,60])
+  expect(exerciseProgress(data, { sets: 2, repsMax: 12 }).ready).toEqual({ weightKg: 60, reps: 12, sessions: 2 })
+  expect(exerciseProgress(data, { sets: 2, repsMax: 12 }).goal).toBeNull()
+  // Bodyweight works too; the UI turns it into "make it harder".
+  expect(exerciseProgress(history([12,12], [0,0]), { sets: 2, repsMax: 12 }).ready).toMatchObject({ weightKg: 0, sessions: 2 })
+  // A raised weight restarts the count.
+  expect(exerciseProgress(history([12,12], [60,62.5]), { sets: 2, repsMax: 12 }).ready.sessions).toBe(1)
+})
+it('does not signal readiness for an incomplete, mixed-load or plan-less session', () => {
+  expect(exerciseProgress(history([12,11]), { sets: 2, repsMax: 12 }).ready).toBeNull()
+  expect(exerciseProgress([row('2026-10-25', [60,60], [12,12])], { sets: 3, repsMax: 12 }).ready).toBeNull()
+  expect(exerciseProgress([row('2026-10-25', [60,65], [12,12])], { sets: 2, repsMax: 12 }).ready).toBeNull()
+  expect(exerciseProgress(history([12,12])).ready).toBeNull()
 })

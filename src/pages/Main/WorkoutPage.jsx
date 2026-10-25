@@ -44,6 +44,8 @@ import { kgToLbs } from '../../utils/weightUnit.js'
 import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
+import { newRecords } from '../../utils/exerciseProgress.js'
+import { useExerciseHistory } from '../../hooks/queries.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
@@ -85,6 +87,8 @@ export default function WorkoutPage() {
   const finishWorkoutMutation = useFinishWorkout()
   const cancelWorkoutMutation = useCancelWorkout()
   const [exerciseSettings, setExerciseSettingsState] = useState(() => getExerciseSettings(null))
+  // Тот же queryKey, что у карточки прогресса — без лишнего запроса.
+  const { data: exerciseHistory } = useExerciseHistory(currentExercise?.id)
   const [detailExerciseId, setDetailExerciseId] = useState(null)
 
   // Plan state
@@ -407,6 +411,21 @@ export default function WorkoutPage() {
     const tempId = crypto.randomUUID()
     const newSet = { weightKg: weight, reps, exerciseId: currentExercise.id, tempId }
     setDoneSets(prev => [...prev, newSet])
+
+    // «Новый рекорд»: только против загруженной истории, иначе второй подход
+    // «побил» бы первый. Подходы этой тренировки тоже считаются прошлыми.
+    const pastWorkouts = exerciseHistory?.workouts ?? []
+    if (pastWorkouts.length && exerciseSettings.type !== 'timer') {
+      const prior = [...pastWorkouts.flatMap(w => w.sets), ...doneSets, ...(partialSets[currentExercise.id] ?? []),
+        ...allExercises.filter(ex => ex.exercise.id === currentExercise.id).flatMap(ex => ex.sets)]
+      const [record] = newRecords([newSet], prior)
+      if (record) {
+        const value = exerciseSettings.unit === 'lbs' ? kgToLbs(record.weightKg) : record.weightKg
+        toast.show(record.weightKg > 0
+          ? t('workout.newRecord', { weight: value, unit: t(exerciseSettings.unit === 'lbs' ? 'units.lbs' : 'units.kg'), reps: record.reps })
+          : t('workout.newRecordReps', { reps: record.reps }), 'success')
+      }
+    }
 
     try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
     // Event handler only: capture the actual time the approach was recorded.
@@ -1029,6 +1048,8 @@ export default function WorkoutPage() {
               exerciseId={currentExercise.id}
               plan={currentPlanExercise}
               unit={exerciseSettings.unit}
+              step={exerciseSettings.step}
+              stepUnit={exerciseSettings.stepUnit}
               timed={exerciseSettings.type === 'timer'}
             />
 
