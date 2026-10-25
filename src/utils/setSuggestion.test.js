@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getSetSuggestion } from './setSuggestion.js'
+import { getSetSuggestion, getSetTarget } from './setSuggestion.js'
 const historical = [
   { weightKg: 20, reps: 15 },
   { weightKg: 60, reps: 8 },
@@ -33,5 +33,23 @@ describe('set suggestions', () => {
       .toEqual({ weightKg: 0, reps: 6, source: 'default' })
     expect(getSetSuggestion({ setIndex: 1, doneSets: [{ weightKg: 30, reps: 9 }] }))
       .toEqual({ weightKg: 30, reps: 9, source: 'previous' })
+  })
+})
+
+describe('set targets', () => {
+  const plan = { sets: 4, repsMin: 8, repsMax: 10 }
+  const lastSets = [{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 10 }, { weightKg: 85, reps: 10 }, { weightKg: 85, reps: 6 }]
+  it('matches last session capped at the top, and adds one rep to the goal set', () => {
+    const progress = { goal: { set: 4, from: 6, to: 7, weightKg: 85 } }
+    expect([0, 1, 2, 3].map(setIndex => getSetTarget({ setIndex, lastSets, plan, progress }).reps)).toEqual([10, 10, 10, 7])
+    expect(getSetTarget({ setIndex: 0, lastSets: [{ weightKg: 80, reps: 12 }], plan, progress: {} })).toEqual({ reps: 10 })
+    expect(getSetTarget({ setIndex: 3, lastSets: [], plan, progress: {} })).toEqual({ reps: 8 })
+  })
+  it('targets the bottom of the range at the new weight when ready or consolidating', () => {
+    expect(getSetTarget({ setIndex: 0, lastSets, plan, progress: { ready: { weightKg: 80 } }, readyWeightKg: 82.5 })).toEqual({ reps: 8, weightKg: 82.5 })
+    expect(getSetTarget({ setIndex: 2, lastSets, plan, progress: { plateau: { kind: 'consolidate', weightKg: 85 }, goal: { set: 3, to: 9 } } })).toEqual({ reps: 8, weightKg: 85 })
+  })
+  it('has no target without a plan', () => {
+    expect(getSetTarget({ setIndex: 0, lastSets, plan: null, progress: {} })).toBeNull()
   })
 })

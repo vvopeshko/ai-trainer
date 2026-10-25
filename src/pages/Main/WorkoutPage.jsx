@@ -39,12 +39,12 @@ import { ActiveSetInput } from './workout/ActiveSetInput.jsx'
 import { UpcomingExerciseItem } from './workout/UpcomingExerciseItem.jsx'
 import { ExpandedUpcomingCard } from './workout/ExpandedUpcomingCard.jsx'
 import { WorkoutSkeleton } from './workout/WorkoutSkeleton.jsx'
-import { getSetSuggestion } from '../../utils/setSuggestion.js'
-import { kgToLbs } from '../../utils/weightUnit.js'
+import { getSetSuggestion, getSetTarget } from '../../utils/setSuggestion.js'
+import { kgToLbs, lbsToKg, stepWeight } from '../../utils/weightUnit.js'
 import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
-import { newRecords } from '../../utils/exerciseProgress.js'
+import { newRecords, exerciseProgress } from '../../utils/exerciseProgress.js'
 import { useExerciseHistory } from '../../hooks/queries.js'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 
@@ -317,6 +317,20 @@ export default function WorkoutPage() {
     plannedReps: currentPlanExercise?.repsMin,
   })
   const nextSet = suggestionFor(doneSets.length)
+  // Same progress as the card (same history query) so the set target agrees with it.
+  const progress = useMemo(() => exerciseHistory?.workouts && exerciseSettings.type !== 'timer'
+    ? exerciseProgress(exerciseHistory.workouts, currentPlanExercise, { experienceLevel: exerciseHistory.experienceLevel })
+    : null, [exerciseHistory, currentPlanExercise, exerciseSettings.type])
+  const readyWeightKg = (() => {
+    if (!progress?.ready?.weightKg || !exerciseSettings.step) return null
+    const lbs = exerciseSettings.unit === 'lbs'
+    const next = stepWeight(lbs ? kgToLbs(progress.ready.weightKg) : progress.ready.weightKg, 1, exerciseSettings.step, exerciseSettings.stepUnit ?? exerciseSettings.unit, exerciseSettings.unit)
+    return lbs ? lbsToKg(next) : next
+  })()
+  const setTarget = getSetTarget({
+    setIndex: doneSets.length, lastSets: lastResultsCache[currentExercise?.id]?.lastSets,
+    plan: currentPlanExercise, progress, readyWeightKg,
+  })
   const formatSuggestedSet = (set) => {
     const weight = exerciseSettings.unit === 'lbs' ? kgToLbs(set.weightKg) : set.weightKg
     return `${weight} ${t(exerciseSettings.unit === 'lbs' ? 'units.lbs' : 'units.kg')} × ${set.reps}`
@@ -1141,6 +1155,7 @@ export default function WorkoutPage() {
                   lastWeight={nextSet.weightKg}
                   lastReps={nextSet.reps}
                   plannedReps={currentPlanExercise?.repsMin || null}
+                  target={setTarget}
                   onDone={handleSetDone}
                 />
               )}

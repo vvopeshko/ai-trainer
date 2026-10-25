@@ -4,7 +4,7 @@ import { kgToLbs, lbsToKg, stepWeight } from '../../../utils/weightUnit.js'
 
 // ─── ActiveSetInput (accent-tinted stepper card) ────────────────────────
 
-export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepUnitProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, onDone }) {
+export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepUnitProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, target, onDone }) {
   const { t } = useTranslation()
   const prevUnit = useRef(unit)
   const [edited, setEdited] = useState(false)
@@ -44,9 +44,10 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
 
   const displayWeight = weight % 1 === 0 ? weight : weight.toFixed(1)
 
-  const targetLabel = plannedReps
-    ? t('workout.targetReps', { reps: plannedReps })
-    : null
+  const targetLabel = !target ? null
+    : target.weightKg != null
+      ? t('workout.targetRepsWeight', { reps: target.reps, weight: unit === 'lbs' ? kgToLbs(target.weightKg) : target.weightKg, unit: t(unit === 'lbs' ? 'units.lbs' : 'units.kg') })
+      : t('workout.targetReps', { reps: target.reps })
 
   return (
     <div style={{

@@ -86,6 +86,7 @@ export const translations = {
     'workout.upcoming': 'далее',
     'workout.addSetExtra': '+ добавить подход',
     'workout.targetReps': 'цель {{reps}}',
+    'workout.targetRepsWeight': 'цель {{reps}} · {{weight}} {{unit}}',
     'workout.rest': 'отдых',
     'workout.skipRest': 'Пропустить отдых',
     'workout.letsGo': 'Идём дальше',
