@@ -9,11 +9,15 @@ const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x))
 const GYM = new Set(['barbell', 'dumbbell', 'cable', 'machine', 'e-z curl bar', 'kettlebells', 'body only'])
 const ODD = new Set(['foam roll', 'medicine ball', 'exercise ball', 'other'])
 // The catalog labels some stretches/drills as compound/isolation.
-const NOT_A_SWAP = /растяж|релиз|самомасс|разминк|мобилиз|бросок|броски|взгляд|вис\b/i
+const NOT_A_SWAP = /растяж|релиз|мфр|самомасс|разминк|мобилиз|бросок|броски|взгляд|вис\b|партн/i
+// One side of a unilateral exercise is the same swap: «(левая нога)» / «(правая)».
+const baseName = name => name.replace(/\s*\((лев|прав|left|right)[^)]*\)/gi, '').trim().toLowerCase()
 const STOP = new Set(['рук', 'руки', 'ног', 'стоя', 'сидя', 'лежа', 'лёжа', 'для', 'при', 'одной', 'двумя', 'хватом', 'тренажере', 'тренажёре'])
 // Name stems approximate the movement ("Сгибания…", "Разгибания ног…", "Тяга…").
-const stems = name => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
-  .filter(w => w.length >= 3 && !STOP.has(w)).map(w => w.slice(0, 5)))
+// Tool words are not the movement: «…со штангой» must not pair a squat with a hip thrust.
+const TOOL = /^(штанг|гантел|гир|блок|тренаж|кабел|канат|смит|фитбол|медбол|эспандер|петл|скамь)/
+const stems = (name, { tools = true } = {}) => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
+  .filter(w => w.length >= 3 && !STOP.has(w) && (tools || !TOOL.test(w))).map(w => w.slice(0, 5)))
 
 /**
  * Pure ranking of catalog candidates for one exercise ("суть одна"): the same
@@ -23,8 +27,11 @@ const stems = name => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a
  */
 export function rankAlternatives(target, pool, usage = new Map()) {
   const own = stems(target.nameRu)
+  const ownMovement = stems(target.nameRu, { tools: false })
+  const sharedStems = ex => [...stems(ex.nameRu)].filter(w => own.has(w)).length
+  const sharedMovement = ex => [...stems(ex.nameRu, { tools: false })].filter(w => ownMovement.has(w)).length
   const score = ex => {
-    const shared = [...stems(ex.nameRu)].filter(w => own.has(w)).length
+    const shared = sharedStems(ex)
     return 2 * Math.min(shared, 2)
       + (sameSet(ex.primaryMuscles, target.primaryMuscles) ? 2 : 0)
       + (ex.equipment.some(e => GYM.has(e)) ? 1.5 : 0) - (ex.equipment.some(e => ODD.has(e)) ? 3 : 0)
@@ -32,12 +39,15 @@ export function rankAlternatives(target, pool, usage = new Map()) {
       + (ex.source === 'seed' ? 0.5 : 0)
   }
   const ranked = pool
-    .filter(ex => ex.id !== target.id && ex.nameRu !== target.nameRu && !NOT_A_SWAP.test(ex.nameRu))
+    .filter(ex => ex.id !== target.id && baseName(ex.nameRu) !== baseName(target.nameRu) && !NOT_A_SWAP.test(ex.nameRu))
+    // A compound swap must keep the movement (жим ↔ жим, тяга ↔ тяга): the
+    // main muscle alone pairs a dumbbell press with a face pull.
+    .filter(ex => target.category !== 'compound' || sharedMovement(ex) > 0)
     .map(ex => ({ ...ex, usedCount: usage.get(ex.id) ?? 0, score: score(ex) }))
     .sort((a, b) => (b.usedCount > 0) - (a.usedCount > 0) || b.score - a.score
       || b.usedCount - a.usedCount || a.nameRu.localeCompare(b.nameRu, 'ru'))
-    // The catalog has duplicates under different slugs: one per name.
-    .filter((ex, i, all) => all.findIndex(o => o.nameRu === ex.nameRu) === i)
+    // Catalog duplicates under different slugs and left/right sides: one per name.
+    .filter((ex, i, all) => all.findIndex(o => baseName(o.nameRu) === baseName(ex.nameRu)) === i)
   // Variety at the top: at most two of the same tool before the rest.
   const perTool = new Map(), head = [], tail = []
   for (const ex of ranked) {
@@ -82,6 +92,7 @@ export async function updateSlot(userId, { dayIndex, mainExerciseId, exerciseId,
   const slot = program?.planJson?.days?.[dayIndex]?.exercises?.find(e => e.exerciseId === mainExerciseId)
   if (!slot) return null
   const alternatives = (slot.alternatives ?? []).filter(id => id !== exerciseId && id !== mainExerciseId)
+  slot.alternativesAuto = false
   if (makeMain && exerciseId !== mainExerciseId) {
     const next = await prisma.exercise.findUnique({ where: { id: exerciseId }, select: { id: true, nameRu: true, slug: true } })
     if (!next) return null
@@ -96,19 +107,25 @@ export async function updateSlot(userId, { dayIndex, mainExerciseId, exerciseId,
   return slot
 }
 
-/** One-time fill: up to `perSlot` alternatives for every slot that has none. */
-export async function fillProgramAlternatives(userId, { perSlot = 3 } = {}) {
+/**
+ * Fill: up to `perSlot` alternatives for every slot that has none, plus the
+ * slots listed in `replace` ({ dayIndex, exerciseId }) — e.g. to refresh an
+ * earlier auto-fill after the ranking improved. Filled slots are marked
+ * `alternativesAuto`; a choice made by the user clears the mark.
+ */
+export async function fillProgramAlternatives(userId, { perSlot = 3, replace = [] } = {}) {
   const program = await activeProgram(userId)
   if (!program) return { filled: 0, slots: 0 }
   const cache = new Map()
   let filled = 0, slots = 0
-  for (const day of program.planJson?.days ?? []) {
+  for (const [dayIndex, day] of (program.planJson?.days ?? []).entries()) {
     for (const slot of day.exercises ?? []) {
       slots++
-      if (slot.alternatives?.length || !slot.exerciseId) continue
+      const listed = replace.some(r => r.dayIndex === dayIndex && r.exerciseId === slot.exerciseId)
+      if (!slot.exerciseId || (slot.alternatives?.length && !listed)) continue
       if (!cache.has(slot.exerciseId)) cache.set(slot.exerciseId, await findAlternatives(userId, slot.exerciseId, { limit: perSlot }))
       const ids = cache.get(slot.exerciseId).map(e => e.id)
-      if (ids.length) { slot.alternatives = ids; filled++ }
+      if (ids.length || listed) { slot.alternatives = ids; slot.alternativesAuto = true; filled++ }
     }
   }
   if (filled) await prisma.program.update({ where: { id: program.id }, data: { planJson: program.planJson } })

@@ -317,8 +317,14 @@ export async function updateActiveSlot(req, res) {
 
 /**
  * POST /api/v1/programs/active/fill-alternatives
- * One-time fill of catalog alternatives for slots without any. Idempotent.
+ * Fills catalog alternatives for slots without any (idempotent) and refreshes
+ * the slots listed in `replace` (e.g. an earlier auto-fill).
  */
+const fillSchema = z.object({
+  replace: z.array(z.object({ dayIndex: z.number().int().nonnegative(), exerciseId: z.string().uuid() })).max(100).default([]),
+}).default({})
+
 export async function fillActiveAlternatives(req, res) {
-  res.json(await fillProgramAlternatives(req.user.id))
+  const { replace } = fillSchema.parse(req.body ?? {})
+  res.json(await fillProgramAlternatives(req.user.id, { replace }))
 }
