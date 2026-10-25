@@ -13,6 +13,7 @@ import { openTrainerChat } from '../../utils/askTrainer.js'
 import { useExerciseDetail } from '../../hooks/queries.js'
 import { getExerciseSettings, setExerciseSettings, saveSettingsToServer, PRESETS, getDefaultPreset, getPresetsForEquipment } from '../../utils/weightUnit.js'
 import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
+import { MuscleTile } from './MuscleTile.jsx'
 import { BodyMap } from './BodyMap.jsx'
 import { Skeleton } from './Skeleton.jsx'
 import { Glass } from './Glass.jsx'
@@ -629,9 +630,9 @@ function MusclesTab({ exercise, t }) {
       {primaryMuscles.length > 0 && (
         <div>
           <SectionLabel>{t('exercise.primary')}</SectionLabel>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
             {primaryMuscles.map(m => (
-              <Chip key={m} variant="primary">{getMuscleName(m)}</Chip>
+              <MuscleTile key={m} muscle={m} primary>{getMuscleName(m)}</MuscleTile>
             ))}
           </div>
         </div>
@@ -641,9 +642,9 @@ function MusclesTab({ exercise, t }) {
       {secondaryMuscles.length > 0 && (
         <div>
           <SectionLabel>{t('exercise.secondary')}</SectionLabel>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
             {secondaryMuscles.map(m => (
-              <Chip key={m} variant="neutral">{getMuscleName(m)}</Chip>
+              <MuscleTile key={m} muscle={m}>{getMuscleName(m)}</MuscleTile>
             ))}
           </div>
         </div>

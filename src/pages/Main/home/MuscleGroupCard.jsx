@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../i18n/useTranslation.js'
-import { Icon } from '../../../components/ui/Icon.jsx'
+import { MuscleIcon } from '../../../components/ui/MuscleIcon.jsx'
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -223,42 +223,28 @@ export function MuscleGroupCard({ group, onTap }) {
         alignItems: 'flex-start', gap: 10,
       }}>
         <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
-          {/* Icon square */}
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: 11,
-            background: 'var(--gd-inset)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <Icon name={iconName} size={18} strokeWidth={1.8} style={{
-              color: 'var(--gd-accent-ink)',
-            }} />
-          </div>
+          <MuscleIcon name={iconName} size={60} />
 
           {/* Text */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: 14.5, fontWeight: 700,
-              color: 'var(--gd-ink)',
-              marginBottom: 2,
+              display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 8px',
+              marginBottom: 5,
             }}>
-              {group.nameRu}
+              <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--gd-ink)' }}>
+                {group.nameRu}
+              </span>
+              <StatusBadge actual={group.setsActual} target={group.setsTarget} t={t} />
             </div>
 
             {hasTarget && (
               <div style={{
                 fontSize: 11.5, color: 'var(--gd-sub)',
-                marginBottom: 8,
               }}>
                 {t('progress.muscle.target', { min, max })}
               </div>
             )}
 
-            <StatusBadge actual={group.setsActual} target={group.setsTarget} t={t} />
           </div>
         </div>
 

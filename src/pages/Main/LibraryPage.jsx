@@ -10,6 +10,7 @@ import { useTranslation } from '../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../hooks/queries.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
+import { MuscleIcon } from '../../components/ui/MuscleIcon.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheetLazy.jsx'
 
@@ -54,8 +55,8 @@ function Chip({ label, active, icon, onClick }) {
     <button
       onClick={onClick}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: '6px 12px',
+        display: 'inline-flex', alignItems: 'center', gap: icon ? 7 : 4,
+        padding: icon ? '4px 12px 4px 5px' : '6px 12px',
         borderRadius: 20,
         border: active ? '1px solid hsla(var(--accent-h,158),60%,50%,0.5)' : '1px solid rgba(255,255,255,0.1)',
         background: active ? 'hsla(var(--accent-h,158),60%,40%,0.25)' : 'rgba(255,255,255,0.06)',
@@ -68,7 +69,7 @@ function Chip({ label, active, icon, onClick }) {
         transition: 'all 0.15s ease',
       }}
     >
-      {icon && <Icon name={icon} size={14} strokeWidth={2} />}
+      {icon && <MuscleIcon name={icon} size={30} />}
       {label}
     </button>
   )

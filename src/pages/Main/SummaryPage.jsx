@@ -14,6 +14,7 @@ import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
+import { MuscleTile } from '../../components/ui/MuscleTile.jsx'
 import { MUSCLE_GROUP } from '../../utils/muscleMapping.js'
 import { useWorkoutDetail } from '../../hooks/queries.js'
 
@@ -187,23 +188,15 @@ export default function SummaryPage() {
       {/* Muscle group chips */}
       {muscleGroups.length > 0 && (
         <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           gap: 8,
-          justifyContent: 'center',
+          width: '100%',
           marginBottom: 'var(--space-8)',
           maxWidth: 360,
         }}>
           {muscleGroups.map(g => (
-            <span key={g} style={{
-              padding: '4px 12px',
-              borderRadius: 12,
-              background: 'var(--surface-0)',
-              color: 'var(--fg-secondary)',
-              fontSize: 'var(--text-xs)',
-            }}>
-              {g}
-            </span>
+            <MuscleTile key={g} muscle={g}>{g}</MuscleTile>
           ))}
         </div>
       )}

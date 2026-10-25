@@ -23,6 +23,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import { HeroBlock, HeroBlockSkeleton } from './home/HeroBlock.jsx'
 import { MyPlanSection } from './home/MyPlanSection.jsx'
 import { MuscleGroupCard, MUSCLE_ICONS } from './home/MuscleGroupCard.jsx'
+import { MuscleIcon } from '../../components/ui/MuscleIcon.jsx'
 import { AnnualGoalCard } from './home/AnnualGoalCard.jsx'
 
 // ─── Main Component ────────────────────────────────────────────────────
@@ -227,10 +228,9 @@ export default function HomePage() {
               display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
               marginBottom: 4,
             }}>
-              <Icon
+              <MuscleIcon
                 name={MUSCLE_ICONS[selectedMuscle.group] || 'activity'}
-                size={20}
-                style={{ color: 'hsl(var(--accent-h,158),55%,72%)' }}
+                size={60}
               />
               <span style={{
                 fontSize: 'var(--text-lg)',

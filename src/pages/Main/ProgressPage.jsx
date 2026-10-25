@@ -11,6 +11,7 @@ import { useTranslation } from '../../i18n/useTranslation.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
+import { MuscleIcon } from '../../components/ui/MuscleIcon.jsx'
 import { StatTile } from '../../components/ui/StatTile.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
@@ -568,7 +569,9 @@ export default function ProgressPage() {
             <div style={{
               fontSize: 'var(--text-base)', fontWeight: 600,
               color: 'var(--fg-primary)', marginBottom: 4,
+              display: 'flex', alignItems: 'center', gap: 10,
             }}>
+              <MuscleIcon name={selectedMuscle.group} size={60} />
               {selectedMuscle.nameRu}
             </div>
             <div style={{
@@ -592,6 +595,7 @@ export default function ProgressPage() {
                     background: 'rgba(255,255,255,0.06)',
                     fontSize: 'var(--text-xs)', color: 'var(--fg-secondary)',
                   }}>
+                    <MuscleIcon name={s.muscle} size={30} />
                     <span style={{ fontWeight: 500, color: 'var(--fg-primary)' }}>{s.nameRu}</span>
                     <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--fg-tertiary)' }}>
                       {s.setsActual}{s.setsTarget ? `/${s.setsTarget}` : ''}
