@@ -6,8 +6,17 @@ const mock = vi.hoisted(() => ({
   workout: { findMany: vi.fn() },
 }))
 vi.mock('../utils/prisma.js', () => ({ default: mock }))
+// Target muscles come from the classified catalog file; tests pin them.
+const targets = vi.hoisted(() => ({ map: {} }))
+vi.mock('./exerciseTargets.js', () => ({
+  targetMuscle: slug => targets.map[slug] ?? null,
+  slugsWithTarget: t => Object.keys(targets.map).filter(s => targets.map[s] === t),
+}))
 import { rankAlternatives, findAlternatives, updateSlot, fillProgramAlternatives, makeMainHints } from './exerciseAlternatives.js'
-beforeEach(() => vi.resetAllMocks())
+beforeEach(() => {
+  vi.resetAllMocks()
+  targets.map = { machine: 'biceps', db: 'biceps', cable: 'biceps', machine2: 'biceps', hammer: 'biceps', press: 'biceps' }
+})
 
 const ex = (id, nameRu, primaryMuscles, equipment, source = 'seed') => ({ id, nameRu, slug: id, primaryMuscles, equipment, category: 'isolation', source })
 const curlMachine = ex('machine', 'Сгибания в тренажёре', ['biceps'], ['machine'])
@@ -26,18 +35,21 @@ it('ranks used exercises first, then the same movement with another gym tool', (
   expect(ranked[0].usedCount).toBe(4)
 })
 
-it('queries the same main muscle and category and counts the user’s finished working sets', async () => {
+it('queries exercises with the same target muscle and category and counts the user’s working sets', async () => {
   mock.exercise.findUnique.mockResolvedValue(curlMachine)
   mock.exercise.findMany.mockResolvedValue(pool)
   mock.workoutSet.groupBy.mockResolvedValue([{ exerciseId: 'cable', _count: { workoutId: 9 } }])
   const list = await findAlternatives('u1', 'machine', { limit: 2 })
-  expect(mock.exercise.findMany.mock.calls[0][0].where).toEqual({ id: { not: 'machine' }, category: 'isolation', primaryMuscles: { has: 'biceps' } })
+  expect(mock.exercise.findMany.mock.calls[0][0].where).toEqual({
+    id: { not: 'machine' }, category: 'isolation', slug: { in: ['machine', 'db', 'cable', 'machine2', 'hammer', 'press'] },
+  })
   expect(mock.workoutSet.groupBy.mock.calls[0][0].where).toMatchObject({ isWarmup: false, workout: { userId: 'u1', finishedAt: { not: null } } })
   expect(list.map(e => e.id)).toEqual(['cable', 'db'])
 })
 
-it('returns nothing for an exercise without muscles', async () => {
-  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, primaryMuscles: [] })
+it('returns nothing when the target muscle is unknown: better none than a wrong one', async () => {
+  targets.map = {}
+  mock.exercise.findUnique.mockResolvedValue(curlMachine)
   expect(await findAlternatives('u1', 'machine')).toEqual([])
   expect(mock.exercise.findMany).not.toHaveBeenCalled()
 })
@@ -70,7 +82,7 @@ it('returns null for an unknown slot and does not save', async () => {
 
 it('fills only slots without alternatives, once per exercise', async () => {
   mock.program.findFirst.mockResolvedValue(program())
-  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, id: 'press' })
+  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, id: 'press', slug: 'press' })
   mock.exercise.findMany.mockResolvedValue(pool)
   mock.workoutSet.groupBy.mockResolvedValue([])
   expect(await fillProgramAlternatives('u1', { perSlot: 2 })).toEqual({ filled: 1, slots: 2 })
@@ -116,26 +128,11 @@ it('drops foam-roll release, partner drills and the other side of a unilateral e
   expect(list.map(e => e.id)).toEqual(['l'])
 })
 
-it('keeps the movement for compound swaps; tool words do not count as movement', () => {
-  const press = { ...ex('press', 'Жим гантелей сидя', ['shoulders'], ['dumbbell']), category: 'compound' }
-  const pressList = rankAlternatives(press, [
-    { ...ex('stand', 'Жим гантелей стоя', ['shoulders'], ['dumbbell']), category: 'compound' },
-    { ...ex('face', 'Тяга к лицу (фейс-пул)', ['shoulders'], ['cable']), category: 'compound' },
-  ])
-  expect(pressList.map(e => e.id)).toEqual(['stand'])
-  const thrust = { ...ex('thrust', 'Ягодичный мостик со штангой', ['glutes'], ['barbell']), category: 'compound' }
-  const thrustList = rankAlternatives(thrust, [
-    { ...ex('squat', 'Коленный присед со штангой', ['glutes'], ['barbell']), category: 'compound' },
-    { ...ex('ball', 'Ягодичный мостик на фитболе', ['glutes'], ['exercise ball']), category: 'compound' },
-  ])
-  expect(thrustList.map(e => e.id)).toEqual(['ball'])
-})
-
 it('refreshes listed auto-filled slots, marks them, and a user choice clears the mark', async () => {
   const plan = program()
   plan.planJson.days[0].exercises[1].alternatives = ['old1', 'old2']
   mock.program.findFirst.mockResolvedValue(plan)
-  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, id: 'press' })
+  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, id: 'press', slug: 'press' })
   mock.exercise.findMany.mockResolvedValue(pool)
   mock.workoutSet.groupBy.mockResolvedValue([])
   expect(await fillProgramAlternatives('u1', { perSlot: 2, replace: [{ dayIndex: 0, exerciseId: 'press' }] })).toEqual({ filled: 1, slots: 2 })
@@ -147,4 +144,18 @@ it('refreshes listed auto-filled slots, marks them, and a user choice clears the
   mock.program.findFirst.mockResolvedValue({ id: 'p1', planJson: { days: [{ exercises: [{ ...saved[1] }] }] } })
   const slot = await updateSlot('u1', { dayIndex: 0, mainExerciseId: 'press', exerciseId: 'x' })
   expect(slot.alternativesAuto).toBe(false)
+})
+
+it('refreshes every auto-filled slot with refreshAuto, leaving hand-picked ones', async () => {
+  const plan = program()
+  plan.planJson.days[0].exercises[0].alternativesAuto = false
+  plan.planJson.days[0].exercises[1] = { ...plan.planJson.days[0].exercises[1], alternatives: ['old'], alternativesAuto: true }
+  mock.program.findFirst.mockResolvedValue(plan)
+  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, id: 'press', slug: 'press' })
+  mock.exercise.findMany.mockResolvedValue(pool)
+  mock.workoutSet.groupBy.mockResolvedValue([])
+  expect(await fillProgramAlternatives('u1', { perSlot: 1, refreshAuto: true })).toEqual({ filled: 1, slots: 2 })
+  const saved = mock.program.update.mock.calls[0][0].data.planJson.days[0].exercises
+  expect(saved[0].alternatives).toEqual(['db'])
+  expect(saved[1].alternatives).toEqual(['cable'])
 })

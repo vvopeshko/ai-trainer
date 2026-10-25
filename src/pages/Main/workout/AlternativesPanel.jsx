@@ -11,10 +11,10 @@ const norm = s => s.toLowerCase().replace(/ё/g, 'е')
 
 // "Аналоги" tab of the exercise info sheet during a workout. Variants of one
 // program slot: its main exercise (if something else is done today), its own
-// alternatives, catalog candidates and a search over the whole catalog. Each
-// shows its last result and status; progress stays per exercise (kilograms of
-// a machine and of dumbbells don't compare).
-export function AlternativesPanel({ current, slot, lastResults, onNeedLastResults, trendById, unit, onPick }) {
+// alternatives, close catalog candidates (same target muscle) and a search over
+// the whole catalog. Each shows its last result and status; a tap opens its
+// description, where it is chosen. Progress stays per exercise.
+export function AlternativesPanel({ current, slot, lastResults, onNeedLastResults, trendById, unit, onPreview }) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const mainId = slot?.mainExerciseId ?? slot?.exerciseId ?? current?.id
@@ -52,7 +52,7 @@ export function AlternativesPanel({ current, slot, lastResults, onNeedLastResult
   }
   const row = alt => (
     <div key={alt.exerciseId} style={{ ...card, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <button onClick={() => onPick(alt, { makeMain: false })} style={{
+      <button onClick={() => onPreview(alt)} style={{
         flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, padding: 0,
         background: 'none', border: 0, textAlign: 'left', cursor: 'pointer',
       }}>
@@ -63,11 +63,8 @@ export function AlternativesPanel({ current, slot, lastResults, onNeedLastResult
           <div style={{ fontSize: 11, color: 'var(--fg-tertiary)', marginTop: 2 }}>{lastText(alt.exerciseId)}</div>
         </div>
         {status(alt.exerciseId)}
+        <Icon name="chevronRight" size={14} style={{ flexShrink: 0, color: 'var(--fg-tertiary)' }} />
       </button>
-      {slot && !alt.isMain && <button onClick={() => onPick(alt, { makeMain: true })} style={{
-        flexShrink: 0, padding: '6px 9px', borderRadius: 8, border: 0, cursor: 'pointer',
-        background: 'rgba(236,234,239,0.08)', color: 'var(--fg-secondary)', fontSize: 11, fontWeight: 600,
-      }}>{t('workout.makeMain')}</button>}
     </div>
   )
 

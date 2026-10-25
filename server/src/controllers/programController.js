@@ -322,9 +322,10 @@ export async function updateActiveSlot(req, res) {
  */
 const fillSchema = z.object({
   replace: z.array(z.object({ dayIndex: z.number().int().nonnegative(), exerciseId: z.string().uuid() })).max(100).default([]),
+  refreshAuto: z.boolean().default(false),
 }).default({})
 
 export async function fillActiveAlternatives(req, res) {
-  const { replace } = fillSchema.parse(req.body ?? {})
-  res.json(await fillProgramAlternatives(req.user.id, { replace }))
+  const { replace, refreshAuto } = fillSchema.parse(req.body ?? {})
+  res.json(await fillProgramAlternatives(req.user.id, { replace, refreshAuto }))
 }

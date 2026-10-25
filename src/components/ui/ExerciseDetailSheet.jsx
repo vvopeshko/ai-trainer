@@ -1,8 +1,9 @@
 /**
  * ExerciseDetailSheet — fullscreen overlay with tabbed exercise details.
  *
- * Three tabs: Instructions (GIF/video + technique steps), Muscles (BodyMap + chips),
- * Settings (unit, weight step, min/max, exercise type).
+ * Tabs: Info (GIF/video, target and other muscles, description, technique),
+ * optional Alternatives (workout only), Settings (unit, weight step, min/max, type).
+ * With `onSelect` it is a preview of an alternative: Info only and a «Выбрать» footer.
  *
  * Used on WorkoutPage, LibraryPage, ProgramEditPage.
  */
@@ -12,9 +13,8 @@ import { useTelegram } from '../TelegramProvider.jsx'
 import { openTrainerChat } from '../../utils/askTrainer.js'
 import { useExerciseDetail } from '../../hooks/queries.js'
 import { getExerciseSettings, setExerciseSettings, saveSettingsToServer, PRESETS, getDefaultPreset, getPresetsForEquipment } from '../../utils/weightUnit.js'
-import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
+import { getMuscleName, getEquipmentName, MUSCLE_GROUP } from '../../utils/muscleMapping.js'
 import { MuscleTile } from './MuscleTile.jsx'
-import { BodyMap } from './BodyMap.jsx'
 import { Skeleton } from './Skeleton.jsx'
 import { Glass } from './Glass.jsx'
 import { Icon } from './Icon.jsx'
@@ -58,7 +58,8 @@ const KEYFRAMES = `
 
 function Header({ exercise, onClose }) {
   const { t } = useTranslation()
-  const primaryMuscle = exercise?.primaryMuscles?.[0]
+  // Target muscle ("верх груди") when known, else the first primary one.
+  const primaryMuscle = exercise?.targetMuscle ?? exercise?.primaryMuscles?.[0]
   const equipment = exercise?.equipment
   const subtitle = [
     primaryMuscle && getMuscleName(primaryMuscle),
@@ -129,7 +130,7 @@ function Header({ exercise, onClose }) {
 
 // ─── SegTabs ─────────────────────────────────────────────────────────
 
-const TABS = ['instructions', 'muscles', 'settings']
+const TABS = ['info', 'settings']
 
 function SegTabs({ tabs = TABS, active, onChange, t }) {
   return (
@@ -505,9 +506,10 @@ function NumberField({ value, onChange, suffix }) {
   )
 }
 
-// ─── Instructions Tab ────────────────────────────────────────────────
+// ─── Info Tab ────────────────────────────────────────────────────────
 
-function InstructionsTab({ exercise, t }) {
+// One screen: what it looks like, which muscles it works, how to do it.
+function InfoTab({ exercise, t }) {
   const videos = exercise.videos || []
   const hasMedia = exercise.gifUrl
   const steps = exercise.instructions
@@ -526,6 +528,8 @@ function InstructionsTab({ exercise, t }) {
           isVideo={isVideoUrl(exercise.gifUrl)}
         />
       )}
+
+      <MusclesSection exercise={exercise} t={t} />
 
       {/* Russian description */}
       {exercise.description && (
@@ -590,88 +594,42 @@ function InstructionsTab({ exercise, t }) {
   )
 }
 
-// ─── Muscles Tab ─────────────────────────────────────────────────────
+// ─── Muscles (inside Info) ───────────────────────────────────────────
 
-function MusclesTab({ exercise, t }) {
-  const primaryMuscles = exercise.primaryMuscles || []
-  const secondaryMuscles = exercise.secondaryMuscles || []
-
-  const bodyMapMuscles = primaryMuscles.map(m => ({
-    muscle: m, setsActual: 10, setsTarget: 10,
-  }))
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* BodyMap */}
-      {primaryMuscles.length > 0 && (
-        <Glass radius={16} padding="14px 10px 6px">
-          <BodyMap muscles={bodyMapMuscles} height={200} />
-          <div style={{
-            display: 'flex', justifyContent: 'space-around',
-            marginTop: 2,
-          }}>
-            <span style={{
-              fontSize: 9, fontWeight: 500, color: 'rgba(236,234,239,0.4)',
-              textTransform: 'uppercase', letterSpacing: '0.14em',
-            }}>
-              {t('exercise.front')}
-            </span>
-            <span style={{
-              fontSize: 9, fontWeight: 500, color: 'rgba(236,234,239,0.4)',
-              textTransform: 'uppercase', letterSpacing: '0.14em',
-            }}>
-              {t('exercise.back')}
-            </span>
-          </div>
-        </Glass>
-      )}
-
-      {/* Primary muscles chips */}
-      {primaryMuscles.length > 0 && (
-        <div>
-          <SectionLabel>{t('exercise.primary')}</SectionLabel>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-            {primaryMuscles.map(m => (
-              <MuscleTile key={m} muscle={m} primary>{getMuscleName(m)}</MuscleTile>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Secondary muscles chips */}
-      {secondaryMuscles.length > 0 && (
-        <div>
-          <SectionLabel>{t('exercise.secondary')}</SectionLabel>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-            {secondaryMuscles.map(m => (
-              <MuscleTile key={m} muscle={m}>{getMuscleName(m)}</MuscleTile>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Characteristics */}
-      {(() => {
-        // t() возвращает сам ключ, если перевода нет — такие чипы скрываем,
-        // чтобы не светить сырые ключи вида «library.cat.strength»
-        const diffKey = exercise.difficulty ? `library.diff.${exercise.difficulty}` : null
-        const diffLabel = diffKey && t(diffKey) !== diffKey ? t(diffKey) : null
-        const catKey = exercise.category ? `library.cat.${exercise.category}` : null
-        const catLabel = catKey && t(catKey) !== catKey ? t(catKey) : null
-        if (!diffLabel && !catLabel) return null
-        return (
-          <div>
-            <SectionLabel>{t('exercise.characteristics')}</SectionLabel>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-              {diffLabel && <Chip variant="meta" icon="activity">{diffLabel}</Chip>}
-              {catLabel && <Chip variant="meta" icon="zap">{catLabel}</Chip>}
-            </div>
-          </div>
-        )
-      })()}
-
+function MuscleTiles({ label, muscles, primary }) {
+  if (!muscles.length) return null
+  return <div>
+    <SectionLabel>{label}</SectionLabel>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+      {muscles.map(m => <MuscleTile key={m} muscle={m} primary={primary}>{getMuscleName(m)}</MuscleTile>)}
     </div>
-  )
+  </div>
+}
+
+// Target muscle first ("верх груди"), then other primary muscles of a
+// different group (no "грудь" next to "верх груди"), then secondary ones.
+function MusclesSection({ exercise, t }) {
+  const target = exercise.targetMuscle
+  const sameGroup = m => target && (m === target || (MUSCLE_GROUP[m] && MUSCLE_GROUP[m] === MUSCLE_GROUP[target]))
+  const primary = (exercise.primaryMuscles || []).filter(m => !sameGroup(m))
+  const secondary = (exercise.secondaryMuscles || []).filter(m => !sameGroup(m) && !primary.includes(m))
+  const diffKey = exercise.difficulty ? `library.diff.${exercise.difficulty}` : null
+  const diffLabel = diffKey && t(diffKey) !== diffKey ? t(diffKey) : null
+  const catKey = exercise.category ? `library.cat.${exercise.category}` : null
+  const catLabel = catKey && t(catKey) !== catKey ? t(catKey) : null
+  return <>
+    {target && <MuscleTiles label={t('exercise.target')} muscles={[target]} primary />}
+    <MuscleTiles label={t(target ? 'exercise.alsoWorks' : 'exercise.primary')} muscles={primary} primary={!target} />
+    <MuscleTiles label={t('exercise.secondary')} muscles={secondary} />
+    {/* t() returns the key when there is no translation: hide such chips */}
+    {(diffLabel || catLabel) && <div>
+      <SectionLabel>{t('exercise.characteristics')}</SectionLabel>
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        {diffLabel && <Chip variant="meta" icon="activity">{diffLabel}</Chip>}
+        {catLabel && <Chip variant="meta" icon="zap">{catLabel}</Chip>}
+      </div>
+    </div>}
+  </>
 }
 
 // ─── Settings Tab ────────────────────────────────────────────────────
@@ -919,12 +877,14 @@ function DetailSkeleton() {
 
 /**
  * `alternatives` (optional node) adds an "Аналоги" tab — the workout passes its
- * swap panel for the current exercise; other screens don't.
+ * swap panel for the current exercise; other screens don't. `initialTab` picks
+ * the tab on open. `onSelect` turns the sheet into a preview of an alternative:
+ * only Info, and a «Выбрать» footer (plus «Сделать основным» with `onMakeMain`).
  */
-export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange, alternatives }) {
+export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange, alternatives, initialTab = 'info', onSelect, onMakeMain }) {
   const { t } = useTranslation()
   const { webApp } = useTelegram()
-  const [activeTab, setActiveTab] = useState('instructions')
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [settings, setSettings] = useState(null)
   const [tabKey, setTabKey] = useState(0)
   const [prevExerciseId, setPrevExerciseId] = useState(null)
@@ -937,13 +897,13 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
   useEffect(() => {
     if (!open) {
       setPrevExerciseId(null)
-      setActiveTab('instructions')
+      setActiveTab(initialTab)
       setSettings(null)
       return
     }
     if (exerciseId !== prevExerciseId) {
       setPrevExerciseId(exerciseId)
-      setActiveTab('instructions')
+      setActiveTab(initialTab)
       setSettings(null)
     }
   }, [open, exerciseId, prevExerciseId])
@@ -1055,8 +1015,8 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
       <Header exercise={exercise} onClose={onClose} />
 
       {/* Tabs */}
-      <SegTabs tabs={alternatives ? ['instructions', 'muscles', 'alternatives', 'settings'] : TABS}
-        active={activeTab} onChange={handleTabChange} t={t} />
+      {!onSelect && <SegTabs tabs={alternatives ? ['info', 'alternatives', 'settings'] : TABS}
+        active={activeTab} onChange={handleTabChange} t={t} />}
 
       {/* Content */}
       <div style={{
@@ -1067,10 +1027,9 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
           <DetailSkeleton />
         ) : exercise ? (
           <div key={tabKey} style={{ animation: 'fadeUp .35s ease-out' }}>
-            {activeTab === 'instructions' && <InstructionsTab exercise={exercise} t={t} />}
-            {activeTab === 'muscles' && <MusclesTab exercise={exercise} t={t} />}
+            {(activeTab === 'info' || onSelect) && <InfoTab exercise={exercise} t={t} />}
             {activeTab === 'alternatives' && alternatives}
-            {activeTab === 'settings' && settings && (
+            {!onSelect && activeTab === 'settings' && settings && (
               <SettingsTab
                 exercise={exercise}
                 settings={settings}
@@ -1083,8 +1042,26 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
         ) : null}
       </div>
 
+      {/* Preview of an alternative: choose it at the bottom, after reading */}
+      {exercise && onSelect && (
+        <div style={{
+          flexShrink: 0, padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8,
+          paddingBottom: 'calc(var(--safe-bottom, 0px) + 12px)',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <button onClick={onSelect} style={{
+            width: '100%', height: 48, borderRadius: 14, border: 'none', cursor: 'pointer',
+            background: 'hsl(var(--accent-h),55%,55%)', color: '#0a1815', fontSize: 14.5, fontWeight: 700,
+          }}>{t('exercise.select')}</button>
+          {onMakeMain && <button onClick={onMakeMain} style={{
+            width: '100%', height: 40, borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: 'rgba(255,255,255,0.06)', color: 'var(--fg-secondary)', fontSize: 13, fontWeight: 600,
+          }}>{t('exercise.selectAsMain')}</button>}
+        </div>
+      )}
+
       {/* Ask-trainer footer */}
-      {exercise && (
+      {exercise && !onSelect && (
         <div style={{
           flexShrink: 0, padding: '10px 16px',
           paddingBottom: 'calc(var(--safe-bottom, 0px) + 12px)',

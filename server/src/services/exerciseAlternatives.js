@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js'
+import { targetMuscle, slugsWithTarget } from './exerciseTargets.js'
 
 const SELECT = { id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true }
 const MAX_ALTERNATIVES = 6
@@ -14,10 +15,8 @@ const NOT_A_SWAP = /растяж|релиз|мфр|самомасс|размин
 const baseName = name => name.replace(/\s*\((лев|прав|left|right)[^)]*\)/gi, '').trim().toLowerCase()
 const STOP = new Set(['рук', 'руки', 'ног', 'стоя', 'сидя', 'лежа', 'лёжа', 'для', 'при', 'одной', 'двумя', 'хватом', 'тренажере', 'тренажёре'])
 // Name stems approximate the movement ("Сгибания…", "Разгибания ног…", "Тяга…").
-// Tool words are not the movement: «…со штангой» must not pair a squat with a hip thrust.
-const TOOL = /^(штанг|гантел|гир|блок|тренаж|кабел|канат|смит|фитбол|медбол|эспандер|петл|скамь)/
-const stems = (name, { tools = true } = {}) => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
-  .filter(w => w.length >= 3 && !STOP.has(w) && (tools || !TOOL.test(w))).map(w => w.slice(0, 5)))
+const stems = name => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
+  .filter(w => w.length >= 3 && !STOP.has(w)).map(w => w.slice(0, 5)))
 
 /**
  * Pure ranking of catalog candidates for one exercise ("суть одна"): the same
@@ -27,9 +26,7 @@ const stems = (name, { tools = true } = {}) => new Set(name.toLowerCase().replac
  */
 export function rankAlternatives(target, pool, usage = new Map()) {
   const own = stems(target.nameRu)
-  const ownMovement = stems(target.nameRu, { tools: false })
   const sharedStems = ex => [...stems(ex.nameRu)].filter(w => own.has(w)).length
-  const sharedMovement = ex => [...stems(ex.nameRu, { tools: false })].filter(w => ownMovement.has(w)).length
   const score = ex => {
     const shared = sharedStems(ex)
     return 2 * Math.min(shared, 2)
@@ -40,9 +37,6 @@ export function rankAlternatives(target, pool, usage = new Map()) {
   }
   const ranked = pool
     .filter(ex => ex.id !== target.id && baseName(ex.nameRu) !== baseName(target.nameRu) && !NOT_A_SWAP.test(ex.nameRu))
-    // A compound swap must keep the movement (жим ↔ жим, тяга ↔ тяга): the
-    // main muscle alone pairs a dumbbell press with a face pull.
-    .filter(ex => target.category !== 'compound' || sharedMovement(ex) > 0)
     .map(ex => ({ ...ex, usedCount: usage.get(ex.id) ?? 0, score: score(ex) }))
     .sort((a, b) => (b.usedCount > 0) - (a.usedCount > 0) || b.score - a.score
       || b.usedCount - a.usedCount || a.nameRu.localeCompare(b.nameRu, 'ru'))
@@ -59,12 +53,18 @@ export function rankAlternatives(target, pool, usage = new Map()) {
   return [...head, ...tail]
 }
 
-/** Catalog alternatives for an exercise, ranked for this user. */
+/**
+ * Close catalog alternatives for an exercise, ranked for this user: the SAME
+ * target muscle ("верх груди", not just "грудь") and the same kind of exercise
+ * (compound ↔ compound, isolation ↔ isolation). No known target — no
+ * alternatives: better none than a wrong one.
+ */
 export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
   const target = await prisma.exercise.findUnique({ where: { id: exerciseId }, select: SELECT })
-  if (!target?.primaryMuscles?.length) return []
+  const muscle = target && targetMuscle(target.slug)
+  if (!muscle) return []
   const pool = await prisma.exercise.findMany({
-    where: { id: { not: target.id }, category: target.category, primaryMuscles: { has: target.primaryMuscles[0] } },
+    where: { id: { not: target.id }, category: target.category, slug: { in: slugsWithTarget(muscle) } },
     select: SELECT,
   })
   if (!pool.length) return []
@@ -109,11 +109,11 @@ export async function updateSlot(userId, { dayIndex, mainExerciseId, exerciseId,
 
 /**
  * Fill: up to `perSlot` alternatives for every slot that has none, plus the
- * slots listed in `replace` ({ dayIndex, exerciseId }) — e.g. to refresh an
- * earlier auto-fill after the ranking improved. Filled slots are marked
+ * slots listed in `replace` ({ dayIndex, exerciseId }) and, with `refreshAuto`,
+ * every slot still marked as auto-filled — to refresh after matching improved. Filled slots are marked
  * `alternativesAuto`; a choice made by the user clears the mark.
  */
-export async function fillProgramAlternatives(userId, { perSlot = 3, replace = [] } = {}) {
+export async function fillProgramAlternatives(userId, { perSlot = 3, replace = [], refreshAuto = false } = {}) {
   const program = await activeProgram(userId)
   if (!program) return { filled: 0, slots: 0 }
   const cache = new Map()
@@ -122,6 +122,7 @@ export async function fillProgramAlternatives(userId, { perSlot = 3, replace = [
     for (const slot of day.exercises ?? []) {
       slots++
       const listed = replace.some(r => r.dayIndex === dayIndex && r.exerciseId === slot.exerciseId)
+        || (refreshAuto && slot.alternativesAuto === true)
       if (!slot.exerciseId || (slot.alternatives?.length && !listed)) continue
       if (!cache.has(slot.exerciseId)) cache.set(slot.exerciseId, await findAlternatives(userId, slot.exerciseId, { limit: perSlot }))
       const ids = cache.get(slot.exerciseId).map(e => e.id)

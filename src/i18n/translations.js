@@ -409,11 +409,14 @@ export const translations = {
 
     // Exercise detail tabs
     'exercise.askTrainer': 'Спросить про упражнение',
-    'exercise.tab.muscles': 'Мышцы',
-    'exercise.tab.instructions': 'Инструкции',
+    'exercise.tab.info': 'Инфо',
     'exercise.tab.settings': 'Настройки',
     'exercise.tab.alternatives': 'Аналоги',
     'exercise.primary': 'Основные',
+    'exercise.target': 'Целевая мышца',
+    'exercise.alsoWorks': 'Также работают',
+    'exercise.select': 'Выбрать',
+    'exercise.selectAsMain': 'Выбрать и сделать основным',
     'exercise.secondary': 'Вспомогательные',
     'exercise.settings.unit': 'Единицы веса',
     'exercise.settings.step': 'Шаг веса',
@@ -437,8 +440,6 @@ export const translations = {
     'exercise.preset.custom': 'Свой вариант',
     'exercise.characteristics': 'характеристики',
     'exercise.technique': 'техника выполнения',
-    'exercise.front': 'спереди',
-    'exercise.back': 'сзади',
 
     // Errors
     'errors.network': 'Ошибка сети. Проверь подключение',

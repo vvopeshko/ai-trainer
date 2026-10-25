@@ -88,6 +88,7 @@ export default function WorkoutPage() {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [programDayIndex, setProgramDayIndex] = useState(null)
+  const [previewAlt, setPreviewAlt] = useState(null) // alternative opened from the info sheet
   const [dismissedHints, setDismissedHints] = useState(() => new Set())
   const [startedAt, setStartedAt] = useState(null)
   const [resting, setResting] = useState(false)
@@ -1394,9 +1395,20 @@ export default function WorkoutPage() {
             onNeedLastResults={loadLastResults}
             trendById={trendById}
             unit={exerciseSettings.unit}
-            onPick={(alt, { makeMain }) => { setDetailExerciseId(null); handleSwapAlternative(alt, { makeMain }) }}
+            onPreview={setPreviewAlt}
           />
         ) : null}
+      />
+
+      {/* An alternative's description on top of the info sheet; chosen at the bottom */}
+      <ExerciseDetailSheet
+        exerciseId={previewAlt?.exerciseId}
+        open={!!previewAlt}
+        onClose={() => setPreviewAlt(null)}
+        onSelect={() => { const alt = previewAlt; setPreviewAlt(null); setDetailExerciseId(null); handleSwapAlternative(alt) }}
+        onMakeMain={currentPlanExercise && programDayIndex != null && !previewAlt?.isMain
+          ? () => { const alt = previewAlt; setPreviewAlt(null); setDetailExerciseId(null); handleSwapAlternative(alt, { makeMain: true }) }
+          : undefined}
       />
     </div>
   )
