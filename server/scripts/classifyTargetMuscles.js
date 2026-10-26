@@ -4,8 +4,8 @@
  * alternatives (same target only) and the target shown in the exercise sheet.
  *
  * One-time LLM classification, resumable: slugs already in the output file are
- * skipped. Result is committed as data/exercise-targets.json and shipped with
- * the code (no schema change, no seeding).
+ * skipped. Result is committed as data/exercise-targets.json; the seed copies it into
+ * Exercise.targetMuscle.
  *
  *   cd server && node --env-file=.env scripts/classifyTargetMuscles.js
  */
@@ -19,12 +19,8 @@ const OUT = new URL('../data/exercise-targets.json', import.meta.url)
 const BATCH = 50
 
 // Exercises created outside the seed (production catalog, no nameEn/muscles).
-const EXTRA = [
-  { slug: 'giperekstenzii-pod-45', nameRu: 'Гиперэкстензии под 45°' },
-  { slug: 'makhi-v-storony-na-bloke-odnoj-rukoj', nameRu: 'Махи в стороны на блоке одной рукой' },
-  { slug: 'palof-press-v-bloke', nameRu: 'Палоф-пресс в блоке' },
-  { slug: 'tyaga-v-trenazhere-s-uporom', nameRu: 'Тяга в тренажёре с упором' },
-]
+// Empty since they were merged into the catalog (data/exercise-merges.json).
+const EXTRA = []
 
 const SYSTEM = `Ты — эксперт по силовым тренировкам. Для каждого упражнения определи ОДНУ целевую мышцу — ту, на которую оно работает в основном (как классифицирует тренер), из списка:
 ${TARGET_MUSCLES.join(', ')}, none.

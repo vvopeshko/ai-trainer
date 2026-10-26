@@ -1,7 +1,5 @@
 import prisma from '../utils/prisma.js'
-import { targetMuscle, slugsWithTarget } from './exerciseTargets.js'
-
-const SELECT = { id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true }
+const SELECT = { id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true, targetMuscle: true }
 const MAX_ALTERNATIVES = 6
 
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x))
@@ -70,13 +68,13 @@ export function rankAlternatives(target, pool, usage = new Map()) {
  */
 export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
   const target = await prisma.exercise.findUnique({ where: { id: exerciseId }, select: SELECT })
-  const muscle = target && targetMuscle(target.slug)
+  const muscle = target?.targetMuscle
   if (!muscle) return []
   // The kind (compound/isolation) is reliable for catalog exercises only:
   // exercises created later get the default 'compound'.
   const pool = await prisma.exercise.findMany({
     where: {
-      id: { not: target.id }, slug: { in: slugsWithTarget(muscle) },
+      id: { not: target.id }, targetMuscle: muscle,
       ...(target.source === 'seed' ? { category: target.category } : { category: { in: ['compound', 'isolation'] } }),
     },
     select: SELECT,

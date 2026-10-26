@@ -6,19 +6,12 @@ const mock = vi.hoisted(() => ({
   workout: { findMany: vi.fn() },
 }))
 vi.mock('../utils/prisma.js', () => ({ default: mock }))
-// Target muscles come from the classified catalog file; tests pin them.
-const targets = vi.hoisted(() => ({ map: {} }))
-vi.mock('./exerciseTargets.js', () => ({
-  targetMuscle: slug => targets.map[slug] ?? null,
-  slugsWithTarget: t => Object.keys(targets.map).filter(s => targets.map[s] === t),
-}))
 import { rankAlternatives, findAlternatives, updateSlot, fillProgramAlternatives, makeMainHints } from './exerciseAlternatives.js'
 beforeEach(() => {
   vi.resetAllMocks()
-  targets.map = { machine: 'biceps', db: 'biceps', cable: 'biceps', machine2: 'biceps', hammer: 'biceps', press: 'biceps' }
 })
 
-const ex = (id, nameRu, primaryMuscles, equipment, source = 'seed') => ({ id, nameRu, slug: id, primaryMuscles, equipment, category: 'isolation', source })
+const ex = (id, nameRu, primaryMuscles, equipment, source = 'seed') => ({ id, nameRu, slug: id, primaryMuscles, equipment, category: 'isolation', source, targetMuscle: 'biceps' })
 const curlMachine = ex('machine', 'Сгибания в тренажёре', ['biceps'], ['machine'])
 const pool = [
   ex('db', 'Сгибания с гантелями', ['biceps'], ['dumbbell']),
@@ -41,15 +34,14 @@ it('queries exercises with the same target muscle and category and counts the us
   mock.workoutSet.groupBy.mockResolvedValue([{ exerciseId: 'cable', _count: { workoutId: 9 } }])
   const list = await findAlternatives('u1', 'machine', { limit: 2 })
   expect(mock.exercise.findMany.mock.calls[0][0].where).toEqual({
-    id: { not: 'machine' }, category: 'isolation', slug: { in: ['machine', 'db', 'cable', 'machine2', 'hammer', 'press'] },
+    id: { not: 'machine' }, category: 'isolation', targetMuscle: 'biceps',
   })
   expect(mock.workoutSet.groupBy.mock.calls[0][0].where).toMatchObject({ isWarmup: false, workout: { userId: 'u1', finishedAt: { not: null } } })
   expect(list.map(e => e.id)).toEqual(['cable', 'db'])
 })
 
 it('returns nothing when the target muscle is unknown: better none than a wrong one', async () => {
-  targets.map = {}
-  mock.exercise.findUnique.mockResolvedValue(curlMachine)
+  mock.exercise.findUnique.mockResolvedValue({ ...curlMachine, targetMuscle: null })
   expect(await findAlternatives('u1', 'machine')).toEqual([])
   expect(mock.exercise.findMany).not.toHaveBeenCalled()
 })

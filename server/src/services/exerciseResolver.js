@@ -62,8 +62,11 @@ export async function resolveExercise(input) {
   //    (регистр и ё/е не важны). Один алиас бывает у нескольких упражнений,
   //    поэтому порядок фиксирован: совпадение по названию → каталог (seed) →
   //    самое раннее. Иначе LIMIT 1 отдавал бы случайное.
+  // Slug тоже ищем среди алиасов: у слитых дублей старый slug остаётся алиасом
+  // канонического упражнения (scripts/mergeExercises.js), и LLM, помнящая
+  // 'rfess-l-db', попадает в него, а не создаёт дубль заново.
   const searchTerms = [nameEn, nameRu].filter(Boolean)
-  for (const term of searchTerms) {
+  for (const term of [...searchTerms, inputSlug].filter(Boolean)) {
     const key = term.toLowerCase().replace(/ё/g, 'е').trim()
 
     const found = await prisma.$queryRaw`

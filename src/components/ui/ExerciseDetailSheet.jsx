@@ -569,7 +569,7 @@ function InfoTab({ exercise, t }) {
         </div>
       )}
 
-      {/* Technique steps (EN fallback) */}
+      {/* Technique steps */}
       {steps.length > 0 && (
         <div>
           <SectionLabel>{t('exercise.technique')}</SectionLabel>

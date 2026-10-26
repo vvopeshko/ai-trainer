@@ -1,4 +1,5 @@
 import { exerciseSeedContent } from './exerciseSeedContent.js'
+import { targetMuscle } from '../services/exerciseTargets.js'
 
 /**
  * Enriched catalog JSON → Exercise rows, and the rules for re-seeding over a
@@ -27,20 +28,29 @@ export function mapCategory(ex) {
   return 'compound'
 }
 
+const FORCES = ['push', 'pull', 'static']
+
+/** Technique steps: Russian when translated, the source English otherwise. */
+function instructions(ex) {
+  const steps = ex.instructionsRu?.length ? ex.instructionsRu : ex.instructions
+  return Array.isArray(steps) ? steps.join('\n\n') : steps || null
+}
+
 export function mapExercise(ex) {
   return {
     slug: ex.slug,
     nameRu: ex.nameRu,
     nameEn: ex.nameEn,
     ...exerciseSeedContent(ex),
-    instructions: Array.isArray(ex.instructions)
-      ? ex.instructions.join('\n\n')
-      : ex.instructions || null,
+    instructions: instructions(ex),
     primaryMuscles: ex.primaryMuscles || [],
     secondaryMuscles: ex.secondaryMuscles || [],
     equipment: ex.equipment ? [ex.equipment] : [],
     difficulty: mapDifficulty(ex.level),
     category: mapCategory(ex),
+    targetMuscle: targetMuscle(ex.slug),
+    force: FORCES.includes(ex.force) ? ex.force : null,
+    unilateral: typeof ex.unilateral === 'boolean' ? ex.unilateral : null,
     imageUrl: ex.images?.[0] || null,
     gifUrl: ex.gifUrl || null,
     aliases: ex.aliases || [],
@@ -52,8 +62,9 @@ const isEmpty = value => value == null
   || (typeof value === 'string' && !value.trim())
   || (Array.isArray(value) && value.length === 0)
 
-// Never touched on an existing row: identity and provenance.
-const KEEP = new Set(['slug', 'source'])
+// Never touched on an existing row. `source` is never empty, so only an
+// explicit --only=source promotes an auto-created exercise into the catalog.
+const KEEP = new Set(['slug'])
 
 /**
  * Update for an existing row. Without `only`: seed values for fields that are

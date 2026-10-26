@@ -249,7 +249,7 @@ node-cron '0 4 * * *' (суточная чистка; scheduler/retention.js)
     ├── package.json
     ├── .env           # DATABASE_URL, BOT_TOKEN, ANTHROPIC_API_KEY, ...
     ├── scripts/
-    │   ├── seedExercises.js     # 924 упражнения → Exercise (npm run seed:exercises)
+    │   ├── seedExercises.js     # 880 упражнений → Exercise (npm run seed:exercises)
     │   ├── seedDevData.js       # dev user + 60 workouts + program (npm run seed:dev)
     │   ├── seedProgram.js       # PPL+Arms программа для прод-юзера
     │   ├── importWorkouts.js    # 60 тренировок из workouts.json
@@ -1099,7 +1099,8 @@ LLM → resolveExercise() → slug-match → alias-search → auto-create (sourc
 
 | Скрипт | Команда | Что делает |
 |--------|---------|-----------|
-| `seedExercises.js` | `npm run seed:exercises` | 924 упражнения из enriched-exercises.json по slug: создаёт недостающие, у существующих заполняет только пустые поля; `--only=поля` — явная перезапись |
+| `mergeExercises.js` | `node --env-file=.env scripts/mergeExercises.js [--apply]` | Слияние дублей по data/exercise-merges.json: подходы, настройки, программы → каноническое упражнение; по умолчанию dry-run |
+| `seedExercises.js` | `npm run seed:exercises` | 880 упражнений из enriched-exercises.json по slug: создаёт недостающие, у существующих заполняет только пустые поля; `--only=поля` — явная перезапись |
 | `seedDevData.js` | `npm run seed:dev` | Создаёт dev user (telegramId=0) + 60 тренировок + PPL+Arms программа |
 | `importWorkouts.js` | `node scripts/importWorkouts.js` | Импорт тренировок из workouts.json (для прод-юзера) |
 | `seedProgram.js` | `node scripts/seedProgram.js` | PPL+Arms программа для прод-юзера |

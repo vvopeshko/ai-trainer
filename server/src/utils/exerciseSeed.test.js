@@ -45,9 +45,23 @@ describe('seedUpdate', () => {
     expect(seedUpdate(existing, data, ['category'])).toEqual({ category: 'compound' })
   })
 
-  it('never erases with an empty seed value nor touches identity', () => {
-    const existing = { ...data, gifUrl: 'https://cdn/x.gif', source: 'ai_generated', slug: 'other' }
-    expect(seedUpdate(existing, data, ['gifUrl', 'source', 'slug'])).toEqual({})
+  it('never erases with an empty seed value nor touches the slug', () => {
+    const existing = { ...data, gifUrl: 'https://cdn/x.gif', slug: 'other' }
+    expect(seedUpdate(existing, data, ['gifUrl', 'slug'])).toEqual({})
+  })
+
+  it('promotes an auto-created exercise only when asked', () => {
+    const existing = { ...data, source: 'ai_generated', primaryMuscles: [] }
+    expect(seedUpdate(existing, data)).toEqual({ primaryMuscles: ['quadriceps'] })
+    expect(seedUpdate(existing, data, ['source'])).toEqual({ source: 'seed' })
+  })
+
+  it('maps target muscle, force, one-sidedness and Russian steps', () => {
+    const row = mapExercise({ slug: 'lateral-raise-machine', nameRu: 'Махи', force: 'push', unilateral: false,
+      instructions: ['Sit down.'], instructionsRu: ['Сядьте.', 'Поднимите руки.'] })
+    expect(row).toMatchObject({ targetMuscle: 'side_delt', force: 'push', unilateral: false, instructions: 'Сядьте.\n\nПоднимите руки.' })
+    expect(mapExercise({ slug: 'hamstring-stretch', force: null, instructions: ['Sit.'] }))
+      .toMatchObject({ targetMuscle: null, force: null, unilateral: null, instructions: 'Sit.' })
   })
 
   it('reports nothing when the row already matches', () => {

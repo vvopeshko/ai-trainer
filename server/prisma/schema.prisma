@@ -259,6 +259,13 @@ model Exercise {
   difficulty       ExerciseDifficulty @default(beginner)
   category         ExerciseCategory   @default(compound)
 
+  // Целевая мышца — одна зона, которую упражнение грузит в основном (точнее primaryMuscles:
+  // 'upper_chest', 'side_delt'…; список — services/exerciseTargets.js). null — растяжки,
+  // кардио, неизвестно. Источник для каталога — data/exercise-targets.json (через seed).
+  targetMuscle     String?
+  force            String?            // 'push' | 'pull' | 'static' — для баланса тяни/толкай
+  unilateral       Boolean?           // одной рукой/ногой за раз; вес и подходы — на сторону
+
   youtubeUrl       String?
   imageUrl         String?
   gifUrl           String?            // анимированная GIF-демонстрация (ExerciseDB OSS, кэшируется при seed)
@@ -276,6 +283,7 @@ model Exercise {
   workoutSets      WorkoutSet[]
 
   @@index([category])
+  @@index([targetMuscle])
   @@index([aliases], type: Gin) // поиск по массиву алиасов (unnest/@> в exerciseResolver)
 }
 
