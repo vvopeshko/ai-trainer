@@ -29,6 +29,10 @@ export function TelegramProvider({ children }) {
       try {
         webApp.ready()
         webApp.expand()
+        // Свайп вниз по контенту иначе сворачивает мини-апп вместо скролла
+        // (особенно у верха страницы). Закрыть можно по-прежнему за шапку
+        // Telegram. Bot API 7.7+, на старых клиентах метода нет — пропускаем.
+        if (webApp.isVersionAtLeast?.('7.7')) webApp.disableVerticalSwipes?.()
       } catch {
         /* ignore */
       }
