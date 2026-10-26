@@ -28,6 +28,7 @@
     "@anthropic-ai/sdk": "^0.111.0",
     "@prisma/client": "^6.2.0",
     "better-auth": "^1.6.23",
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "express": "^5.0.1",
     "express-rate-limit": "^8.5.2",

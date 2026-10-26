@@ -14,7 +14,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMapLazy.jsx'
 import { GlassAINote } from '../../components/ui/GlassAINote.jsx'
-import { useMonthStats, useYearStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight } from '../../hooks/queries.js'
+import { useYearStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight } from '../../hooks/queries.js'
 import { useCancelWorkout, useResumeWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -34,12 +34,11 @@ export default function HomePage() {
   const queryClient = useQueryClient()
   const { user } = useTelegram()
 
-  const { data: monthStats } = useMonthStats()
   const { data: yearStats } = useYearStats()
-  const { data: activeWorkoutData } = useActiveWorkoutQuery()
+  const { data: activeWorkoutData, isPending: activePending } = useActiveWorkoutQuery()
   const activeWorkout = activeWorkoutData?.workout ?? null
-  const { data: program } = useActiveProgram()
-  const { data: nextWorkoutData } = useNextWorkout()
+  const { data: program, isPending: programPending } = useActiveProgram()
+  const { data: nextWorkoutData, isPending: nextPending } = useNextWorkout()
   const nextWorkout = nextWorkoutData?.day ? nextWorkoutData : null
   const { data: progressData } = useProgress()
   const planAdherence = progressData?.planAdherence ?? null
@@ -49,7 +48,8 @@ export default function HomePage() {
   const cancelWorkoutMutation = useCancelWorkout()
   const resumeWorkoutMutation = useResumeWorkout()
 
-  const loaded = monthStats !== undefined
+  // Hero рисуем, как только есть то, что он показывает (тренировка/программа/следующий день)
+  const loaded = !activePending && !programPending && !nextPending
   const progressLoaded = progressData !== undefined
 
   const toast = useToast()

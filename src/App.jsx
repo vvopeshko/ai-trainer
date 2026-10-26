@@ -53,6 +53,11 @@ export default function App() {
         queryKey: queryKeys.progress,
         queryFn: () => apiGet('/api/v1/progress'),
       })
+      // Нужен только Progress — Home его больше не ждёт, греем в idle
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.stats.month,
+        queryFn: () => apiGet('/api/v1/stats/month'),
+      })
       queryClient.prefetchQuery({
         queryKey: queryKeys.exercises.catalog,
         queryFn: async () => {

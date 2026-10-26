@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import compression from 'compression'
 import { toNodeHandler } from 'better-auth/node'
 import { auth as betterAuth } from './auth/index.js'
 import { FRONTEND_URLS } from './utils/origins.js'
@@ -38,8 +39,15 @@ app.use(
     // Клиент Better Auth читает bearer-токен из заголовка ответа —
     // без exposedHeaders браузер его молча спрячет (net::ERR_FAILED без ошибок)
     exposedHeaders: ['set-auth-token'],
+    // Authorization/X-Timezone делают каждый запрос «непростым» → OPTIONS-preflight.
+    // Без Max-Age браузер помнит preflight 5 с, и почти каждый вызов API — два
+    // round trip. 7200 с — потолок Chrome.
+    maxAge: 7200,
   }),
 )
+
+// gzip/deflate ответов: каталог упражнений, /progress, planJson — сотни KB JSON.
+app.use(compression())
 
 // Better Auth (web-авторизация): монтаж строго ДО express.json() —
 // BA сам читает body своих запросов. Без BETTER_AUTH_SECRET выключен.
@@ -62,6 +70,9 @@ app.use(errorHandler)
 const server = app.listen(PORT, () => {
   console.log(`[api] listening on :${PORT}`)
 })
+
+// Прогрев пула: TCP+TLS+SCRAM до Neon платит старт процесса, а не первый запрос юзера.
+prisma.$connect().catch((err) => console.error('[db] warm-up connect failed:', err.message))
 
 // Telegram-бот запускается параллельно Express при наличии BOT_TOKEN.
 // В dev без токена сервер всё равно работает — можно тестировать API по dev-bypass.

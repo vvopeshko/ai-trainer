@@ -26,6 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **[product/EVIDENCE_KNOWLEDGE_BASE.md](product/EVIDENCE_KNOWLEDGE_BASE.md)** | Научная база знаний: исследования → claims → рекомендации AI-тренера и блог |
 | **[product/ARCHITECTURE_PAYMENTS.md](product/ARCHITECTURE_PAYMENTS.md)** | Платежи и подписка: hard paywall, entitlement-слой, провайдеры (Stars/ЮKassa/Tribute/Paddle). Фаза 1 (фундамент + mock) в коде за флагом `PREMIUM_GATING=off`; живые платёжки — фазы 2–5 |
 | **[product/DOMAIN_MIGRATION.md](product/DOMAIN_MIGRATION.md)** | План переезда: аппка → app.gymwithai.me, корень → сайт+блог (Astro в `site/`) |
+| **[product/PERFORMANCE_PLAN.md](product/PERFORMANCE_PLAN.md)** | Быстродействие: аудит (сеть, бэк, кэш, рендер) и план по фазам 0–4 со статусами |
 | **[product/implementation-plan.md](product/implementation-plan.md)** | План реализации экранов мини-аппа (фазы 1–6) |
 | **[product/CODESTYLE.md](product/CODESTYLE.md)** | Code style guide: именование, компоненты, стили, паттерны |
 | **[product/design/DESIGN_BRIEF.md](product/design/DESIGN_BRIEF.md)** | Дизайн-бриф (Glass UI) |

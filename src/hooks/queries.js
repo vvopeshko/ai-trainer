@@ -10,8 +10,8 @@ export function useYearStats() {
   return useQuery({
     queryKey: queryKeys.stats.year,
     queryFn: () => apiGet('/api/v1/stats/year'),
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+    // Без поллинга: счётчик меняется только финишем тренировки,
+    // а useFinishWorkout инвалидирует ['stats'].
   })
 }
 
