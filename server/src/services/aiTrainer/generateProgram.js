@@ -117,6 +117,8 @@ export async function generateProgram(userId, profile) {
   const catalog = await prisma.exercise.findMany({
     where: {
       source: { not: 'user_created' }, // свои упражнения юзеров — приватные
+      // Ядро каталога: без стронгмена и редких вариаций; null — неразмеченные (созданные резолвером)
+      OR: [{ isCore: true }, { isCore: null }],
       ...(equipmentFilter && { equipment: { hasSome: equipmentFilter } }),
     },
     select: {

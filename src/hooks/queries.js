@@ -144,8 +144,8 @@ export function useExerciseSettings() {
 // показывает каталог мгновенно, без скелетона и без 66 KB gzip по сети.
 // Версионированный ключ — при смене формы данных или состава каталога бампнуть
 // суффикс (v2: слиты дубли — в v1 остались удалённые упражнения, + popularity).
-const CATALOG_LS_KEY = 'ai-trainer:catalog-v2'
-const STALE_CATALOG_KEYS = ['ai-trainer:catalog-v1']
+const CATALOG_LS_KEY = 'ai-trainer:catalog-v3' // v3: trackingType, isCore, свои упражнения
+const STALE_CATALOG_KEYS = ['ai-trainer:catalog-v1', 'ai-trainer:catalog-v2']
 
 function readPersistedCatalog() {
   try {

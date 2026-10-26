@@ -55,6 +55,7 @@ export function mapExercise(ex) {
     movementPattern: ex.movementPattern ?? null,
     jointStress: ex.jointStress ?? [],
     stable: typeof ex.stable === 'boolean' ? ex.stable : null,
+    isCore: typeof ex.core === 'boolean' ? ex.core : null,
     imageUrl: ex.images?.[0] || null,
     gifUrl: ex.gifUrl || null,
     aliases: ex.aliases || [],

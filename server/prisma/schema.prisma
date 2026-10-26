@@ -274,6 +274,7 @@ model Exercise {
   movementPattern  String?            // horizontal_push, hinge, … — основа аналогов и баланса
   jointStress      String[]           @default([]) // ['knee', 'lower_back'] ↔ UserProfile.constraints
   stable           Boolean?           // тренажёр/блок/опора: мало стабилизации
+  isCore           Boolean?           // ядро каталога (~250): то, что ставят в обычные программы; выше в выдаче, из него генерация
 
   youtubeUrl       String?
   imageUrl         String?

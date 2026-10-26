@@ -44,7 +44,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "9090-hamstring",
@@ -90,7 +91,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "ab-crunch-machine",
@@ -133,7 +135,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "ab-roller",
@@ -182,7 +185,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "adductor",
@@ -225,7 +229,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "adductorgroin",
@@ -271,7 +276,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "advanced-kettlebell-windmill",
@@ -325,7 +331,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "air-bike",
@@ -378,7 +385,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "all-fours-quad-stretch",
@@ -426,7 +434,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternate-hammer-curl",
@@ -479,7 +488,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "alternate-heel-touchers",
@@ -527,7 +537,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternate-incline-dumbbell-curl",
@@ -580,7 +591,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "alternate-leg-diagonal-bound",
@@ -633,7 +645,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternating-cable-shoulder-press",
@@ -682,7 +695,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternating-deltoid-raise",
@@ -729,7 +743,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternating-floor-press",
@@ -782,7 +797,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "alternating-hang-clean",
@@ -837,7 +853,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternating-kettlebell-press",
@@ -887,7 +904,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternating-kettlebell-row",
@@ -936,7 +954,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "alternating-renegade-row",
@@ -990,7 +1009,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "ankle-circles",
@@ -1035,7 +1055,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "ankle-on-the-knee",
@@ -1083,7 +1104,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "anterior-tibialis-smr",
@@ -1126,7 +1148,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "anti-gravity-press",
@@ -1178,7 +1201,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "arm-circles",
@@ -1224,7 +1248,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "arnold-dumbbell-press",
@@ -1275,7 +1300,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "around-the-worlds",
@@ -1323,7 +1349,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "atlas-stone-trainer",
@@ -1378,7 +1405,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "atlas-stones",
@@ -1438,7 +1466,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "axle-deadlift",
@@ -1493,7 +1522,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "back-flyes-with-bands",
@@ -1547,7 +1577,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "backward-drag",
@@ -1599,7 +1630,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "backward-medicine-ball-throw",
@@ -1647,7 +1679,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "balance-board",
@@ -1696,7 +1729,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "ball-leg-curl",
@@ -1747,7 +1781,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "band-assisted-pull-up",
@@ -1800,7 +1835,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "band-good-morning",
@@ -1851,7 +1887,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "band-good-morning-pull-through",
@@ -1902,7 +1939,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "band-hip-adductions",
@@ -1951,7 +1989,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "band-pull-apart",
@@ -2001,7 +2040,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "band-skull-crusher",
@@ -2047,7 +2087,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-ab-rollout",
@@ -2099,7 +2140,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-ab-rollout-on-knees",
@@ -2151,7 +2193,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-bench-press-medium-grip",
@@ -2206,7 +2249,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-curls-lying-against-an-incline",
@@ -2254,7 +2298,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "barbell-deadlift",
@@ -2312,7 +2357,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-full-squat",
@@ -2371,7 +2417,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-glute-bridge",
@@ -2420,7 +2467,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "barbell-guillotine-bench-press",
@@ -2471,7 +2519,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-hack-squat",
@@ -2522,7 +2571,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-hip-thrust",
@@ -2571,7 +2621,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "barbell-incline-shoulder-raise",
@@ -2620,7 +2671,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "barbell-lunge",
@@ -2674,7 +2726,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-rear-delt-row",
@@ -2728,7 +2781,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-rollout-from-bench",
@@ -2780,7 +2834,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "barbell-seated-calf-raise",
@@ -2829,7 +2884,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "barbell-shoulder-press",
@@ -2885,7 +2941,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-shrug",
@@ -2931,7 +2988,8 @@
       "lower_back",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-shrug-behind-the-back",
@@ -2981,7 +3039,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-side-bend",
@@ -3029,7 +3088,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-side-split-squat",
@@ -3083,7 +3143,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "barbell-squat",
@@ -3139,7 +3200,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-squat-to-a-bench",
@@ -3195,7 +3257,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-step-ups",
@@ -3247,7 +3310,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "barbell-walking-lunge",
@@ -3299,7 +3363,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "battling-ropes",
@@ -3350,7 +3415,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bear-crawl-sled-drags",
@@ -3403,7 +3469,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "behind-head-chest-stretch",
@@ -3453,7 +3520,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bench-dips",
@@ -3504,7 +3572,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "bench-jump",
@@ -3558,7 +3627,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bench-press-powerlifting",
@@ -3610,7 +3680,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bench-press-with-bands",
@@ -3663,7 +3734,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bench-press-with-chains",
@@ -3714,7 +3786,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bench-sprint",
@@ -3765,7 +3838,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bent-arm-barbell-pullover",
@@ -3818,7 +3892,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "bent-arm-dumbbell-pullover",
@@ -3874,7 +3949,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "bent-knee-hip-raise",
@@ -3922,7 +3998,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "bent-over-barbell-row",
@@ -3975,7 +4052,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "bent-over-dumbbell-rear-delt-raise-with-head-on-bench",
@@ -4025,7 +4103,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "bent-over-low-pulley-side-lateral",
@@ -4077,7 +4156,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "bent-over-one-arm-long-bar-row",
@@ -4132,7 +4212,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bent-over-two-arm-long-bar-row",
@@ -4187,7 +4268,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bent-over-two-dumbbell-row",
@@ -4239,7 +4321,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "bent-over-two-dumbbell-row-with-palms-in",
@@ -4290,7 +4373,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bent-press",
@@ -4345,7 +4429,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bicycling",
@@ -4393,7 +4478,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bicycling-stationary",
@@ -4442,7 +4528,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "board-press",
@@ -4494,7 +4581,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "body-up",
@@ -4544,7 +4632,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "body-tricep-press",
@@ -4592,7 +4681,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bodyweight-flyes",
@@ -4644,7 +4734,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "bodyweight-mid-row",
@@ -4691,7 +4782,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "bodyweight-squat",
@@ -4740,7 +4832,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "bodyweight-walking-lunge",
@@ -4792,7 +4885,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "bosu-ball-cable-crunch-with-side-bends",
@@ -4846,7 +4940,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bottoms-up-clean-from-the-hang-position",
@@ -4893,7 +4988,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "bottoms-up",
@@ -4940,7 +5036,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "box-jump-multiple-response",
@@ -4991,7 +5088,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "box-skip",
@@ -5045,7 +5143,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "box-squat",
@@ -5100,7 +5199,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "box-squat-with-bands",
@@ -5157,7 +5257,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "box-squat-with-chains",
@@ -5213,7 +5314,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "brachialis-smr",
@@ -5256,7 +5358,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "bradfordrocky-presses",
@@ -5310,7 +5413,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "butt-ups",
@@ -5358,7 +5462,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "butt-lift-bridge",
@@ -5406,7 +5511,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-chest-press",
@@ -5455,7 +5561,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-crunch",
@@ -5503,7 +5610,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-deadlifts",
@@ -5557,7 +5665,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-hammer-curls-rope-attachment",
@@ -5607,7 +5716,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-hip-adduction",
@@ -5659,7 +5769,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-incline-pushdown",
@@ -5707,7 +5818,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-incline-triceps-extension",
@@ -5756,7 +5868,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-internal-rotation",
@@ -5803,7 +5916,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-iron-cross",
@@ -5849,7 +5963,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "chest_fly",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-judo-flip",
@@ -5901,7 +6016,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-lying-triceps-extension",
@@ -5949,7 +6065,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-one-arm-tricep-extension",
@@ -5998,7 +6115,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-preacher-curl",
@@ -6051,7 +6169,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-rear-delt-fly",
@@ -6098,7 +6217,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-reverse-crunch",
@@ -6145,7 +6265,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cable-rope-rear-delt-rows",
@@ -6200,7 +6321,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-russian-twists",
@@ -6255,7 +6377,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cable-seated-crunch",
@@ -6302,7 +6425,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-seated-lateral-raise",
@@ -6354,7 +6478,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "cable-shoulder-press",
@@ -6403,7 +6528,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cable-shrugs",
@@ -6449,7 +6575,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-wrist-curl",
@@ -6499,7 +6626,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "calf-machine-shoulder-shrug",
@@ -6543,7 +6671,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "calf-press",
@@ -6588,7 +6717,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "calf-press-on-the-leg-press-machine",
@@ -6634,7 +6764,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "calf-raise-on-a-dumbbell",
@@ -6680,7 +6811,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "calf-raises-with-bands",
@@ -6727,7 +6859,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "calf-stretch-elbows-against-wall",
@@ -6772,7 +6905,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "calf-stretch-hands-against-wall",
@@ -6817,7 +6951,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "calves-smr",
@@ -6864,7 +6999,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "car-deadlift",
@@ -6920,7 +7056,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "car-drivers",
@@ -6973,7 +7110,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "carioca-quick-step",
@@ -7026,7 +7164,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cat-stretch",
@@ -7072,7 +7211,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "catch-and-overhead-throw",
@@ -7122,7 +7262,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chain-handle-extension",
@@ -7168,7 +7309,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "chain-press",
@@ -7216,7 +7358,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "chair-leg-extended-stretch",
@@ -7262,7 +7405,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "chair-lower-back-stretch",
@@ -7306,7 +7450,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "chair-squat",
@@ -7361,7 +7506,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chair-upper-body-stretch",
@@ -7407,7 +7553,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "chest-and-front-of-shoulder-stretch",
@@ -7453,7 +7600,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chest-push-from-3-point-stance",
@@ -7501,7 +7649,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chest-push-multiple-response",
@@ -7552,7 +7701,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chest-push-single-response",
@@ -7601,7 +7751,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chest-push-with-run-release",
@@ -7652,7 +7803,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "chest-stretch-on-stability-ball",
@@ -7696,7 +7848,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "childs-pose",
@@ -7744,7 +7897,8 @@
       "knee",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "chin-to-chest-stretch",
@@ -7791,7 +7945,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "circus-bell",
@@ -7847,7 +8002,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean",
@@ -7910,7 +8066,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean-deadlift",
@@ -7967,7 +8124,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean-pull",
@@ -8024,7 +8182,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean-shrug",
@@ -8073,7 +8232,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean-and-jerk",
@@ -8137,7 +8297,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean-and-press",
@@ -8201,7 +8362,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clean-from-blocks",
@@ -8257,7 +8419,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "clock-push-up",
@@ -8309,7 +8472,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "close-grip-barbell-bench-press",
@@ -8363,7 +8527,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "close-grip-dumbbell-press",
@@ -8415,7 +8580,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "close-grip-ez-bar-curl-with-band",
@@ -8465,7 +8631,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "close-grip-ez-bar-press",
@@ -8516,7 +8683,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "close-grip-ez-bar-curl",
@@ -8566,7 +8734,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "close-grip-push-up-off-of-a-dumbbell",
@@ -8617,7 +8786,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "close-grip-standing-barbell-curl",
@@ -8665,7 +8835,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cocoons",
@@ -8709,7 +8880,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "conans-wheel",
@@ -8764,7 +8936,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "concentration-curls",
@@ -8813,7 +8986,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cross-body-crunch",
@@ -8860,7 +9034,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "cross-body-hammer-curl",
@@ -8910,7 +9085,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cross-over-with-bands",
@@ -8961,7 +9137,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "chest_fly",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "crossover-reverse-lunge",
@@ -9016,7 +9193,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "crucifix",
@@ -9064,7 +9242,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "crunch-hands-overhead",
@@ -9112,7 +9291,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "crunch-legs-on-exercise-ball",
@@ -9163,7 +9343,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "cuban-press",
@@ -9213,7 +9394,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dancers-stretch",
@@ -9265,7 +9447,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dead-bug",
@@ -9313,7 +9496,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "deadlift-with-bands",
@@ -9368,7 +9552,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "deadlift-with-chains",
@@ -9424,7 +9609,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "decline-barbell-bench-press",
@@ -9481,7 +9667,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "decline-close-grip-bench-to-skull-crusher",
@@ -9536,7 +9723,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "decline-crunch",
@@ -9585,7 +9773,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "decline-dumbbell-bench-press",
@@ -9641,7 +9830,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "decline-dumbbell-flyes",
@@ -9691,7 +9881,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "decline-dumbbell-triceps-extension",
@@ -9739,7 +9930,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "decline-ez-bar-triceps-extension",
@@ -9789,7 +9981,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "decline-oblique-crunch",
@@ -9841,7 +10034,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "decline-push-up",
@@ -9897,7 +10091,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "decline-reverse-crunch",
@@ -9943,7 +10138,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "decline-smith-press",
@@ -9995,7 +10191,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "deficit-deadlift",
@@ -10050,7 +10247,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "depth-jump-leap",
@@ -10105,7 +10303,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dip-machine",
@@ -10155,7 +10354,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dips-chest-version",
@@ -10207,7 +10407,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dips-triceps-version",
@@ -10258,7 +10459,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "donkey-calf-raises",
@@ -10304,7 +10506,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "double-kettlebell-alternating-hang-clean",
@@ -10360,7 +10563,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "double-kettlebell-jerk",
@@ -10422,7 +10626,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "double-kettlebell-push-press",
@@ -10473,7 +10678,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "double-kettlebell-snatch",
@@ -10523,7 +10729,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "double-kettlebell-windmill",
@@ -10575,7 +10782,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "double-leg-butt-kick",
@@ -10627,7 +10835,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "downward-facing-balance",
@@ -10671,7 +10880,8 @@
     "trackingType": "duration",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "drag-curl",
@@ -10722,7 +10932,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "drop-push",
@@ -10774,7 +10985,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-alternate-bicep-curl",
@@ -10821,7 +11033,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-bench-press-with-neutral-grip",
@@ -10869,7 +11082,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-clean",
@@ -10926,7 +11140,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-floor-press",
@@ -10972,7 +11187,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-flyes",
@@ -11023,7 +11239,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "dumbbell-incline-shoulder-raise",
@@ -11071,7 +11288,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-lunges",
@@ -11123,7 +11341,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-lying-one-arm-rear-lateral-raise",
@@ -11173,7 +11392,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-lying-pronation",
@@ -11222,7 +11442,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-lying-rear-lateral-raise",
@@ -11269,7 +11490,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "dumbbell-lying-supination",
@@ -11318,7 +11540,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-one-arm-shoulder-press",
@@ -11371,7 +11594,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-one-arm-triceps-extension",
@@ -11421,7 +11645,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-one-arm-upright-row",
@@ -11474,7 +11699,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-prone-incline-curl",
@@ -11524,7 +11750,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-raise",
@@ -11574,7 +11801,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-rear-lunge",
@@ -11625,7 +11853,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-scaption",
@@ -11673,7 +11902,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-seated-box-jump",
@@ -11724,7 +11954,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-seated-one-leg-calf-raise",
@@ -11772,7 +12003,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dumbbell-shrug",
@@ -11819,7 +12051,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-side-bend",
@@ -11865,7 +12098,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-squat",
@@ -11916,7 +12150,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-squat-to-a-bench",
@@ -11968,7 +12203,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dumbbell-step-ups",
@@ -12020,7 +12256,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "dumbbell-tricep-extension-pronated-grip",
@@ -12067,7 +12304,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "dynamic-back-stretch",
@@ -12111,7 +12349,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "dynamic-chest-stretch",
@@ -12154,7 +12393,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "ez-bar-curl",
@@ -12202,7 +12442,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "ez-bar-skullcrusher",
@@ -12249,7 +12490,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "elbow-circles",
@@ -12293,7 +12535,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "elbows-back",
@@ -12339,7 +12582,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "elevated-back-lunge",
@@ -12390,7 +12634,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "elevated-cable-rows",
@@ -12443,7 +12688,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "elliptical-trainer",
@@ -12488,7 +12734,8 @@
     "trackingType": "duration",
     "movementPattern": "cardio",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "exercise-ball-crunch",
@@ -12533,7 +12780,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "exercise-ball-pull-in",
@@ -12580,7 +12828,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "extended-range-one-arm-kettlebell-floor-press",
@@ -12628,7 +12877,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "external-rotation",
@@ -12676,7 +12926,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "external-rotation-with-band",
@@ -12724,7 +12975,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "external-rotation-with-cable",
@@ -12771,7 +13023,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "farmers-walk",
@@ -12824,7 +13077,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "fast-skipping",
@@ -12876,7 +13130,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "finger-curls",
@@ -12922,7 +13177,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "flat-bench-cable-flyes",
@@ -12973,7 +13229,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "flat-bench-leg-pull-in",
@@ -13019,7 +13276,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "flat-bench-lying-leg-raise",
@@ -13063,7 +13321,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "flexor-incline-dumbbell-curls",
@@ -13112,7 +13371,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "floor-glute-ham-raise",
@@ -13160,7 +13420,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "floor-press",
@@ -13211,7 +13472,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "floor-press-with-chains",
@@ -13263,7 +13525,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "flutter-kicks",
@@ -13312,7 +13575,8 @@
     "trackingType": "duration",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "foot-smr",
@@ -13353,7 +13617,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "forward-drag-with-press",
@@ -13404,7 +13669,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "frankenstein-squat",
@@ -13460,7 +13726,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "freehand-jump-squat",
@@ -13513,7 +13780,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "frog-hops",
@@ -13561,7 +13829,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "frog-sit-ups",
@@ -13608,7 +13877,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-barbell-squat",
@@ -13663,7 +13933,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "front-barbell-squat-to-a-bench",
@@ -13718,7 +13989,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-cable-raise",
@@ -13766,7 +14038,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "front-cone-hops-or-hurdle-hops",
@@ -13822,7 +14095,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-dumbbell-raise",
@@ -13868,7 +14142,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "front-incline-dumbbell-raise",
@@ -13914,7 +14189,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "front-leg-raises",
@@ -13959,7 +14235,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-plate-raise",
@@ -14004,7 +14281,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-raise-and-pullover",
@@ -14054,7 +14332,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-squat-clean-grip",
@@ -14108,7 +14387,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-squats-with-two-kettlebells",
@@ -14159,7 +14439,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "front-two-dumbbell-raise",
@@ -14204,7 +14485,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "full-range-of-motion-lat-pulldown",
@@ -14247,7 +14529,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "gironda-sternum-chins",
@@ -14299,7 +14582,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "glute-ham-raise",
@@ -14348,7 +14632,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "glute-kickback",
@@ -14397,7 +14682,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "goblet-squat",
@@ -14448,7 +14734,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "good-morning",
@@ -14496,7 +14783,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "good-morning-off-pins",
@@ -14543,7 +14831,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "gorilla-chincrunch",
@@ -14595,7 +14884,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "groin-and-back-stretch",
@@ -14641,7 +14931,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "groiners",
@@ -14689,7 +14980,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hack-squat",
@@ -14745,7 +15037,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "hammer-grip-incline-db-bench-press",
@@ -14802,7 +15095,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hamstring-smr",
@@ -14847,7 +15141,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "hamstring-stretch",
@@ -14890,7 +15185,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "handstand-push-ups",
@@ -14944,7 +15240,8 @@
       "wrist",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hang-clean",
@@ -15000,7 +15297,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hang-clean-below-the-knees",
@@ -15058,7 +15356,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hang-snatch",
@@ -15116,7 +15415,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hang-snatch-below-knees",
@@ -15174,7 +15474,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hanging-bar-good-morning",
@@ -15223,7 +15524,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hanging-pike",
@@ -15272,7 +15574,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "heaving-snatch-balance",
@@ -15327,7 +15630,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "heavy-bag-thrust",
@@ -15377,7 +15681,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "high-cable-curls",
@@ -15424,7 +15729,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "hip-circles-prone",
@@ -15469,7 +15775,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hip-extension-with-bands",
@@ -15516,7 +15823,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hip-flexion-with-band",
@@ -15559,7 +15867,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "lunge",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hip-lift-with-band",
@@ -15606,7 +15915,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hug-a-ball",
@@ -15652,7 +15962,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "hug-knees-to-chest",
@@ -15695,7 +16006,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hurdle-hops",
@@ -15747,7 +16059,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "hyperextensions-back-extensions",
@@ -15801,7 +16114,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "hyperextensions-with-no-hyperextension-bench",
@@ -15852,7 +16166,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "it-band-and-glute-stretch",
@@ -15894,7 +16209,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "iliotibial-tract-smr",
@@ -15938,7 +16254,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "inchworm",
@@ -15987,7 +16304,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "incline-barbell-triceps-extension",
@@ -16037,7 +16355,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "incline-bench-pull",
@@ -16088,7 +16407,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "incline-cable-chest-press",
@@ -16135,7 +16455,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "incline-cable-flye",
@@ -16186,7 +16507,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "incline-dumbbell-curl",
@@ -16230,7 +16552,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "incline-dumbbell-flyes",
@@ -16277,7 +16600,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "incline-dumbbell-flyes-with-a-twist",
@@ -16327,7 +16651,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "incline-hammer-curls",
@@ -16369,7 +16694,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "incline-inner-biceps-curl",
@@ -16415,7 +16741,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "incline-push-up",
@@ -16462,7 +16789,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "incline-push-up-close-grip",
@@ -16513,7 +16841,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "incline-push-up-depth-jump",
@@ -16565,7 +16894,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "incline-push-up-medium",
@@ -16615,7 +16945,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "incline-push-up-reverse-grip",
@@ -16669,7 +17000,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "incline-push-up-wide",
@@ -16721,7 +17053,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "intermediate-groin-stretch",
@@ -16764,7 +17097,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "intermediate-hip-flexor-and-quad-stretch",
@@ -16810,7 +17144,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "internal-rotation-with-band",
@@ -16857,7 +17192,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "inverted-row",
@@ -16906,7 +17242,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "inverted-row-with-straps",
@@ -16953,7 +17290,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "iron-cross",
@@ -16998,7 +17336,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "iron-crosses-stretch",
@@ -17046,7 +17385,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "isometric-chest-squeezes",
@@ -17095,7 +17435,8 @@
     "trackingType": "duration",
     "movementPattern": "chest_fly",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "isometric-neck-exercise-front-and-back",
@@ -17142,7 +17483,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "isometric-neck-exercise-sides",
@@ -17190,7 +17532,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "isometric-wipers",
@@ -17239,7 +17582,8 @@
     "trackingType": "duration",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "jm-press",
@@ -17288,7 +17632,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "jackknife-sit-up",
@@ -17335,7 +17680,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "janda-sit-up",
@@ -17379,7 +17725,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "jefferson-squats",
@@ -17435,7 +17782,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "jerk-balance",
@@ -17487,7 +17835,8 @@
       "shoulder",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "jerk-dip-squat",
@@ -17537,7 +17886,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "jogging-treadmill",
@@ -17584,7 +17934,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "keg-load",
@@ -17643,7 +17994,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-arnold-press",
@@ -17689,7 +18041,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-dead-clean",
@@ -17741,7 +18094,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-figure-8",
@@ -17788,7 +18142,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-hang-clean",
@@ -17841,7 +18196,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-one-legged-deadlift",
@@ -17889,7 +18245,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "kettlebell-pass-between-the-legs",
@@ -17935,7 +18292,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-pirate-ships",
@@ -17983,7 +18341,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-pistol-squat",
@@ -18036,7 +18395,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-seated-press",
@@ -18082,7 +18442,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-seesaw-press",
@@ -18130,7 +18491,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-sumo-high-pull",
@@ -18182,7 +18544,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-thruster",
@@ -18234,7 +18597,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-turkish-get-up-lunge-style",
@@ -18287,7 +18651,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-turkish-get-up-squat-style",
@@ -18343,7 +18708,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kettlebell-windmill",
@@ -18394,7 +18760,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kipping-muscle-up",
@@ -18454,7 +18821,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "knee-across-the-body",
@@ -18502,7 +18870,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "knee-circles",
@@ -18550,7 +18919,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kneehip-raise-on-parallel-bars",
@@ -18599,7 +18969,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "knee-tuck-jump",
@@ -18651,7 +19022,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kneeling-arm-drill",
@@ -18699,7 +19071,8 @@
     "trackingType": "duration",
     "movementPattern": "plyometric",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kneeling-cable-crunch-with-alternating-oblique-twists",
@@ -18754,7 +19127,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "kneeling-cable-triceps-extension",
@@ -18806,7 +19180,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "kneeling-forearm-stretch",
@@ -18850,7 +19225,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kneeling-high-pulley-row",
@@ -18896,7 +19272,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "kneeling-hip-flexor",
@@ -18941,7 +19318,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kneeling-jump-squat",
@@ -18994,7 +19372,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "kneeling-single-arm-high-pulley-row",
@@ -19041,7 +19420,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "kneeling-squat",
@@ -19093,7 +19473,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "landmine-180s",
@@ -19147,7 +19528,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "landmine-linear-jammer",
@@ -19205,7 +19587,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lateral-bound",
@@ -19259,7 +19642,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lateral-box-jump",
@@ -19314,7 +19698,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lateral-cone-hops",
@@ -19365,7 +19750,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lateral-raise-with-bands",
@@ -19415,7 +19801,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "latissimus-dorsi-smr",
@@ -19459,7 +19846,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "leg-over-floor-press",
@@ -19508,7 +19896,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "leg-up-hamstring-stretch",
@@ -19551,7 +19940,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "leg-lift",
@@ -19601,7 +19991,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "leg-pull-in",
@@ -19643,7 +20034,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "leverage-deadlift",
@@ -19687,7 +20079,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "leverage-decline-chest-press",
@@ -19735,7 +20128,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "leverage-high-row",
@@ -19783,7 +20177,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "leverage-iso-row",
@@ -19830,7 +20225,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "leverage-shoulder-press",
@@ -19876,7 +20272,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "leverage-shrug",
@@ -19925,7 +20322,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "linear-3-part-start-technique",
@@ -19976,7 +20374,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "linear-acceleration-wall-drill",
@@ -20026,7 +20425,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "linear-depth-jump",
@@ -20080,7 +20480,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "log-lift",
@@ -20139,7 +20540,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "london-bridges",
@@ -20191,7 +20593,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "looking-at-ceiling",
@@ -20236,7 +20639,8 @@
       "neck",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "low-cable-crossover",
@@ -20285,7 +20689,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "low-cable-triceps-extension",
@@ -20335,7 +20740,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "low-pulley-row-to-neck",
@@ -20389,7 +20795,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lower-back-smr",
@@ -20432,7 +20839,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lower-back-curl",
@@ -20481,7 +20889,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lunge-pass-through",
@@ -20537,7 +20946,8 @@
       "knee",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lunge-sprint",
@@ -20590,7 +21000,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-bent-leg-groin",
@@ -20637,7 +21048,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lying-cable-curl",
@@ -20689,7 +21101,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-cambered-barbell-row",
@@ -20741,7 +21154,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-close-grip-bar-curl-on-high-pulley",
@@ -20795,7 +21209,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-close-grip-barbell-triceps-extension-behind-the-head",
@@ -20844,7 +21259,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-close-grip-barbell-triceps-press-to-chin",
@@ -20893,7 +21309,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-crossover",
@@ -20941,7 +21358,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lying-dumbbell-tricep-extension",
@@ -20987,7 +21405,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "lying-face-down-plate-neck-resistance",
@@ -21035,7 +21454,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-face-up-plate-neck-resistance",
@@ -21081,7 +21501,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-glute",
@@ -21130,7 +21551,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lying-hamstring",
@@ -21177,7 +21599,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lying-high-bench-barbell-curl",
@@ -21226,7 +21649,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-machine-squat",
@@ -21281,7 +21705,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-one-arm-lateral-raise",
@@ -21331,7 +21756,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-prone-quadriceps",
@@ -21379,7 +21805,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "lying-rear-delt-raise",
@@ -21430,7 +21857,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "lying-supine-dumbbell-curl",
@@ -21482,7 +21910,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-t-bar-row",
@@ -21536,7 +21965,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "lying-triceps-press",
@@ -21585,7 +22015,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-bicep-curl",
@@ -21632,7 +22063,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-preacher-curls",
@@ -21682,7 +22114,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-triceps-extension",
@@ -21731,7 +22164,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "medicine-ball-chest-pass",
@@ -21785,7 +22219,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "medicine-ball-full-twist",
@@ -21837,7 +22272,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "medicine-ball-scoop-throw",
@@ -21889,7 +22325,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "middle-back-shrug",
@@ -21938,7 +22375,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "middle-back-stretch",
@@ -21983,7 +22421,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "mixed-grip-chin",
@@ -22035,7 +22474,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "monster-walk",
@@ -22078,7 +22518,8 @@
     "trackingType": "duration",
     "movementPattern": "hip_abduction",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "mountain-climbers",
@@ -22123,7 +22564,8 @@
     "trackingType": "duration",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "moving-claw-series",
@@ -22169,7 +22611,8 @@
     "trackingType": "duration",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "muscle-snatch",
@@ -22224,7 +22667,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "muscle-up",
@@ -22281,7 +22725,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "narrow-stance-hack-squats",
@@ -22336,7 +22781,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "narrow-stance-leg-press",
@@ -22389,7 +22835,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "narrow-stance-squats",
@@ -22443,7 +22890,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "natural-glute-ham-raise",
@@ -22495,7 +22943,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "neck-smr",
@@ -22539,7 +22988,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "neck-press",
@@ -22591,7 +23041,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "oblique-crunches",
@@ -22640,7 +23091,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "oblique-crunches-on-the-floor",
@@ -22689,7 +23141,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "olympic-squat",
@@ -22742,7 +23195,8 @@
       "knee",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "on-your-back-quad-stretch",
@@ -22789,7 +23243,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "on-your-side-quad-stretch",
@@ -22834,7 +23289,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-dumbbell-row",
@@ -22897,7 +23353,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "one-arm-flat-bench-dumbbell-flye",
@@ -22946,7 +23403,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "one-arm-high-pulley-cable-side-bends",
@@ -23000,7 +23458,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "one-arm-incline-lateral-raise",
@@ -23049,7 +23508,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-clean",
@@ -23102,7 +23562,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-clean-and-jerk",
@@ -23162,7 +23623,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-floor-press",
@@ -23210,7 +23672,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-jerk",
@@ -23265,7 +23728,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-military-press-to-the-side",
@@ -23313,7 +23777,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-para-press",
@@ -23362,7 +23827,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-push-press",
@@ -23415,7 +23881,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-row",
@@ -23461,7 +23928,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-snatch",
@@ -23515,7 +23983,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-split-jerk",
@@ -23572,7 +24041,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-split-snatch",
@@ -23627,7 +24097,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-kettlebell-swings",
@@ -23677,7 +24148,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "one-arm-long-bar-row",
@@ -23731,7 +24203,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-medicine-ball-slam",
@@ -23783,7 +24256,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-open-palm-kettlebell-clean",
@@ -23838,7 +24312,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-overhead-kettlebell-squats",
@@ -23892,7 +24367,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-side-deadlift",
@@ -23950,7 +24426,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-side-laterals",
@@ -24000,7 +24477,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "one-legged-cable-kickback",
@@ -24050,7 +24528,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "one-arm-against-wall",
@@ -24091,7 +24570,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "one-arm-chin-up",
@@ -24146,7 +24626,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-dumbbell-bench-press",
@@ -24200,7 +24681,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-dumbbell-preacher-curl",
@@ -24250,7 +24732,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "one-arm-floor-press",
@@ -24304,7 +24787,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-lat-pulldown",
@@ -24352,7 +24836,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "one-arm-pronated-dumbbell-triceps-extension",
@@ -24402,7 +24887,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-arm-supinated-dumbbell-triceps-extension",
@@ -24453,7 +24939,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-half-locust",
@@ -24502,7 +24989,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-handed-hang",
@@ -24548,7 +25036,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-knee-to-chest",
@@ -24595,7 +25084,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "one-leg-barbell-squat",
@@ -24652,7 +25142,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "open-palm-kettlebell-clean",
@@ -24706,7 +25197,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "otis-up",
@@ -24754,7 +25246,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "overhead-cable-curl",
@@ -24804,7 +25297,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "overhead-lat",
@@ -24851,7 +25345,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "overhead-slam",
@@ -24904,7 +25399,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "overhead-squat",
@@ -24965,7 +25461,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "overhead-stretch",
@@ -25012,7 +25509,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "overhead-triceps",
@@ -25058,7 +25556,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "pallof-press",
@@ -25112,7 +25611,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "pallof-press-with-rotation",
@@ -25166,7 +25666,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "palms-down-dumbbell-wrist-curl-over-a-bench",
@@ -25218,7 +25719,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "palms-down-wrist-curl-over-a-bench",
@@ -25270,7 +25772,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "palms-up-barbell-wrist-curl-over-a-bench",
@@ -25322,7 +25825,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "palms-up-dumbbell-wrist-curl-over-a-bench",
@@ -25374,7 +25878,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "pelvic-tilt-into-bridge",
@@ -25421,7 +25926,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "peroneals-smr",
@@ -25463,7 +25969,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "peroneals-stretch",
@@ -25505,7 +26012,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "physioball-hip-bridge",
@@ -25549,7 +26057,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "pin-presses",
@@ -25607,7 +26116,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "piriformis-smr",
@@ -25650,7 +26160,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "plate-pinch",
@@ -25699,7 +26210,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "plate-twist",
@@ -25749,7 +26261,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "platform-hamstring-slides",
@@ -25798,7 +26311,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "plie-dumbbell-squat",
@@ -25852,7 +26366,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "plyo-kettlebell-pushups",
@@ -25903,7 +26418,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "plyo-push-up",
@@ -25958,7 +26474,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "posterior-tibialis-stretch",
@@ -25999,7 +26516,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-clean",
@@ -26080,7 +26598,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-clean-from-blocks",
@@ -26135,7 +26654,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-jerk",
@@ -26194,7 +26714,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-partials",
@@ -26238,7 +26759,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-snatch",
@@ -26300,7 +26822,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-snatch-from-blocks",
@@ -26362,7 +26885,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "power-stairs",
@@ -26418,7 +26942,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "preacher-curl",
@@ -26468,7 +26993,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "preacher-hammer-dumbbell-curl",
@@ -26518,7 +27044,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "press-sit-up",
@@ -26571,7 +27098,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "prone-manual-hamstring",
@@ -26615,7 +27143,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "prowler-sprint",
@@ -26669,7 +27198,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "pull-through",
@@ -26718,7 +27248,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "push-up-wide",
@@ -26769,7 +27300,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "push-ups-close-triceps-position",
@@ -26820,7 +27352,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "push-ups-with-feet-on-an-exercise-ball",
@@ -26872,7 +27405,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "push-press",
@@ -26919,7 +27453,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "push-press-behind-the-neck",
@@ -26970,7 +27505,8 @@
       "neck",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "push-up-to-side-plank",
@@ -27024,7 +27560,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "pushups-close-and-wide-hand-positions",
@@ -27077,7 +27614,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "pyramid",
@@ -27119,7 +27657,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "quad-stretch",
@@ -27163,7 +27702,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "quadriceps-smr",
@@ -27206,7 +27746,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "quick-leap",
@@ -27259,7 +27800,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rack-delivery",
@@ -27310,7 +27852,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rack-pull-with-bands",
@@ -27362,7 +27905,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rack-pulls",
@@ -27412,7 +27956,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rear-leg-raises",
@@ -27458,7 +28003,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "recumbent-bike",
@@ -27505,7 +28051,8 @@
     "trackingType": "duration",
     "movementPattern": "cardio",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "return-push-from-stance",
@@ -27557,7 +28104,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-band-bench-press",
@@ -27607,7 +28155,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "reverse-band-box-squat",
@@ -27661,7 +28210,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-band-deadlift",
@@ -27715,7 +28265,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-band-power-squat",
@@ -27769,7 +28320,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-band-sumo-deadlift",
@@ -27826,7 +28378,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-barbell-curl",
@@ -27876,7 +28429,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "reverse-barbell-preacher-curls",
@@ -27927,7 +28481,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "reverse-cable-curl",
@@ -27975,7 +28530,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "reverse-crunch",
@@ -28019,7 +28575,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "reverse-flyes-with-external-rotation",
@@ -28073,7 +28630,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-grip-bent-over-rows",
@@ -28128,7 +28686,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "reverse-grip-triceps-pushdown",
@@ -28176,7 +28735,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "reverse-hyperextension",
@@ -28224,7 +28784,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "reverse-machine-flyes",
@@ -28269,7 +28830,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "reverse-plate-curls",
@@ -28317,7 +28879,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "reverse-triceps-bench-press",
@@ -28369,7 +28932,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rhomboids-smr",
@@ -28415,7 +28979,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rickshaw-carry",
@@ -28469,7 +29034,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rickshaw-deadlift",
@@ -28521,7 +29087,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "ring-dips",
@@ -28572,7 +29139,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rocket-jump",
@@ -28622,7 +29190,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rocking-standing-calf-raise",
@@ -28675,7 +29244,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rocky-pull-upspulldowns",
@@ -28731,7 +29301,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "romanian-deadlift",
@@ -28783,7 +29354,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "romanian-deadlift-from-deficit",
@@ -28832,7 +29404,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rope-climb",
@@ -28887,7 +29460,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rope-crunch",
@@ -28935,7 +29509,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "rope-jumping",
@@ -28982,7 +29557,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "rope-straight-arm-pulldown",
@@ -29027,7 +29603,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "pullover",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "round-the-world-shoulder-stretch",
@@ -29076,7 +29653,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "rowing-stationary",
@@ -29129,7 +29707,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "runners-stretch",
@@ -29174,7 +29753,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "running-treadmill",
@@ -29223,7 +29803,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "russian-twist",
@@ -29273,7 +29854,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "sandbag-load",
@@ -29332,7 +29914,8 @@
       "knee",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "scapular-pull-up",
@@ -29383,7 +29966,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "scissor-kick",
@@ -29429,7 +30013,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "scissors-jump",
@@ -29479,7 +30064,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-band-hamstring-curl",
@@ -29523,7 +30109,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-barbell-military-press",
@@ -29576,7 +30163,8 @@
       "wrist",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "seated-barbell-twist",
@@ -29624,7 +30212,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-bent-over-one-arm-dumbbell-triceps-extension",
@@ -29674,7 +30263,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-bent-over-rear-delt-raise",
@@ -29722,7 +30312,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "seated-bent-over-two-arm-dumbbell-triceps-extension",
@@ -29771,7 +30362,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-biceps",
@@ -29822,7 +30414,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-cable-shoulder-press",
@@ -29871,7 +30464,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-calf-raise",
@@ -29918,7 +30512,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-calf-stretch",
@@ -29965,7 +30560,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-close-grip-concentration-barbell-curl",
@@ -30016,7 +30612,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-dumbbell-curl",
@@ -30060,7 +30657,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "seated-dumbbell-inner-biceps-curl",
@@ -30106,7 +30704,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-dumbbell-palms-down-wrist-curl",
@@ -30156,7 +30755,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "seated-dumbbell-palms-up-wrist-curl",
@@ -30207,7 +30807,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-flat-bench-leg-pull-in",
@@ -30251,7 +30852,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-floor-hamstring-stretch",
@@ -30294,7 +30896,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-front-deltoid",
@@ -30339,7 +30942,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-glute",
@@ -30384,7 +30988,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-good-mornings",
@@ -30431,7 +31036,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-hamstring",
@@ -30475,7 +31081,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-hamstring-and-calf-stretch",
@@ -30518,7 +31125,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-head-harness-neck-resistance",
@@ -30569,7 +31177,8 @@
     "jointStress": [
       "neck"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-leg-tucks",
@@ -30613,7 +31222,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-one-arm-dumbbell-palms-down-wrist-curl",
@@ -30664,7 +31274,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-one-arm-dumbbell-palms-up-wrist-curl",
@@ -30715,7 +31326,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-one-arm-cable-pulley-rows",
@@ -30778,7 +31390,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-overhead-stretch",
@@ -30826,7 +31439,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "seated-palm-up-barbell-wrist-curl",
@@ -30874,7 +31488,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-palms-down-barbell-wrist-curl",
@@ -30923,7 +31538,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-side-lateral-raise",
@@ -30970,7 +31586,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-triceps-press",
@@ -31018,7 +31635,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-two-arm-palms-up-low-pulley-wrist-curl",
@@ -31071,7 +31689,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "see-saw-press-alternating-side-press",
@@ -31124,7 +31743,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "shotgun-row",
@@ -31174,7 +31794,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "shoulder-circles",
@@ -31218,7 +31839,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "shoulder-press-with-bands",
@@ -31267,7 +31889,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "shoulder-raise",
@@ -31308,7 +31931,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "shoulder-stretch",
@@ -31349,7 +31973,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "side-lying-floor-stretch",
@@ -31391,7 +32016,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "side-hop-sprint",
@@ -31441,7 +32067,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "side-jackknife",
@@ -31481,7 +32108,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "side-laterals-to-front-raise",
@@ -31529,7 +32157,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "side-leg-raises",
@@ -31572,7 +32201,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_abduction",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "side-lying-groin-stretch",
@@ -31617,7 +32247,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "side-neck-stretch",
@@ -31658,7 +32289,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "side-standing-long-jump",
@@ -31708,7 +32340,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "side-to-side-chins",
@@ -31764,7 +32397,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "side-wrist-pull",
@@ -31805,7 +32439,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "side-to-side-box-shuffle",
@@ -31855,7 +32490,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-arm-cable-crossover",
@@ -31901,7 +32537,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "chest_fly",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "single-arm-linear-jammer",
@@ -31953,7 +32590,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-arm-push-up",
@@ -32004,7 +32642,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-cone-sprint-drill",
@@ -32054,7 +32693,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-leg-high-box-squat",
@@ -32103,7 +32743,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-leg-hop-progression",
@@ -32154,7 +32795,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-leg-lateral-hop",
@@ -32205,7 +32847,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-leg-leg-extension",
@@ -32253,7 +32896,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "single-leg-stride-jump",
@@ -32302,7 +32946,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-dumbbell-raise",
@@ -32350,7 +32995,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-leg-butt-kick",
@@ -32399,7 +33045,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "single-leg-glute-bridge",
@@ -32445,7 +33092,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "single-leg-push-off",
@@ -32492,7 +33140,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sit-up",
@@ -32542,7 +33191,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "sit-squats",
@@ -32590,7 +33240,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "skating",
@@ -32640,7 +33291,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sled-drag-harness",
@@ -32689,7 +33341,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sled-overhead-backward-walk",
@@ -32737,7 +33390,8 @@
       "shoulder",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sled-overhead-triceps-extension",
@@ -32784,7 +33438,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sled-push",
@@ -32834,7 +33489,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sled-reverse-flye",
@@ -32884,7 +33540,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sled-row",
@@ -32933,7 +33590,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sledgehammer-swings",
@@ -32988,7 +33646,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "smith-incline-shoulder-raise",
@@ -33036,7 +33695,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shrug",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-behind-the-back-shrug",
@@ -33085,7 +33745,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-bench-press",
@@ -33136,7 +33797,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "smith-machine-bent-over-row",
@@ -33190,7 +33852,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-calf-raise",
@@ -33235,7 +33898,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "smith-machine-close-grip-bench-press",
@@ -33288,7 +33952,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-decline-press",
@@ -33339,7 +34004,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-hang-power-clean",
@@ -33397,7 +34063,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-hip-raise",
@@ -33445,7 +34112,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-leg-press",
@@ -33494,7 +34162,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-one-arm-upright-row",
@@ -33544,7 +34213,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-overhead-shoulder-press",
@@ -33595,7 +34265,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "smith-machine-pistol-squat",
@@ -33645,7 +34316,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-reverse-calf-raises",
@@ -33694,7 +34366,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-squat",
@@ -33749,7 +34422,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "smith-machine-stiff-legged-deadlift",
@@ -33799,7 +34473,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-machine-upright-row",
@@ -33850,7 +34525,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "smith-single-leg-split-squat",
@@ -33905,7 +34581,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "snatch",
@@ -33965,7 +34642,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "snatch-balance",
@@ -34021,7 +34699,8 @@
       "wrist",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "snatch-deadlift",
@@ -34075,7 +34754,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "snatch-pull",
@@ -34133,7 +34813,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "snatch-shrug",
@@ -34181,7 +34862,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "snatch-from-blocks",
@@ -34241,7 +34923,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "speed-band-overhead-triceps",
@@ -34288,7 +34971,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "speed-box-squat",
@@ -34341,7 +35025,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "speed-squats",
@@ -34396,7 +35081,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "spell-caster",
@@ -34448,7 +35134,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "spider-crawl",
@@ -34499,7 +35186,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "spider-curl",
@@ -34549,7 +35237,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "spinal-stretch",
@@ -34598,7 +35287,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "split-clean",
@@ -34660,7 +35350,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "split-jerk",
@@ -34716,7 +35407,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "split-jump",
@@ -34767,7 +35459,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "split-snatch",
@@ -34829,7 +35522,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "split-squat-with-dumbbells",
@@ -34891,7 +35585,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "split-squats",
@@ -34940,7 +35635,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "squat-jerk",
@@ -34994,7 +35690,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "squat-with-bands",
@@ -35048,7 +35745,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "squat-with-chains",
@@ -35100,7 +35798,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "squat-with-plate-movers",
@@ -35160,7 +35859,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "squats-with-bands",
@@ -35214,7 +35914,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "stairmaster",
@@ -35263,7 +35964,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "standing-alternating-dumbbell-press",
@@ -35311,7 +36013,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-barbell-calf-raise",
@@ -35360,7 +36063,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-barbell-press-behind-neck",
@@ -35413,7 +36117,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-bent-over-one-arm-dumbbell-triceps-extension",
@@ -35465,7 +36170,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-bent-over-two-arm-dumbbell-triceps-extension",
@@ -35512,7 +36218,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-biceps-stretch",
@@ -35558,7 +36265,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-bradford-press",
@@ -35610,7 +36318,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-cable-chest-press",
@@ -35660,7 +36369,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "standing-cable-lift",
@@ -35712,7 +36422,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "standing-cable-wood-chop",
@@ -35763,7 +36474,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "standing-calf-raises",
@@ -35808,7 +36520,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "standing-concentration-curl",
@@ -35857,7 +36570,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-dumbbell-calf-raise",
@@ -35901,7 +36615,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "calf_raise",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-dumbbell-press",
@@ -35948,7 +36663,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-dumbbell-reverse-curl",
@@ -35997,7 +36713,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-dumbbell-straight-arm-front-delt-raise-above-head",
@@ -36044,7 +36761,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-dumbbell-triceps-extension",
@@ -36092,7 +36810,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-dumbbell-upright-row",
@@ -36143,7 +36862,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-elevated-quad-stretch",
@@ -36187,7 +36907,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-front-barbell-raise-over-head",
@@ -36236,7 +36957,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-gastrocnemius-calf-stretch",
@@ -36281,7 +37003,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-hamstring-and-calf-stretch",
@@ -36323,7 +37046,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-hip-circles",
@@ -36370,7 +37094,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-hip-flexors",
@@ -36412,7 +37137,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-inner-biceps-curl",
@@ -36460,7 +37186,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-lateral-stretch",
@@ -36505,7 +37232,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-leg-curl",
@@ -36550,7 +37278,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "standing-long-jump",
@@ -36600,7 +37329,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-low-pulley-deltoid-raise",
@@ -36651,7 +37381,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-low-pulley-one-arm-triceps-extension",
@@ -36695,7 +37426,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_extension",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-olympic-plate-hand-squeeze",
@@ -36746,7 +37478,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-one-arm-cable-curl",
@@ -36792,7 +37525,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-one-arm-dumbbell-curl-over-incline-bench",
@@ -36839,7 +37573,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "standing-one-arm-dumbbell-triceps-extension",
@@ -36888,7 +37623,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-overhead-barbell-triceps-extension",
@@ -36936,7 +37672,8 @@
       "elbow",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-palm-in-one-arm-dumbbell-press",
@@ -36987,7 +37724,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-palms-in-dumbbell-press",
@@ -37035,7 +37773,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-palms-up-barbell-behind-the-back-wrist-curl",
@@ -37083,7 +37822,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-pelvic-tilt",
@@ -37127,7 +37867,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-rope-crunch",
@@ -37173,7 +37914,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-soleus-and-achilles-stretch",
@@ -37215,7 +37957,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-toe-touches",
@@ -37260,7 +38003,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-towel-triceps-extension",
@@ -37307,7 +38051,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "standing-two-arm-overhead-throw",
@@ -37358,7 +38103,8 @@
       "elbow",
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "star-jump",
@@ -37411,7 +38157,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "step-up-with-knee-raise",
@@ -37460,7 +38207,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "step-mill",
@@ -37509,7 +38257,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "stiff-legged-barbell-deadlift",
@@ -37560,7 +38309,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "stiff-legged-dumbbell-deadlift",
@@ -37611,7 +38361,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "stiff-leg-barbell-good-morning",
@@ -37665,7 +38416,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "stomach-vacuum",
@@ -37710,7 +38462,8 @@
     "trackingType": "duration",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "straight-arm-dumbbell-pullover",
@@ -37762,7 +38515,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "straight-bar-bench-mid-rows",
@@ -37812,7 +38566,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "straight-raises-on-incline-bench",
@@ -37859,7 +38614,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "stride-jump-crossover",
@@ -37909,7 +38665,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sumo-deadlift",
@@ -37965,7 +38722,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "sumo-deadlift-with-bands",
@@ -38023,7 +38781,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "sumo-deadlift-with-chains",
@@ -38081,7 +38840,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "superman",
@@ -38128,7 +38888,8 @@
     "trackingType": "duration",
     "movementPattern": "hinge",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "supine-chest-throw",
@@ -38178,7 +38939,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "supine-one-arm-overhead-throw",
@@ -38228,7 +38990,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "supine-two-arm-overhead-throw",
@@ -38279,7 +39042,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "suspended-fallout",
@@ -38334,7 +39098,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "suspended-push-up",
@@ -38386,7 +39151,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "suspended-reverse-crunch",
@@ -38431,7 +39197,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "suspended-row",
@@ -38483,7 +39250,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "suspended-split-squat",
@@ -38537,7 +39305,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "svend-press",
@@ -38585,7 +39354,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "chest_fly",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "t-bar-row-with-handle",
@@ -38640,7 +39410,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "tate-press",
@@ -38691,7 +39462,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "the-straddle",
@@ -38737,7 +39509,8 @@
     "jointStress": [
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "thigh-abductor",
@@ -38783,7 +39556,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_abduction",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "tire-flip",
@@ -38841,7 +39615,8 @@
       "knee",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "toe-touchers",
@@ -38889,7 +39664,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "torso-rotation",
@@ -38933,7 +39709,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_rotation",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "trail-runningwalking",
@@ -38983,7 +39760,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "trap-bar-deadlift",
@@ -39035,7 +39813,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "tricep-dumbbell-kickback",
@@ -39082,7 +39861,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "tricep-side-stretch",
@@ -39127,7 +39907,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "triceps-pushdown",
@@ -39175,7 +39956,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "triceps-pushdown-v-bar-attachment",
@@ -39221,7 +40003,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "triceps-stretch",
@@ -39266,7 +40049,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "tuck-crunch",
@@ -39313,7 +40097,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "two-arm-dumbbell-preacher-curl",
@@ -39358,7 +40143,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "two-arm-kettlebell-clean",
@@ -39410,7 +40196,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "two-arm-kettlebell-military-press",
@@ -39458,7 +40245,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "two-arm-kettlebell-row",
@@ -39506,7 +40294,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "underhand-cable-pulldowns",
@@ -39560,7 +40349,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "upper-back-leg-grab",
@@ -39605,7 +40395,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "upper-back-stretch",
@@ -39648,7 +40439,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "upright-row-with-bands",
@@ -39698,7 +40490,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "upward-stretch",
@@ -39742,7 +40535,8 @@
     "trackingType": "duration",
     "movementPattern": "stretch",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "v-bar-pulldown",
@@ -39796,7 +40590,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "v-bar-pullup",
@@ -39848,7 +40643,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "vertical-swing",
@@ -39900,7 +40696,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "walking-treadmill",
@@ -39947,7 +40744,8 @@
     "trackingType": "distance",
     "movementPattern": "cardio",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "weighted-ball-hyperextension",
@@ -39997,7 +40795,8 @@
     "jointStress": [
       "lower_back"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "weighted-ball-side-bend",
@@ -40047,7 +40846,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "core_stability",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "weighted-bench-dip",
@@ -40100,7 +40900,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "weighted-crunches",
@@ -40146,7 +40947,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "weighted-jump-squat",
@@ -40199,7 +41001,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "weighted-pull-ups",
@@ -40250,7 +41053,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "weighted-sissy-squat",
@@ -40300,7 +41104,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "weighted-sit-ups-with-bands",
@@ -40346,7 +41151,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "weighted-squat",
@@ -40399,7 +41205,8 @@
       "lower_back",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wide-grip-barbell-bench-press",
@@ -40449,7 +41256,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "wide-grip-decline-barbell-bench-press",
@@ -40501,7 +41309,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "wide-grip-decline-barbell-pullover",
@@ -40554,7 +41363,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "wide-grip-pulldown-behind-the-neck",
@@ -40608,7 +41418,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "wide-grip-rear-pull-up",
@@ -40661,7 +41472,8 @@
       "shoulder",
       "neck"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wide-grip-standing-barbell-curl",
@@ -40711,7 +41523,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wide-stance-barbell-squat",
@@ -40766,7 +41579,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wide-stance-stiff-legs",
@@ -40816,7 +41630,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wind-sprints",
@@ -40863,7 +41678,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "windmills",
@@ -40913,7 +41729,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "worlds-greatest-stretch",
@@ -40963,7 +41780,8 @@
       "hip",
       "knee"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wrist-circles",
@@ -41009,7 +41827,8 @@
     "jointStress": [
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wrist-roller",
@@ -41060,7 +41879,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "wrist-rotations-with-straight-bar",
@@ -41107,7 +41927,8 @@
       "wrist",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "yoke-walk",
@@ -41162,7 +41983,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "zercher-squats",
@@ -41217,7 +42039,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "zottman-curl",
@@ -41270,7 +42093,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": false
   },
   {
     "slug": "zottman-preacher-curl",
@@ -41322,7 +42146,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "crunches",
@@ -41369,7 +42194,8 @@
     "trackingType": "bodyweight_reps",
     "movementPattern": "core_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "lateral-raise-machine",
@@ -41417,7 +42243,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-chest-press",
@@ -41472,7 +42299,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "smith-machine-incline-bench-press",
@@ -41522,7 +42350,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "dip",
@@ -41574,7 +42403,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "lat-pulldown-wide",
@@ -41632,7 +42462,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "hanging-leg-raises",
@@ -41680,7 +42511,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "leg-press",
@@ -41732,7 +42564,8 @@
       "knee",
       "hip"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "prone-leg-curl",
@@ -41782,7 +42615,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "triceps-extension-rope",
@@ -41838,7 +42672,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-row",
@@ -41892,7 +42727,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "straight-arm-pulldown",
@@ -41939,7 +42775,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "pullover",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "cable-face-pull",
@@ -41985,7 +42822,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "rear_delt",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "incline-row-db",
@@ -42039,7 +42877,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "seated-leg-extension",
@@ -42088,7 +42927,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "triceps-pulldown-rope",
@@ -42139,7 +42979,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_extension",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "biceps-curl-cable",
@@ -42189,7 +43030,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "hammer-curl-db",
@@ -42242,7 +43084,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "pull-up",
@@ -42295,7 +43138,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "adductor-machine",
@@ -42345,7 +43189,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "hip_adduction",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-incline-press",
@@ -42397,7 +43242,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_push",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "chin-up",
@@ -42448,7 +43294,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "lat-pulldown-narrow",
@@ -42503,7 +43350,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "vertical_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-shoulder-fly",
@@ -42546,7 +43394,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "shoulder_abduction",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "machine-chest-fly",
@@ -42601,7 +43450,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "chest_fly",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "biceps-curl-db",
@@ -42651,7 +43501,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "upright-row-cable",
@@ -42705,7 +43556,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "bench-press-db",
@@ -42759,7 +43611,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "seated-row-wide",
@@ -42808,7 +43661,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "reverse-curl-barbell",
@@ -42857,7 +43711,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "one-arm-biceps-curl-machine",
@@ -42903,7 +43758,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "elbow_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "push-up",
@@ -42955,7 +43811,8 @@
       "shoulder",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "upright-row-barbell",
@@ -43009,7 +43866,8 @@
       "elbow",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "biceps-curl-barbell",
@@ -43062,7 +43920,8 @@
     "jointStress": [
       "elbow"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "front-plank",
@@ -43110,7 +43969,8 @@
       "lower_back",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "box-jump",
@@ -43164,7 +44024,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "pli-squat",
@@ -43217,7 +44078,8 @@
       "knee",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "goblet-squat-db",
@@ -43267,7 +44129,8 @@
       "knee",
       "wrist"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "side-plank-l-r",
@@ -43318,7 +44181,8 @@
       "wrist",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "bench-pullover-db",
@@ -43370,7 +44234,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "overhead-press-seated-db",
@@ -43426,7 +44291,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "standing-cable-crossover",
@@ -43480,7 +44346,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "reverse-fly-db",
@@ -43538,7 +44405,8 @@
       "lower_back",
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "lateral-raise-db",
@@ -43588,7 +44456,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "seated-leg-curl",
@@ -43632,7 +44501,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "knee_flexion",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "shoulder-press-machine",
@@ -43686,7 +44556,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "incline-bench-db",
@@ -43740,7 +44611,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "leg-raises-lying",
@@ -43786,7 +44658,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "incline-bench-press-barbell",
@@ -43842,7 +44715,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": false
+    "stable": false,
+    "core": true
   },
   {
     "slug": "biceps-curl-incline-barbell",
@@ -43889,7 +44763,8 @@
       "shoulder",
       "elbow"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "tyaga-v-trenazhere-s-uporom",
@@ -43932,7 +44807,8 @@
     "trackingType": "weight_reps",
     "movementPattern": "horizontal_pull",
     "jointStress": [],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "assisted-pull-up-machine",
@@ -43975,7 +44851,8 @@
     "jointStress": [
       "shoulder"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "hip-thrust-machine",
@@ -44018,7 +44895,8 @@
       "lower_back",
       "hip"
     ],
-    "stable": true
+    "stable": true,
+    "core": true
   },
   {
     "slug": "pendulum-squat",
@@ -44061,7 +44939,8 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   },
   {
     "slug": "belt-squat",
@@ -44104,6 +44983,7 @@
     "jointStress": [
       "knee"
     ],
-    "stable": true
+    "stable": true,
+    "core": false
   }
 ]

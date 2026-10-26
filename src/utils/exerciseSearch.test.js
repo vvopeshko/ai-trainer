@@ -79,3 +79,16 @@ describe('isStretchOrCardio', () => {
     expect(isStretchOrCardio({ category: 'compound' })).toBe(false)
   })
 })
+
+describe('catalog core', () => {
+  it('puts core exercises above rare ones when popularity is equal', () => {
+    const list = [ex('Жим Тейта'), ex('Жим JM'), ex('Жим ногами', { isCore: true })]
+    expect(searchExercises(list, 'жим').map(e => e.nameRu)[0]).toBe('Жим ногами')
+    expect(byPopularity(list).map(e => e.nameRu)[0]).toBe('Жим ногами')
+  })
+
+  it('keeps own exercises first and popularity above the core flag', () => {
+    const list = [ex('Б', { isCore: true }), ex('А', { popularity: 2 }), ex('Моё', { own: true })]
+    expect(byPopularity(list).map(e => e.nameRu)).toEqual(['Моё', 'А', 'Б'])
+  })
+})

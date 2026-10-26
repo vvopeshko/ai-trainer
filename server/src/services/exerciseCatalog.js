@@ -65,7 +65,7 @@ export async function catalogResponse({ muscle, limit }) {
         id: true, slug: true, nameRu: true, nameEn: true,
         primaryMuscles: true, secondaryMuscles: true, equipment: true,
         difficulty: true, category: true, gifUrl: true, aliases: true,
-        targetMuscle: true, unilateral: true, trackingType: true,
+        targetMuscle: true, unilateral: true, trackingType: true, isCore: true,
       },
     }),
     exercisePopularity(),

@@ -7,7 +7,8 @@
  *   start in the name · 3 query inside the name · 4 all words in the name ·
  *   5 matched only via English name / aliases;
  * ties: more popular first (catalog `popularity` — how many people do it; the
- * server search has no such tie-break), then shorter name, then alphabetical.
+ * server search has no such tie-break), then the catalog core (`isCore` — what
+ * ordinary gym programs use), then shorter name, then alphabetical.
  */
 
 export const normalizeSearch = s => (s ?? '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim()
@@ -37,15 +38,17 @@ export function searchExercises(exercises, query) {
     .filter(r => r.rank !== null)
     .sort((a, b) => a.rank - b.rank
       || (b.ex.popularity ?? 0) - (a.ex.popularity ?? 0)
+      || (b.ex.isCore ? 1 : 0) - (a.ex.isCore ? 1 : 0)
       || (a.ex.nameRu?.length ?? 0) - (b.ex.nameRu?.length ?? 0)
       || (a.ex.nameRu ?? '').localeCompare(b.ex.nameRu ?? '', 'ru'))
     .map(r => r.ex)
 }
 
-/** Catalog browsing order without a query: own exercises, popular, then alphabetical. */
+/** Catalog browsing order without a query: own exercises, popular, the core, then alphabetical. */
 export function byPopularity(exercises) {
   return [...exercises].sort((a, b) => (b.own ? 1 : 0) - (a.own ? 1 : 0)
     || (b.popularity ?? 0) - (a.popularity ?? 0)
+    || (b.isCore ? 1 : 0) - (a.isCore ? 1 : 0)
     || (a.nameRu ?? '').localeCompare(b.nameRu ?? '', 'ru'))
 }
 
