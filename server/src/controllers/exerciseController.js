@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { findAlternatives } from '../services/exerciseAlternatives.js'
+import { exerciseImages } from '../utils/exerciseImages.js'
 
 /**
  * Популярность: сколько пользователей делают упражнение — записывали подходы
@@ -66,14 +67,15 @@ export async function list(req, res) {
 /**
  * GET /api/v1/exercises/:id
  *
- * Полные данные одного упражнения (включая instructions, description, typicalMistakes).
+ * Полные данные одного упражнения (включая instructions, description, typicalMistakes)
+ * и `images` — абсолютные URL кадров (начало/конец движения) для показа без GIF.
  */
 export async function getById(req, res) {
   const exercise = await prisma.exercise.findUnique({
     where: { id: req.params.id },
   })
   if (!exercise) return res.status(404).json({ error: 'Exercise not found' })
-  res.json({ exercise })
+  res.json({ exercise: { ...exercise, images: exerciseImages(exercise.imageUrl) } })
 }
 
 /** Search text: lower case, ё → е, single spaces (same as src/utils/exerciseSearch.js). */

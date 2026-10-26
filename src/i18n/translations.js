@@ -439,6 +439,7 @@ export const translations = {
     'exercise.tab.alternatives': 'Аналоги',
     'exercise.primary': 'Основные',
     'exercise.target': 'Целевая мышца',
+    'exercise.photos': 'Фото',
     'exercise.alsoWorks': 'Также работают',
     'exercise.select': 'Выбрать',
     'exercise.selectAsMain': 'Выбрать и сделать основным',

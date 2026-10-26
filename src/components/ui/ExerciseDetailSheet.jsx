@@ -230,6 +230,59 @@ function DemoMedia({ url, alt, isVideo }) {
   )
 }
 
+// ─── FramesMedia ─────────────────────────────────────────────────────
+
+const FRAME_MS = 1200
+
+// Start/end photos when there is no GIF: both frames are stacked and crossfade,
+// so they read as the movement. Reduced motion: no autoplay, a tap switches.
+function FramesMedia({ images, alt, label }) {
+  const [frame, setFrame] = useState(0)
+  useEffect(() => {
+    if (images.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const id = setInterval(() => setFrame(f => (f + 1) % images.length), FRAME_MS)
+    return () => clearInterval(id)
+  }, [images.length])
+
+  return (
+    <button
+      type="button"
+      onClick={() => setFrame(f => (f + 1) % images.length)}
+      aria-label={alt}
+      style={{
+        aspectRatio: '4/3', borderRadius: 16, overflow: 'hidden', position: 'relative',
+        padding: 0, cursor: images.length > 1 ? 'pointer' : 'default', width: '100%',
+        background: 'radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,0.06), rgba(255,255,255,0.015))',
+        border: '1px solid rgba(255,255,255,0.07)',
+      }}
+    >
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          loading={i === 0 ? 'eager' : 'lazy'}
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+            opacity: i === frame ? 1 : 0, transition: 'opacity 300ms ease',
+          }}
+        />
+      ))}
+      <div style={{
+        position: 'absolute', bottom: 10, left: 10,
+        display: 'flex', alignItems: 'center', gap: 5,
+        height: 24, padding: '0 10px', borderRadius: 999,
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'hsl(var(--accent-h),55%,55%)' }} />
+        <span style={{ fontSize: 10.5, color: 'var(--fg-primary)', fontWeight: 500 }}>{label}</span>
+      </div>
+    </button>
+  )
+}
+
 // ─── VideoRow ────────────────────────────────────────────────────────
 
 function VideoRow({ videos }) {
@@ -511,7 +564,8 @@ function NumberField({ value, onChange, suffix }) {
 // One screen: what it looks like, which muscles it works, how to do it.
 function InfoTab({ exercise, t }) {
   const videos = exercise.videos || []
-  const hasMedia = exercise.gifUrl
+  const frames = exercise.gifUrl ? [] : exercise.images ?? []
+  const hasMedia = exercise.gifUrl || frames.length > 0
   const steps = exercise.instructions
     ? exercise.instructions.split('\n').map(s => s.trim()).filter(Boolean)
     : []
@@ -520,13 +574,15 @@ function InfoTab({ exercise, t }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* GIF / Video preview */}
-      {hasMedia && (
+      {/* GIF / Video preview; start/end photos when there is none */}
+      {exercise.gifUrl ? (
         <DemoMedia
           url={exercise.gifUrl}
           alt={exercise.nameRu}
           isVideo={isVideoUrl(exercise.gifUrl)}
         />
+      ) : frames.length > 0 && (
+        <FramesMedia key={frames[0]} images={frames} alt={exercise.nameRu} label={t('exercise.photos')} />
       )}
 
       <MusclesSection exercise={exercise} t={t} />
