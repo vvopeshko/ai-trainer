@@ -14,6 +14,7 @@ import { loadBodyMap, loadExerciseDetailSheet } from './components/ui/lazyChunks
 
 const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
+const WorkoutPreviewPage = lazy(() => import('./pages/Main/WorkoutPreviewPage.jsx'))
 const ProgramEditPage = lazy(() => import('./pages/Main/ProgramEditPage.jsx'))
 const LibraryPage = lazy(() => import('./pages/Main/LibraryPage.jsx'))
 const MePage = lazy(() => import('./pages/Main/MePage.jsx'))
@@ -57,6 +58,7 @@ export default function App() {
       import('./pages/Main/LibraryPage.jsx')
       import('./pages/Main/MePage.jsx')
       import('./pages/Main/SummaryPage.jsx') // сразу после «Завершить»
+      import('./pages/Main/WorkoutPreviewPage.jsx') // тап по карточке на главной
       loadBodyMap()
       loadExerciseDetailSheet()
       queryClient.prefetchQuery({
@@ -84,6 +86,7 @@ export default function App() {
 
         {/* Full-screen flows */}
         <Route path="/workout" element={<WorkoutPage />} />
+        <Route path="/workout/preview" element={<Suspense fallback={<PageSkeleton />}><WorkoutPreviewPage /></Suspense>} />
         <Route path="/program/:id" element={<Suspense fallback={<PageSkeleton />}><ProgramEditPage /></Suspense>} />
         <Route path="/summary/:id" element={<Suspense fallback={<PageSkeleton />}><SummaryPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={null}><DesignSystemDemo /></Suspense>} />

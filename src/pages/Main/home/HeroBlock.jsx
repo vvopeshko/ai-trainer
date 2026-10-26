@@ -25,7 +25,7 @@ function HeroTimer({ workout }) {
 
 export function HeroBlock({
   user, annualCount, onShowGoal, program, nextWorkout, activeWorkout, doneDates,
-  onStart, onContinue, onResume, onCancel, onPickDay, onNotifications, loading,
+  onStart, onContinue, onResume, onCancel, onPickDay, onNotifications, onPreview, loading,
 }) {
   const { t } = useTranslation()
   const plural = PLURAL_RU
@@ -38,6 +38,7 @@ export function HeroBlock({
     return sum + sets * 1.5 + (sets - 1) * (ex.restSec || 90) / 60
   }, 0) || 0)
   const canPickDay = !isActive && program?.planJson?.days?.length > 0
+  const cardAction = isActive ? (isPaused ? null : onContinue) : day && !loading ? onPreview : null
 
   return (
     <div className="home-hero">
@@ -58,7 +59,10 @@ export function HeroBlock({
         </div>
       </header>
       <WeekCalendar doneDates={doneDates} />
-      <Glass className="home-hero__workout" style={{ background: 'var(--home-card-bg)', border: '1px solid var(--home-card-border)', boxShadow: 'var(--home-card-shadow)', borderRadius: 20 }}>
+      <Glass className="home-hero__workout"
+        // Тап по карточке (мимо кнопок): идёт тренировка — открыть её, нет — посмотреть день без старта
+        onClick={cardAction && ((e) => { if (!e.target.closest('button')) cardAction() })}
+        style={{ background: 'var(--home-card-bg)', border: '1px solid var(--home-card-border)', boxShadow: 'var(--home-card-shadow)', borderRadius: 20, cursor: cardAction ? 'pointer' : undefined }}>
         <img className="home-hero__photo" src="/workout-hero.jpg" alt="" fetchPriority="high" />
         <div className="home-hero__shade" />
         <div className="home-hero__workout-content">

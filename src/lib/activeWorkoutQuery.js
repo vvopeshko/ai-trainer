@@ -1,4 +1,4 @@
-import { apiGet } from '../utils/api.js'
+import { apiGet, apiPost } from '../utils/api.js'
 import { queryKeys } from './queryKeys.js'
 
 // Only this read gets a longer startup budget. Never retry writes: a timed-out
@@ -42,4 +42,15 @@ export function activeWorkoutSignature(data) {
     (w.sets ?? []).map((s) => s.id),
     (data.planExercises ?? []).map((pe) => pe.exerciseId),
   ])
+}
+
+// Старт тренировки: ответ POST — та же форма, что GET /active (тренировка + план
+// дня), кладём его в кэш, и WorkoutPage открывается без запроса и скелетона.
+// Есть незавершённая — сервер вернёт её (resumed), а не создаст вторую.
+export async function startWorkout(queryClient, { programId, programDayIndex } = {}) {
+  const body = programId ? { programId, programDayIndex } : {}
+  const { workout, planExercises, planDayTitle } = await apiPost('/api/v1/workouts', body)
+  const payload = { workout, planExercises, planDayTitle }
+  queryClient.setQueryData(queryKeys.workouts.active, payload)
+  return payload
 }

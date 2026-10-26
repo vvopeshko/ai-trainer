@@ -8,7 +8,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { apiPost } from '../../utils/api.js'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
@@ -17,6 +16,7 @@ import { GlassAINote } from '../../components/ui/GlassAINote.jsx'
 import { useYearStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight, programDetailQueryOptions } from '../../hooks/queries.js'
 import { useCancelWorkout, useResumeWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
+import { startWorkout } from '../../lib/activeWorkoutQuery.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 
@@ -61,15 +61,7 @@ export default function HomePage() {
   const handleStart = async (programId, dayIndex) => {
     setStarting(true)
     try {
-      const body = {}
-      if (programId) {
-        body.programId = programId
-        body.programDayIndex = dayIndex
-      }
-      // Ответ старта — та же форма, что GET /active (тренировка + план дня):
-      // кладём в кэш, и WorkoutPage открывается сразу, без скелетона
-      const { workout, planExercises, planDayTitle } = await apiPost('/api/v1/workouts', body)
-      queryClient.setQueryData(queryKeys.workouts.active, { workout, planExercises, planDayTitle })
+      await startWorkout(queryClient, { programId, programDayIndex: dayIndex })
       navigate('/workout')
     } catch (err) {
       console.error('Failed to start workout:', err)
@@ -153,6 +145,7 @@ export default function HomePage() {
           onResume={handleResume}
           onCancel={() => setConfirmCancel(true)}
           onPickDay={() => setShowDayPicker(true)}
+          onPreview={() => navigate('/workout/preview')}
           onNotifications={() => navigate('/me')}
           loading={starting}
         />
