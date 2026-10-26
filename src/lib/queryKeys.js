@@ -24,6 +24,9 @@ export const queryKeys = {
     history: (id) => ['exerciseHistory', id],
     // Under the 'exerciseHistory' prefix: finishing/deleting a workout invalidates it too.
     overview: ['exerciseHistory', 'overview'],
+    // Прошлые подходы (batch-last-results) — копится по мере тренировки; под тем
+    // же префиксом: финиш инвалидирует, и следующая тренировка возьмёт свежие
+    lastResults: ['exerciseHistory', 'lastResults'],
     alternatives: (id) => ['exercises', 'alternatives', id],
     detail:   (id) => ['exercises', 'detail', id],
     settings: ['exercises', 'settings'],

@@ -6,7 +6,7 @@ import { Icon } from '../../../components/ui/Icon.jsx'
  * MyPlanSection — компактная карточка "Мой план": прогресс недели + статус.
  * Вся карточка — кнопка, ведёт в детали программы.
  */
-export function MyPlanSection({ planAdherence, program, onProgramTap }) {
+export function MyPlanSection({ planAdherence, program, onProgramTap, onProgramIntent }) {
   const { t } = useTranslation()
 
   const planned = planAdherence?.planned || program?.planJson?.days?.length || 0
@@ -46,6 +46,7 @@ export function MyPlanSection({ planAdherence, program, onProgramTap }) {
       <button
         type="button"
         onClick={onProgramTap}
+        onPointerDown={onProgramIntent}
         aria-label={`${t('home.planDetails')}: ${t('home.weekProgressA11y', { done, n: planned })}`}
         style={{
           display: 'block',

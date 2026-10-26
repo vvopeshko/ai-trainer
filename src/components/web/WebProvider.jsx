@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TelegramContext } from '../TelegramProvider.jsx'
 import { authClient } from '../../utils/authClient.js'
+import { clearPersistedQueries } from '../../lib/queryPersistence.js'
 import { tokenStorage } from '../../utils/tokenStorage.js'
 
 // Auth-гейт web-платформы. Поставляет TelegramContext-совместимое значение
@@ -30,16 +31,23 @@ export function WebProvider({ children }) {
   const isPublic = PUBLIC_PREFIXES.some((p) => location.pathname.startsWith(p))
 
   // status: 'checking' | 'authed' | 'dev' | 'anonymous'
-  const [state, setState] = useState(() =>
-    tokenStorage.get()
-      ? { status: 'checking', user: null }
-      : import.meta.env.DEV
-        ? { status: 'dev', user: DEV_MOCK_USER }
-        : { status: 'anonymous', user: null },
-  )
+  // Токен + профиль прошлой сессии → сразу 'authed' (рендер без ожидания сети),
+  // getSession сверяет фоном. Профиля нет (первый вход) — честный 'checking'.
+  const [state, setState] = useState(() => {
+    if (tokenStorage.get()) {
+      const cachedUser = tokenStorage.getUser()
+      return cachedUser ? { status: 'authed', user: cachedUser } : { status: 'checking', user: null }
+    }
+    return import.meta.env.DEV
+      ? { status: 'dev', user: DEV_MOCK_USER }
+      : { status: 'anonymous', user: null }
+  })
+
+  // Сессию сверяем один раз на старте, если есть токен
+  const [needsCheck] = useState(() => !!tokenStorage.get())
 
   useEffect(() => {
-    if (state.status !== 'checking') return
+    if (!needsCheck) return
     let cancelled = false
     authClient
       .getSession()
@@ -49,21 +57,24 @@ export function WebProvider({ children }) {
           // BA-поля name/image замаплены на firstName/photoUrl на сервере,
           // но клиентский getSession отдаёт канонические имена BA
           const u = data.user
-          setState({
-            status: 'authed',
-            user: {
-              id: u.id,
-              firstName: u.name || '',
-              lastName: null,
-              username: null,
-              languageCode: u.languageCode ?? 'ru',
-              photoUrl: u.image ?? null,
-              email: u.email,
-              emailVerified: u.emailVerified,
-            },
-          })
+          const user = {
+            id: u.id,
+            firstName: u.name || '',
+            lastName: null,
+            username: null,
+            languageCode: u.languageCode ?? 'ru',
+            photoUrl: u.image ?? null,
+            email: u.email,
+            emailVerified: u.emailVerified,
+          }
+          tokenStorage.setUser(user)
+          // Тот же профиль (частый случай) — не трогаем state, без лишнего ре-рендера
+          setState((prev) => (prev.status === 'authed' && JSON.stringify(prev.user) === JSON.stringify(user)
+            ? prev
+            : { status: 'authed', user }))
         } else {
           tokenStorage.clear()
+          clearPersistedQueries()
           setState(
             import.meta.env.DEV
               ? { status: 'dev', user: DEV_MOCK_USER }
@@ -73,13 +84,14 @@ export function WebProvider({ children }) {
       })
       .catch(() => {
         // Сеть/сервер недоступны — токен не трогаем, пробуем рендерить:
-        // TanStack Query покажет свои ошибки, сессия может быть валидной
-        if (!cancelled) setState({ status: 'authed', user: null })
+        // TanStack Query покажет свои ошибки, сессия может быть валидной.
+        // Профиль из прошлой сессии (если был) оставляем.
+        if (!cancelled) setState((prev) => (prev.status === 'authed' ? prev : { status: 'authed', user: null }))
       })
     return () => {
       cancelled = true
     }
-  }, [state.status])
+  }, [needsCheck])
 
   // Редирект на логин — только приватные пути и только вне DEV
   useEffect(() => {
@@ -99,7 +111,7 @@ export function WebProvider({ children }) {
   )
 
   if (state.status === 'checking' && !isPublic) {
-    return null // мгновенная проверка сессии; splash из index.html ещё виден
+    return null // первый вход: проверка сессии; splash из index.html ещё виден (его прячет App)
   }
   if (state.status === 'anonymous' && !isPublic) {
     return null // сейчас произойдёт redirect на /login

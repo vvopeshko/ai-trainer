@@ -9,6 +9,7 @@ import { usePlatform } from '../../contexts/PlatformContext.jsx'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
 import { authClient } from '../../utils/authClient.js'
+import { clearPersistedQueries } from '../../lib/queryPersistence.js'
 import { tokenStorage } from '../../utils/tokenStorage.js'
 import { TelegramLoginWidget } from '../../components/web/TelegramLoginWidget.jsx'
 import { canInstall, subscribeInstall, promptInstall, isStandalone, isIOS } from '../../utils/installPrompt.js'
@@ -188,6 +189,7 @@ export default function MePage() {
       await apiDelete('/api/v1/auth/sessions')
       if (isWeb) {
         tokenStorage.clear()
+        clearPersistedQueries()
         window.location.replace('/login')
       } else {
         setAccNotice(t('accounts.logoutAllDone'))
@@ -200,6 +202,7 @@ export default function MePage() {
   function logout() {
     authClient.signOut().finally(() => {
       tokenStorage.clear()
+      clearPersistedQueries()
       window.location.replace('/login')
     })
   }

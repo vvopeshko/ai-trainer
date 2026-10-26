@@ -78,7 +78,7 @@ function RecentListSkeleton() {
 
 // SwipeRow, formatDuration, formatDateLine, WEEKDAYS_RU — imported from shared modules
 
-function RecentList({ workouts, onDelete, onTap }) {
+function RecentList({ workouts, onDelete, onTap, onIntent }) {
   const { t } = useTranslation()
 
   if (!workouts || workouts.length === 0) return null
@@ -105,6 +105,7 @@ function RecentList({ workouts, onDelete, onTap }) {
             <SwipeRow key={w.id} onDelete={() => onDelete(w.id)}>
               <div
                 onClick={() => onTap(w)}
+                onPointerDown={() => onIntent?.(w)}
                 style={{
                   padding: '12px 14px',
                   borderBottom: i < workouts.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
@@ -466,15 +467,21 @@ export default function ProgressPage() {
     deleteWorkoutMutation.mutate(id)
   }
 
+  const workoutDetailOptions = (id) => ({
+    queryKey: queryKeys.workouts.detail(id),
+    queryFn: () => apiGet(`/api/v1/workouts/${id}`),
+    staleTime: Infinity,
+  })
+
+  // Касание строки — детали грузятся, пока палец не отпущен
+  const handleWorkoutIntent = (w) => queryClient.prefetchQuery(workoutDetailOptions(w.id))
+
   const handleTapWorkout = async (w) => {
     setSelectedWorkout(w)
-    setWorkoutDetail(null)
+    // Уже в кэше — сразу, без кадра скелетона
+    setWorkoutDetail(queryClient.getQueryData(queryKeys.workouts.detail(w.id))?.workout ?? null)
     try {
-      const data = await queryClient.fetchQuery({
-        queryKey: queryKeys.workouts.detail(w.id),
-        queryFn: () => apiGet(`/api/v1/workouts/${w.id}`),
-        staleTime: Infinity,
-      })
+      const data = await queryClient.fetchQuery(workoutDetailOptions(w.id))
       setWorkoutDetail(data.workout)
     } catch {
       // Ошибка загрузки: закрываем шит (иначе он вечно висит на скелетоне) и показываем toast
@@ -636,7 +643,7 @@ export default function ProgressPage() {
       </BottomSheet>
 
       {/* Recent workouts */}
-      <RecentList workouts={recent} onDelete={id => setDeletingWorkoutId(id)} onTap={handleTapWorkout} />
+      <RecentList workouts={recent} onDelete={id => setDeletingWorkoutId(id)} onTap={handleTapWorkout} onIntent={handleWorkoutIntent} />
 
       <ConfirmDialog
         open={!!deletingWorkoutId}

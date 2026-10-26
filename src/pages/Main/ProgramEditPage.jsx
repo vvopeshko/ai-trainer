@@ -46,8 +46,9 @@ export default function ProgramEditPage() {
   const { data: allPrograms = [] } = useProgramList()
 
   // Local state for editable program (initialized from fetched data)
-  const [program, setProgram] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Программа уже в кэше (prefetch по касанию / прошлый визит) — без скелетона
+  const [program, setProgram] = useState(() => fetchedProgram ?? null)
+  const [loading, setLoading] = useState(() => !fetchedProgram)
   const [error, setError] = useState(null)
 
   // Edits (lazy copy on first mutation)

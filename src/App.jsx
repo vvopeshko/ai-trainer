@@ -3,12 +3,14 @@ import { Routes, Route } from 'react-router-dom'
 import TabLayout from './components/layout/TabLayout.jsx'
 import HomePage from './pages/Main/HomePage.jsx'
 import WorkoutPage from './pages/Main/WorkoutPage.jsx'
-import { useExerciseSettings } from './hooks/queries.js'
+import { useExerciseSettings, exerciseCatalogQueryOptions } from './hooks/queries.js'
 import { queryClient } from './lib/queryClient.js'
 import { queryKeys } from './lib/queryKeys.js'
 import { apiGet } from './utils/api.js'
 import { Skeleton } from './components/ui/Skeleton.jsx'
 import { BillingGate } from './components/BillingGate.jsx'
+import { hideSplash } from './utils/splash.js'
+import { loadBodyMap, loadExerciseDetailSheet } from './components/ui/lazyChunks.js'
 
 const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
@@ -43,12 +45,20 @@ export default function App() {
   // Early sync of exercise settings from server → localStorage
   useExerciseSettings()
 
+  // Провайдеры пропустили до App — контент есть, splash больше не нужен
+  // (без rAF: в фоновой вкладке он не срабатывает, а эффект и так после отрисовки)
+  useEffect(hideSplash, [])
+
   // Prefetch lazy tab chunks + data during idle time
   useEffect(() => {
     const idle = typeof requestIdleCallback === 'function' ? requestIdleCallback : setTimeout
     idle(() => {
       import('./pages/Main/ProgressPage.jsx')
       import('./pages/Main/LibraryPage.jsx')
+      import('./pages/Main/MePage.jsx')
+      import('./pages/Main/SummaryPage.jsx') // сразу после «Завершить»
+      loadBodyMap()
+      loadExerciseDetailSheet()
       queryClient.prefetchQuery({
         queryKey: queryKeys.progress,
         queryFn: () => apiGet('/api/v1/progress'),
@@ -58,14 +68,7 @@ export default function App() {
         queryKey: queryKeys.stats.month,
         queryFn: () => apiGet('/api/v1/stats/month'),
       })
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.exercises.catalog,
-        queryFn: async () => {
-          const d = await apiGet('/api/v1/exercises?limit=1500')
-          return d.exercises || []
-        },
-        staleTime: 24 * 60 * 60_000,
-      })
+      queryClient.prefetchQuery(exerciseCatalogQueryOptions())
     })
   }, [])
 

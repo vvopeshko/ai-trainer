@@ -22,3 +22,24 @@ export function fetchActiveWorkout(queryClient) {
   // is managed by QueryClient, not by a page unmount that might affect Home.
   return queryClient.fetchQuery({ ...activeWorkoutQueryOptions(), staleTime: 0 })
 }
+
+// Кэш активной тренировки — источник мгновенного рендера WorkoutPage, поэтому
+// держим в нём подходы актуальными: добавленный/удалённый на странице сет
+// сразу отражается в кэше (без ожидания рефетча).
+export function patchActiveWorkoutSets(queryClient, workoutId, update) {
+  queryClient.setQueryData(queryKeys.workouts.active, (old) => {
+    if (!old?.workout || old.workout.id !== workoutId) return old
+    return { ...old, workout: { ...old.workout, sets: update(old.workout.sets ?? []) } }
+  })
+}
+
+// Отпечаток серверного состояния: совпал — фоновая сверка ничего не меняет.
+export function activeWorkoutSignature(data) {
+  const w = data?.workout
+  if (!w) return 'none'
+  return JSON.stringify([
+    w.id, w.pausedAt ?? null, w.totalPausedMs ?? 0, w.programDayIndex ?? null,
+    (w.sets ?? []).map((s) => s.id),
+    (data.planExercises ?? []).map((pe) => pe.exerciseId),
+  ])
+}

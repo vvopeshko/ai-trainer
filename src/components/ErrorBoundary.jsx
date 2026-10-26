@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { hideSplash } from '../utils/splash.js'
 
 /**
  * React Error Boundary — ловит JS-ошибки в дереве компонентов.
@@ -15,6 +16,7 @@ export class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    hideSplash() // App не смонтирован — иначе splash закрывал бы экран ошибки
     console.error('[ErrorBoundary]', error, errorInfo)
   }
 

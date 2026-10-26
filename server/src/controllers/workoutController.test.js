@@ -87,7 +87,7 @@ describe('create', () => {
     expect(mockPrisma.workout.delete).toHaveBeenCalledWith({ where: { id: 'old-w' } })
     expect(mockPrisma.workout.create).toHaveBeenCalled()
     expect(res.statusCode).toBe(201)
-    expect(res.body).toEqual({ workout: created, resumed: false })
+    expect(res.body).toEqual({ workout: created, planExercises: null, planDayTitle: null, resumed: false })
   })
 
   it('resumes an existing active workout that already has sets (no delete/create)', async () => {
@@ -100,7 +100,7 @@ describe('create', () => {
 
     expect(mockPrisma.workout.delete).not.toHaveBeenCalled()
     expect(mockPrisma.workout.create).not.toHaveBeenCalled()
-    expect(res.body).toEqual({ workout: existing, resumed: true })
+    expect(res.body).toEqual({ workout: existing, planExercises: null, planDayTitle: null, resumed: true })
   })
 
   it('retries the transaction once on a P2034 serialization failure', async () => {
@@ -124,7 +124,7 @@ describe('create', () => {
 
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(2)
     expect(res.statusCode).toBe(201)
-    expect(res.body).toEqual({ workout: created, resumed: false })
+    expect(res.body).toEqual({ workout: created, planExercises: null, planDayTitle: null, resumed: false })
   })
 
   it('gives up after retries exhausted and rethrows persistent P2034', async () => {
@@ -195,6 +195,8 @@ describe('create', () => {
     })
     const created = { id: 'new-w', programId: PROGRAM_ID, programDayIndex: 1, sets: [] }
     mockPrisma.workout.create.mockResolvedValue(created)
+    mockPrisma.workoutPlanOverride.findUnique.mockResolvedValue(null)
+    mockPrisma.workout.findMany.mockResolvedValue([])
 
     const req = mockReq({ body: { programId: PROGRAM_ID, programDayIndex: 1 } })
     const res = mockRes()
@@ -205,7 +207,7 @@ describe('create', () => {
       include: { sets: true },
     })
     expect(res.statusCode).toBe(201)
-    expect(res.body).toEqual({ workout: created, resumed: false })
+    expect(res.body).toEqual({ workout: created, planExercises: [], planDayTitle: 'B', resumed: false })
   })
 })
 

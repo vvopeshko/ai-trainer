@@ -90,10 +90,11 @@ export async function create(req, res) {
   }
 
   if (result.error) return res.status(result.status).json({ error: result.error })
-  if (result.resumed) return res.json({ workout: result.workout, resumed: true })
+  const payload = await activeWorkoutPayload(req.user.id, result.workout)
+  if (result.resumed) return res.json({ ...payload, resumed: true })
 
   track(req.user.id, 'workout_started', { workoutId: result.workout.id })
-  res.status(201).json({ workout: result.workout, resumed: false })
+  res.status(201).json({ ...payload, resumed: false })
 }
 
 /**
@@ -110,6 +111,15 @@ export async function getActive(req, res) {
     },
   })
 
+  res.json(await activeWorkoutPayload(req.user.id, workout))
+}
+
+/**
+ * Ответ «активная тренировка»: сама тренировка + план дня (с оверрайдом,
+ * подсказками и аналогами). Общий для GET /active и POST / — фронт кладёт
+ * ответ старта прямо в кэш и открывает тренировку без повторного запроса.
+ */
+async function activeWorkoutPayload(userId, workout) {
   // Если тренировка привязана к программе — вернуть план дня
   let planExercises = null
   let planDayTitle = null
@@ -118,7 +128,7 @@ export async function getActive(req, res) {
     // Программа и разовый оверрайд зависят только от workout — читаем параллельно
     const [program, override] = await Promise.all([
       prisma.program.findFirst({
-        where: { id: workout.programId, userId: req.user.id },
+        where: { id: workout.programId, userId: userId },
         select: { planJson: true },
       }),
       // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b):
@@ -126,7 +136,7 @@ export async function getActive(req, res) {
       prisma.workoutPlanOverride.findUnique({
         where: {
           userId_programId_dayIndex: {
-            userId: req.user.id,
+            userId: userId,
             programId: workout.programId,
             dayIndex: workout.programDayIndex,
           },
@@ -136,7 +146,7 @@ export async function getActive(req, res) {
     ])
     const day = program?.planJson?.days?.[workout.programDayIndex]
     if (day) {
-      planExercises = override ? override.exercises : day.exercises
+      planExercises = (override ? override.exercises : day.exercises) ?? []
       planDayTitle = day.title
 
       // Slot identity survives a swap during the workout; "make it main?" hint
@@ -144,7 +154,7 @@ export async function getActive(req, res) {
       // Подсказка ссылается на id из alternatives, поэтому оба запроса — параллельно.
       const allAltIds = planExercises.flatMap(pe => pe.alternatives || [])
       const [hints, altExercises] = await Promise.all([
-        makeMainHints(req.user.id, workout.programId, workout.programDayIndex, planExercises),
+        makeMainHints(userId, workout.programId, workout.programDayIndex, planExercises),
         allAltIds.length > 0
           ? prisma.exercise.findMany({
             where: { id: { in: allAltIds } },
@@ -175,7 +185,7 @@ export async function getActive(req, res) {
     }
   }
 
-  res.json({ workout, planExercises, planDayTitle })
+  return { workout, planExercises, planDayTitle }
 }
 
 /**

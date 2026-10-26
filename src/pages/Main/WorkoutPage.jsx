@@ -27,7 +27,7 @@ import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheetLazy
 import { getExerciseSettings } from '../../utils/weightUnit.js'
 import { SwipeRow } from '../../components/ui/SwipeRow.jsx'
 import { useQueryClient } from '@tanstack/react-query'
-import { fetchActiveWorkout } from '../../lib/activeWorkoutQuery.js'
+import { fetchActiveWorkout, patchActiveWorkoutSets, activeWorkoutSignature } from '../../lib/activeWorkoutQuery.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { useFinishWorkout, useCancelWorkout } from '../../hooks/mutations.js'
 import { useActiveWorkout } from '../../contexts/ActiveWorkoutContext.jsx'
@@ -99,7 +99,15 @@ export default function WorkoutPage() {
   const [loading, setLoading] = useState(true)
   const [expandedExerciseId, setExpandedExerciseId] = useState(null)
   const [expandedDoneIndex, setExpandedDoneIndex] = useState(null)
-  const [lastResultsCache, setLastResultsCache] = useState({})
+  // Прошлые результаты переживают уход с экрана: повторный вход не ждёт сеть
+  // и не дёргает предзаполненный вес. Инвалидированные (финиш) — не берём.
+  const [lastResultsCache, setLastResultsCache] = useState(() => {
+    const cached = queryClient.getQueryState(queryKeys.exercises.lastResults)
+    return cached && !cached.isInvalidated ? cached.data ?? {} : {}
+  })
+  useEffect(() => {
+    if (Object.keys(lastResultsCache).length) queryClient.setQueryData(queryKeys.exercises.lastResults, lastResultsCache)
+  }, [lastResultsCache, queryClient])
   const [partialSets, setPartialSets] = useState({}) // { exerciseId: [...sets] }
   const pendingDeletionsRef = useRef(new Set()) // tempId'ы сетов, удалённых до ответа POST
   const pendingSetPostsRef = useRef(new Set()) // in-flight POST'ы сетов (finish их дожидается)
@@ -261,28 +269,38 @@ export default function WorkoutPage() {
         ...(restored.planExercises ?? []).map(pe => pe.exerciseId),
         ...(restored.currentExercise ? [restored.currentExercise.id] : []),
       ])]
-      if (ids.length) {
-        apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: ids })
-          .then(r => { if (!cancelled) setLastResultsCache(r.results) })
+      const missing = ids.filter(id => !lastResultsCache[id])
+      if (missing.length) {
+        apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: missing })
+          .then(r => { if (!cancelled) setLastResultsCache(prev => ({ ...prev, ...r.results })) })
           .catch(() => {})
       }
     }
 
-    setLoading(true)
+    // Есть тренировка в кэше (Home, старт, прошлый визит, персист) — рисуем сразу,
+    // без скелетона, и сверяемся с сервером фоном: кэш мог отстать (другое
+    // устройство). Разошлось — применяем серверную правду.
+    const cached = queryClient.getQueryData(queryKeys.workouts.active)
+    const shownFromCache = !!cached?.workout
+    if (shownFromCache) {
+      applyData(cached)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     setLoadError(false)
-    // The cache may predate the last recorded set or a pause made on Home.
     fetchActiveWorkout(queryClient)
       .then(data => {
-        if (!cancelled) {
-          applyData(data)
-          setLoading(false)
-        }
+        if (cancelled) return
+        if (!shownFromCache || activeWorkoutSignature(data) !== activeWorkoutSignature(cached)) applyData(data)
+        setLoading(false)
       })
       .catch(error => {
         if (!cancelled) {
           // No tokens, response bodies or workout data in diagnostics.
           console.warn('[workout] active load failed', { name: error?.name, status: error?.status })
-          setLoadError(true)
+          // Показали кэш — оставляем его; ошибка только если показывать нечего
+          if (!shownFromCache) setLoadError(true)
           setLoading(false)
         }
       })
@@ -307,7 +325,9 @@ export default function WorkoutPage() {
   const pendingDeletesRef = useRef(new Set())
   const deleteSetOnServer = (setId) => {
     if (!setId || !workoutId) return
-    const request = apiDelete(`/api/v1/workouts/${workoutId}/sets/${setId}`).catch(() => {
+    const request = apiDelete(`/api/v1/workouts/${workoutId}/sets/${setId}`).then(() => {
+      patchActiveWorkoutSets(queryClient, workoutId, sets => sets.filter(s => s.id !== setId))
+    }, () => {
       failedDeletionsRef.current.push(setId)
       toast.show(t('errors.network'))
     })
@@ -318,12 +338,12 @@ export default function WorkoutPage() {
   // ── Ensure workout exists ──
   const ensureWorkout = async () => {
     if (workoutId) return workoutId
-    const { workout } = await apiPost('/api/v1/workouts', {})
+    const { workout, planExercises: plan, planDayTitle: title } = await apiPost('/api/v1/workouts', {})
     setWorkoutId(workout.id)
     setStartedAt(new Date(workout.startedAt).getTime())
-    // Кэш активной тренировки устарел (там workout: null) — без инвалидации
-    // Home до 30с показывал бы «нет тренировки».
-    queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
+    // Кэш активной тренировки устарел (там workout: null): ответ старта — та же
+    // форма, что GET /active, кладём его вместо рефетча
+    queryClient.setQueryData(queryKeys.workouts.active, { workout, planExercises: plan, planDayTitle: title })
     return workout.id
   }
 
@@ -498,6 +518,8 @@ export default function WorkoutPage() {
           deleteSetOnServer(set.id)
           return
         }
+
+        patchActiveWorkoutSets(queryClient, workoutId, sets => [...sets, set])
 
         // Патчим id по tempId (не по позиции)
         setDoneSets(prev => prev.map(s =>
@@ -730,7 +752,10 @@ export default function WorkoutPage() {
       if (workout) {
         setPausedAt(workout.pausedAt ? new Date(workout.pausedAt).getTime() : null)
         setTotalPausedMs(workout.totalPausedMs || 0)
-        queryClient.setQueryData(queryKeys.workouts.active, old => ({ ...old, workout }))
+        // Ответ PATCH может прийти без подходов — не теряем их в кэше
+        queryClient.setQueryData(queryKeys.workouts.active, old => ({
+          ...old, workout: { ...old?.workout, ...workout, sets: workout.sets ?? old?.workout?.sets },
+        }))
       }
       if (failed) toast.show(t('errors.network'))
       return !failed

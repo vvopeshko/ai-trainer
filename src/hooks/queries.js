@@ -81,8 +81,8 @@ export function useProgramList() {
   })
 }
 
-export function useProgramDetail(id) {
-  return useQuery({
+export function programDetailQueryOptions(id) {
+  return {
     queryKey: queryKeys.programs.detail(id),
     queryFn: async () => {
       const d = await apiGet('/api/v1/programs/' + id)
@@ -90,7 +90,11 @@ export function useProgramDetail(id) {
     },
     enabled: !!id,
     staleTime: 10 * 60_000,
-  })
+  }
+}
+
+export function useProgramDetail(id) {
+  return useQuery(programDetailQueryOptions(id))
 }
 
 // ─── Progress ────────────────────────────────────────────────────────
@@ -159,8 +163,18 @@ function writePersistedCatalog(data) {
   } catch { /* quota / приватный режим — не критично, просто не кэшируем */ }
 }
 
-export function useExerciseCatalog() {
-  return useQuery({
+// Парсим localStorage один раз на сессию (~320 KB JSON — дорого делать в рендере)
+let persistedCatalog
+function persistedCatalogOnce() {
+  if (persistedCatalog === undefined) persistedCatalog = readPersistedCatalog()
+  return persistedCatalog
+}
+
+// Общие опции: и хук, и idle-prefetch в App создают query одинаково — с гидрацией
+// из localStorage. Иначе prefetch без initialData создавал query первым, и
+// сохранённый каталог игнорировался (качался заново на каждом старте).
+export function exerciseCatalogQueryOptions() {
+  return {
     queryKey: queryKeys.exercises.catalog,
     queryFn: async () => {
       const d = await apiGet('/api/v1/exercises?limit=1500')
@@ -169,12 +183,17 @@ export function useExerciseCatalog() {
       return list
     },
     staleTime: 24 * 60 * 60_000, // 24 hours
+    gcTime: Infinity, // ушли из Library — повторный разбор не нужен
     // Гидрация из localStorage: initialDataUpdatedAt = момент прошлого фетча,
     // поэтому react-query сам решит, свежий ли кэш (нет рефетча) или пора
     // ревалидировать фоном (>24ч) — без мигания скелетона.
-    initialData: () => readPersistedCatalog()?.data,
-    initialDataUpdatedAt: () => readPersistedCatalog()?.ts,
-  })
+    initialData: () => persistedCatalogOnce()?.data,
+    initialDataUpdatedAt: () => persistedCatalogOnce()?.ts,
+  }
+}
+
+export function useExerciseCatalog() {
+  return useQuery(exerciseCatalogQueryOptions())
 }
 
 export function useExerciseDetail(exerciseId) {
@@ -236,10 +255,19 @@ export function useExerciseAlternatives(id, enabled = true) {
 }
 
 export function useExerciseHistory(id) {
+  const queryClient = useQueryClient()
+
   return useQuery({
     queryKey: queryKeys.exercises.history(id),
     queryFn: () => apiGet(`/api/v1/exercises/${id}/history`),
     enabled: !!id,
     staleTime: 60_000,
+    // Обзор прогресса уже несёт ту же историю (та же форма сессий) для недавних
+    // упражнений — показываем её сразу, пока летит точный запрос
+    placeholderData: () => {
+      const overview = queryClient.getQueryData(queryKeys.exercises.overview)
+      const entry = overview?.exercises?.find(ex => ex.id === id)
+      return entry ? { workouts: entry.workouts, hasMore: false, experienceLevel: overview.experienceLevel } : undefined
+    },
   })
 }

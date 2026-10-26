@@ -99,6 +99,8 @@ export function useFinishWorkout() {
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
       queryClient.invalidateQueries({ queryKey: ['exerciseHistory'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
+      // Инсайты считаются по завершённым тренировкам
+      queryClient.invalidateQueries({ queryKey: ['insights'] })
     },
   })
 }

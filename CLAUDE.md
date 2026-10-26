@@ -165,7 +165,7 @@ cd server && npx prisma generate       # регенерация клиента (
 
 - **TelegramProvider** — `useTelegram()` → `{ user, webApp, isDev }`. В dev-режиме отдаёт мок-юзера. Устанавливает CSS-переменные `--safe-top` / `--safe-bottom` для safe area insets Telegram и слушает `safeAreaChanged`/`contentSafeAreaChanged`.
 - **TranslationProvider** — `useTranslation()` → `{ t, language, setLanguage }`.
-- **QueryClientProvider** (`@tanstack/react-query`) — кэш-слой данных. Заменяет HomeDataContext и ProgressDataContext. Каждый endpoint = отдельный queryKey, дедупликация, staleTime, точечная инвалидация по мутациям. Hooks в `src/hooks/queries.js` + `src/hooks/mutations.js`, ключи в `src/lib/queryKeys.js`, клиент в `src/lib/queryClient.js`.
+- **QueryClientProvider** (`@tanstack/react-query`) — кэш-слой данных. Заменяет HomeDataContext и ProgressDataContext. Каждый endpoint = отдельный queryKey, дедупликация, staleTime, точечная инвалидация по мутациям. Hooks в `src/hooks/queries.js` + `src/hooks/mutations.js`, ключи в `src/lib/queryKeys.js`, клиент в `src/lib/queryClient.js`. Белый список ключей персистится в localStorage per-user (`src/lib/queryPersistence.js`, `QueryPersistence` в `main.jsx`; при смене формы ответа такого ключа — бампнуть версию префикса). `gcTime` по умолчанию — сутки.
 - **ActiveWorkoutProvider** (`src/contexts/ActiveWorkoutContext.jsx`) — `useActiveWorkout()` → `{ save, restore, clear }`. Ref-based буфер ephemeral workout state (currentExercise, doneSets, partialSets, planExercises, planIndex). Переживает навигацию Home ↔ Workout без ре-рендеров.
 
 ### Фронтенд: API-клиент (`src/utils/api.js`)

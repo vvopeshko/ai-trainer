@@ -14,7 +14,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
 import { BodyMap } from '../../components/ui/BodyMapLazy.jsx'
 import { GlassAINote } from '../../components/ui/GlassAINote.jsx'
-import { useYearStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight } from '../../hooks/queries.js'
+import { useYearStats, useActiveWorkoutQuery, useActiveProgram, useNextWorkout, useProgress, useDailyInsight, programDetailQueryOptions } from '../../hooks/queries.js'
 import { useCancelWorkout, useResumeWorkout } from '../../hooks/mutations.js'
 import { queryKeys } from '../../lib/queryKeys.js'
 import { useTelegram } from '../../components/TelegramProvider.jsx'
@@ -66,10 +66,10 @@ export default function HomePage() {
         body.programId = programId
         body.programDayIndex = dayIndex
       }
-      await apiPost('/api/v1/workouts', body)
-      // POST не возвращает план дня — инвалидируем, чтобы Home и WorkoutPage
-      // перечитали активную тренировку с сервера, а не из устаревшего кэша.
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
+      // Ответ старта — та же форма, что GET /active (тренировка + план дня):
+      // кладём в кэш, и WorkoutPage открывается сразу, без скелетона
+      const { workout, planExercises, planDayTitle } = await apiPost('/api/v1/workouts', body)
+      queryClient.setQueryData(queryKeys.workouts.active, { workout, planExercises, planDayTitle })
       navigate('/workout')
     } catch (err) {
       console.error('Failed to start workout:', err)
@@ -179,6 +179,11 @@ export default function HomePage() {
           planAdherence={planAdherence}
           program={program}
           onProgramTap={() => navigate('/program/' + program.id)}
+          // Палец коснулся — грузим чанк экрана и программу, пока он не отпущен
+          onProgramIntent={() => {
+            import('./ProgramEditPage.jsx')
+            queryClient.prefetchQuery(programDetailQueryOptions(program.id))
+          }}
         />
       )}
 
