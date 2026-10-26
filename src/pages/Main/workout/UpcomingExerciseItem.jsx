@@ -9,7 +9,7 @@ export function UpcomingExerciseItem({ muscle, name, scheme, weightRange, trend,
   // translateY во время драга применяется императивно к wrapper'у в WorkoutPage
   // (через ref, без ре-рендера). Здесь — только «поднятый» вид: scale/тень/opacity.
   return (
-    <Glass padding="11px 12px" radius={11} style={{
+    <Glass flat padding="11px 12px" radius={11} style={{
       display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer',
       ...(isDragging && {
         transform: 'scale(1.02)',

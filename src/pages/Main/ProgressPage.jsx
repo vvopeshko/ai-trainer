@@ -93,7 +93,7 @@ function RecentList({ workouts, onDelete, onTap, onIntent }) {
       }}>
         {t('home.recent')}
       </div>
-      <Glass padding={0} style={{ overflow: 'hidden' }}>
+      <Glass flat padding={0} style={{ overflow: 'hidden' }}>
         {workouts.map((w, i) => {
           const title = w.dayTitle
             ? `${t('home.dayN', { n: (w.programDayIndex ?? 0) + 1 })} · ${w.dayTitle}`
@@ -399,7 +399,7 @@ function InsightsSection() {
           {cards.map((c, i) => {
             const s = INSIGHT_STYLE[c.type] || INSIGHT_STYLE.imbalance
             return (
-              <Glass key={i} padding="11px 13px" radius={11}>
+              <Glass flat key={i} padding="11px 13px" radius={11}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <div style={{
                     width: 22, height: 22, borderRadius: 7, flexShrink: 0,

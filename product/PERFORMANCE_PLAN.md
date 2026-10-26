@@ -112,6 +112,11 @@
 
 ## Фаза 3 — плавность рендера (2–3 дня)
 
+**Статус (2026-10-26):** сделано, кроме трёх пунктов.
+- Виртуализация Library отложена: строки уже `content-visibility: auto`, а теперь ещё `memo` со стабильным `onClick` и без blur-контейнера.
+- `memo` для `UpcomingExerciseItem`/`CollapsedExercise`/`DoneSetRow` не делали: строк мало и они лёгкие, а пропсы — инлайн-замыкания, так что `memo` ничего не дал бы без перестройки WorkoutPage. Мемоизирована дорогая часть — `ExerciseProgress` (статистика по истории).
+- `@keyframes` вынесены только у `Skeleton` (десятки экземпляров). В одиночных компонентах (Toast, BottomSheet, RestCard) остались на месте.
+
 1. **Glass без blur в списках.**
    - Добавить `variant="flat"` (полупрозрачный фон без `backdrop-filter`) для элементов списков, вложенных и непрозрачных карточек: `UpcomingExerciseItem`, `CollapsedExercise`, `ExerciseStatusSection`, список Library, `RestCard` внутри Glass, кнопки дней в BottomSheet.
    - Blur оставить только для фиксированного chrome: TopBar, GlassNav, BottomSheet.

@@ -20,7 +20,9 @@ export function TelegramProvider({ children }) {
     // WebApp может подгрузиться чуть позже скрипта в index.html —
     // перечитываем на всякий случай после первого рендера.
     const resolved = resolveInitial()
-    setState(resolved)
+    // Обычно WebApp уже был на первом рендере — тот же юзер, лишний ре-рендер
+    // всех useTelegram() не нужен
+    setState((prev) => (prev.webApp === resolved.webApp && prev.user?.id === resolved.user?.id ? prev : resolved))
 
     const webApp = resolved.webApp
     if (webApp) {

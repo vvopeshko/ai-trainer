@@ -202,6 +202,7 @@ function DemoMedia({ url, alt, isVideo }) {
         <img
           src={url}
           alt={alt}
+          decoding="async"
           style={{
             width: '100%', height: '100%', objectFit: 'cover',
             display: 'block',
@@ -317,7 +318,7 @@ function VideoRow({ videos }) {
             }}>
               {thumb && (
                 <img
-                  src={thumb} alt=""
+                  src={thumb} alt="" loading="lazy" decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               )}

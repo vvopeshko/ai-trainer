@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { useExerciseAlternatives, useExerciseCatalog } from '../../../hooks/queries.js'
 import { Icon, Skeleton } from '../../../components/ui/index.js'
@@ -25,11 +25,15 @@ export function AlternativesPanel({ current, slot, lastResults, onNeedLastResult
   const main = slot && current?.id !== mainId ? [{ exerciseId: mainId, nameRu: slot.mainNameRu ?? slot.nameRu, slug: slot.mainSlug ?? slot.slug, isMain: true }] : []
   const rows = [...main, ...own.filter(a => a.exerciseId !== mainId), ...(data?.alternatives ?? []).filter(a => !seen.has(a.exerciseId) && a.exerciseId !== mainId)]
     .filter(a => a.exerciseId !== current?.id).slice(0, MAX_ROWS)
-  const listed = new Set([current?.id, ...rows.map(r => r.exerciseId)])
-  const found = query.trim().length >= 2
-    ? searchExercises(catalog.filter(e => !listed.has(e.id)), query)
+  // Поиск по всему каталогу (~900) — с отложенным значением: ввод не ждёт пересчёта
+  const deferredQuery = useDeferredValue(query)
+  const listedKey = [current?.id, ...rows.map(r => r.exerciseId)].join(',')
+  const found = useMemo(() => {
+    if (deferredQuery.trim().length < 2) return []
+    const listed = new Set(listedKey.split(','))
+    return searchExercises(catalog.filter(e => !listed.has(e.id)), deferredQuery)
       .slice(0, MAX_FOUND).map(e => ({ exerciseId: e.id, nameRu: e.nameRu, slug: e.slug }))
-    : []
+  }, [catalog, deferredQuery, listedKey])
   const missing = [...rows, ...found].map(r => r.exerciseId).filter(id => !(id in lastResults)).join(',')
   useEffect(() => {
     if (missing) onNeedLastResults(missing.split(','))

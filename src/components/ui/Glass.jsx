@@ -33,18 +33,28 @@ const specularLayer = {
   background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 36%)',
 }
 
+// backdrop-filter — самое дорогое в отрисовке: каждый такой слой пересэмплирует
+// фон при скролле и анимациях (особенно Android WebView). Он оправдан только
+// для одиночных карточек над «живым» фоном.
+const NO_BLUR = { backdropFilter: 'none', WebkitBackdropFilter: 'none' }
+
 /**
  * Base glass surface. All cards build on this.
  * Variants: default | strong | tint (accent gradient — use sparingly).
+ *
+ * flat — тот же вид без blur: для элементов списков, карточек внутри другого
+ * Glass/шита (blur поверх blur ничего не добавляет) и длинных контейнеров.
+ * Свой непрозрачный background в style — blur выключается сам (его не видно).
  */
 export const Glass = forwardRef(
-  ({ variant = 'default', specular, padding, radius = 14, style, children, ...rest }, ref) => (
+  ({ variant = 'default', specular, flat, padding, radius = 14, style, children, ...rest }, ref) => (
     <div
       ref={ref}
       style={{
         position: 'relative',
         borderRadius: radius,
         ...variantStyles[variant],
+        ...((flat || style?.background) && NO_BLUR),
         padding,
         ...style,
       }}

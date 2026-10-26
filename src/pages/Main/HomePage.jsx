@@ -347,8 +347,8 @@ export default function HomePage() {
                 style={{
                   width: '100%',
                   textAlign: 'left',
+                  // без blur: кнопки внутри BottomSheet, который уже размыт
                   background: 'var(--surface-0, rgba(255,255,255,0.04))',
-                  backdropFilter: 'blur(12px)',
                   border: isPlanned
                     ? '1.5px solid hsl(var(--accent-h,158),55%,55%)'
                     : '1px solid rgba(255,255,255,0.08)',

@@ -7,7 +7,7 @@
  * отдельным чипом (поиск по названию находит их и без чипа).
  * Детали — в BottomSheet по тапу (полный запрос GET /exercises/:id).
  */
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../hooks/queries.js'
 import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
@@ -134,7 +134,9 @@ function ChipRow({ children }) {
 
 // ─── Exercise Row ─────────────────────────────────────────────────────
 
-function ExerciseRow({ exercise, isLast, onClick }) {
+// memo + стабильный onClick(id): ввод в поиск и открытие карточки ре-рендерят
+// страницу, но не ~900 строк списка (до дебаунса список не меняется вовсе)
+const ExerciseRow = memo(function ExerciseRow({ exercise, isLast, onClick }) {
   // Same as the detail sheet header: target muscle (or main muscle) · equipment
   const muscle = exercise.targetMuscle ?? exercise.primaryMuscles?.[0]
   const subtitle = [
@@ -144,7 +146,7 @@ function ExerciseRow({ exercise, isLast, onClick }) {
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => onClick(exercise.id)}
       style={{
         display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
         width: '100%',
@@ -179,7 +181,7 @@ function ExerciseRow({ exercise, isLast, onClick }) {
       <Icon name="chevronRight" size={16} style={{ color: 'var(--fg-disabled)', flexShrink: 0 }} />
     </button>
   )
-}
+})
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────
 
@@ -338,13 +340,13 @@ export default function LibraryPage() {
               {t('library.noResults')}
             </div>
           ) : (
-            <Glass padding="0 var(--space-4)">
+            <Glass flat padding="0 var(--space-4)">
               {filtered.map((ex, i) => (
                 <ExerciseRow
                   key={ex.id}
                   exercise={ex}
                   isLast={i === filtered.length - 1}
-                  onClick={() => openDetail(ex.id)}
+                  onClick={openDetail}
                 />
               ))}
             </Glass>

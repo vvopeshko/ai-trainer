@@ -24,3 +24,10 @@ body {
   background: var(--bg-base);
   color: var(--fg-primary);
 }
+
+/* Skeleton: раньше каждый экземпляр вставлял свой <style> с keyframes
+   (~20 на скелетоне Progress) */
+@keyframes skeletonShimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

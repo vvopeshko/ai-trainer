@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useExerciseHistory } from '../../../hooks/queries.js'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { exerciseProgress } from '../../../utils/exerciseProgress.js'
@@ -7,12 +7,17 @@ import { ExerciseProgressSheet } from './ExerciseProgressSheet.jsx'
 import { StatusPill, Sparkline } from './ProgressStatus.jsx'
 import { useProgressText } from './useProgressText.js'
 
-export function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit, timed = false }) {
+// memo: WorkoutPage ре-рендерится на каждый подход/таймер, а пропсы карточки
+// (id, план, настройки) при этом не меняются — статистика не пересчитывается
+export const ExerciseProgress = memo(function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit, timed = false }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const { data, isPending, isError, refetch } = useExerciseHistory(exerciseId)
   const workouts = data?.workouts ?? []
-  const progress = exerciseProgress(workouts, timed ? null : plan, { experienceLevel: data?.experienceLevel })
+  const progress = useMemo(
+    () => exerciseProgress(workouts, timed ? null : plan, { experienceLevel: data?.experienceLevel }),
+    [workouts, timed, plan, data?.experienceLevel],
+  )
   const text = useProgressText(progress, { plan, unit, step, stepUnit })
   const style = { margin: '0 12px 12px', fontSize: 11.5, color: 'var(--fg-secondary)', lineHeight: 1.45 }
   const box = { padding: '9px 11px', borderRadius: 12, border: '1px solid rgba(236,234,239,0.08)', background: 'rgba(236,234,239,0.03)' }
@@ -57,4 +62,4 @@ export function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit
     <ExerciseProgressSheet open={open} onClose={() => setOpen(false)} exerciseId={exerciseId}
       progress={progress} data={data} text={text} unit={unit} timed={timed} />
   </>
-}
+})

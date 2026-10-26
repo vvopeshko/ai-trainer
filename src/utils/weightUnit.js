@@ -102,14 +102,28 @@ const SETTINGS_KEY = 'exercise-settings'
 
 const DEFAULT_SETTINGS = { unit: 'kg', minWeight: 0, maxWeight: 500, step: 2.5, stepUnit: 'kg', preset: null, type: 'reps' }
 
+// Настройки читаются на каждый рендер для каждой строки тренировки — JSON.parse
+// всего хранилища каждый раз дорого. Кэшируем разобранное значение, пока строка
+// в localStorage не изменилась (сравнение строк намного дешевле парсинга).
+// Значение из кэша не мутировать — писатели работают с копией.
+const parsedCache = new Map() // key → { raw, value }
+function readJson(key) {
+  const raw = localStorage.getItem(key)
+  const hit = parsedCache.get(key)
+  if (hit && hit.raw === raw) return hit.value
+  const value = JSON.parse(raw || '{}') ?? {}
+  parsedCache.set(key, { raw, value })
+  return value
+}
+
 export function getExerciseUnit(slug) {
   if (!slug) return 'kg'
   try {
     // Check new settings format first
-    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')?.[slug]
+    const settings = readJson(SETTINGS_KEY)[slug]
     if (settings?.unit) return settings.unit
     // Fall back to old format
-    return JSON.parse(localStorage.getItem(STORAGE_KEY))?.[slug] || 'kg'
+    return readJson(STORAGE_KEY)[slug] || 'kg'
   } catch { return 'kg' }
 }
 
@@ -122,10 +136,10 @@ export function setExerciseUnit(slug, unit) {
 export function getExerciseSettings(slug) {
   if (!slug) return { ...DEFAULT_SETTINGS }
   try {
-    const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+    const all = readJson(SETTINGS_KEY)
     if (all[slug]) return { ...DEFAULT_SETTINGS, ...all[slug] }
     // Migrate from old format if exists
-    const oldUnits = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    const oldUnits = readJson(STORAGE_KEY)
     if (oldUnits[slug]) return { ...DEFAULT_SETTINGS, unit: oldUnits[slug] }
     return { ...DEFAULT_SETTINGS }
   } catch { return { ...DEFAULT_SETTINGS } }
@@ -134,7 +148,7 @@ export function getExerciseSettings(slug) {
 export function setExerciseSettings(slug, settings) {
   if (!slug) return
   try {
-    const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+    const all = { ...readJson(SETTINGS_KEY) }
     all[slug] = { ...DEFAULT_SETTINGS, ...all[slug], ...settings }
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(all))
   } catch { /* localStorage unavailable */ }
@@ -150,7 +164,7 @@ export function setExerciseSettings(slug, settings) {
 export function syncSettingsFromServer(settingsMap) {
   if (!settingsMap || typeof settingsMap !== 'object') return
   try {
-    const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+    const all = { ...readJson(SETTINGS_KEY) }
     for (const [slug, serverSettings] of Object.entries(settingsMap)) {
       const { updatedAt, ...fields } = serverSettings
       all[slug] = { ...DEFAULT_SETTINGS, ...all[slug], ...fields }

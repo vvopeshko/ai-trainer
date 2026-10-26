@@ -6,23 +6,31 @@ import { Glass } from '../../../components/ui/Glass.jsx'
 import { WeekCalendar } from './WeekCalendar.jsx'
 import './hero.css'
 
+const PLURAL_RU = new Intl.PluralRules('ru')
+
+// Секундный тик — только в этом спане, а не во всём hero (календарь, фото, Glass)
+function HeroTimer({ workout }) {
+  const isPaused = workout.pausedAt != null
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (isPaused) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [isPaused])
+  const elapsed = Math.max(0, Math.floor(((isPaused ? new Date(workout.pausedAt).getTime() : now)
+    - new Date(workout.startedAt).getTime() - (workout.totalPausedMs || 0)) / 1000))
+  const timer = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
+  return <span className="home-hero__timer" role="timer">· {timer}</span>
+}
+
 export function HeroBlock({
   user, annualCount, onShowGoal, program, nextWorkout, activeWorkout, doneDates,
   onStart, onContinue, onResume, onCancel, onPickDay, onNotifications, loading,
 }) {
   const { t } = useTranslation()
-  const plural = new Intl.PluralRules('ru')
+  const plural = PLURAL_RU
   const isPaused = activeWorkout?.pausedAt != null
   const isActive = !!activeWorkout
-  const [now, setNow] = useState(Date.now)
-  useEffect(() => {
-    if (!isActive || isPaused) return
-    const timer = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [isActive, isPaused])
-  const elapsed = isActive ? Math.max(0, Math.floor(((isPaused ? new Date(activeWorkout.pausedAt).getTime() : now)
-    - new Date(activeWorkout.startedAt).getTime() - (activeWorkout.totalPausedMs || 0)) / 1000)) : 0
-  const timer = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
   const dayIndex = isActive ? activeWorkout.programDayIndex : nextWorkout?.dayIndex
   const day = isActive ? program?.planJson?.days?.[dayIndex] : nextWorkout?.day
   const estimatedMin = Math.round(day?.exercises?.reduce((sum, ex) => {
@@ -75,7 +83,7 @@ export function HeroBlock({
               <span className="home-hero__start-label">
                 {!loading && <Icon name="play" size={19} fill="currentColor" strokeWidth={1.5} aria-hidden="true" />}
                 <span>{loading ? t('workout.starting') : t(isActive ? 'home.continueWorkout' : 'home.startWorkoutCta')}</span>
-                {isActive && <span className="home-hero__timer" role="timer">· {timer}</span>}
+                {isActive && <HeroTimer workout={activeWorkout} />}
               </span>
             </button>
             {isActive ? <button type="button" className="home-hero__icon-button home-hero__side-action home-hero__cancel"

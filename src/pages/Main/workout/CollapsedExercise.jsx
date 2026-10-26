@@ -6,7 +6,7 @@ import { MuscleIcon } from '../../../components/ui/MuscleIcon.jsx'
 
 export function CollapsedExercise({ muscle, name, summary, expanded, onClick }) {
   return (
-    <Glass padding="9px 12px" radius={expanded ? '10px 10px 0 0' : 10} style={{
+    <Glass flat padding="9px 12px" radius={expanded ? '10px 10px 0 0' : 10} style={{
       display: 'flex', alignItems: 'center', gap: 10,
       background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.05)',
       cursor: 'pointer',

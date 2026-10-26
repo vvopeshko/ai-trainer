@@ -9,7 +9,7 @@
  * Обёртка <ToastProvider> в main.jsx:
  *   <ToastProvider><App /></ToastProvider>
  */
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react'
 
 const ToastContext = createContext()
 
@@ -35,8 +35,11 @@ export function ToastProvider({ children }) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
+  // Стабильное значение: показ/скрытие тоста не ре-рендерит всех useToast()
+  const value = useMemo(() => ({ show }), [show])
+
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={value}>
       {children}
       {toast && (
         <div

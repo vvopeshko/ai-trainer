@@ -53,7 +53,7 @@ export function WorkoutSkeleton() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[0, 1, 2].map(i => (
-            <Glass key={i} padding="11px 12px" radius={11} style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <Glass flat key={i} padding="11px 12px" radius={11} style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <Skeleton width={28} height={28} radius="50%" />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <Skeleton width="55%" height={13} />

@@ -35,14 +35,16 @@ export function RestCard({ seconds = 90, onSkip, startedAt, pausedAt = null }) {
         @keyframes trainerRestBreath { 0%,100% { opacity:.55; transform: scale(1); } 50% { opacity:.85; transform: scale(1.04); } }
         @keyframes restCardAppear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
-      <Glass variant="tint" padding="18px 16px 16px" radius={16} style={{
+      <Glass flat variant="tint" padding="18px 16px 16px" radius={16} style={{
         textAlign: 'center', position: 'relative', overflow: 'hidden',
         animation: 'restCardAppear 0.35s var(--ease-out) both',
       }}>
         <div aria-hidden="true" style={{
           position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
           background: 'radial-gradient(ellipse at 50% 50%, hsla(var(--accent-h,158),55%,40%,0.4) 0%, transparent 65%)',
-          animation: 'trainerRestBreath 3s ease-in-out infinite',
+          // Три «вдоха» и покой: бесконечная анимация держала композитинг
+          // всё время отдыха (минуты) — заметно на слабых Android
+          animation: 'trainerRestBreath 3s ease-in-out 3',
         }} />
         <div style={{ position: 'relative' }}>
           <div style={{
@@ -62,7 +64,9 @@ export function RestCard({ seconds = 90, onSkip, startedAt, pausedAt = null }) {
           }}>{mm}:{ss}</div>
           <div style={{ margin: '10px auto 0', width: '70%', height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
             <div style={{
-              height: '100%', width: `${pct}%`, borderRadius: 2, transition: 'width 1s linear',
+              // scaleX, а не width: трансформация идёт на композиторе, без layout каждую секунду
+              height: '100%', width: '100%', borderRadius: 2,
+              transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform 1s linear',
               background: isReady ? 'hsl(var(--accent-h,158),55%,65%)' : '#fff',
             }} />
           </div>

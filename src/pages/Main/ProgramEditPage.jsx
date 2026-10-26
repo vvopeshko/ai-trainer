@@ -631,7 +631,7 @@ export default function ProgramEditPage() {
           const estMin = estimateDayMin(exercises)
 
           return (
-            <Glass key={dayIdx} padding={0} style={{ marginBottom: 'var(--space-3)', overflow: 'hidden' }}>
+            <Glass flat key={dayIdx} padding={0} style={{ marginBottom: 'var(--space-3)', overflow: 'hidden' }}>
               {/* Day header */}
               <button
                 onClick={() => toggleDay(dayIdx)}
@@ -857,7 +857,7 @@ export default function ProgramEditPage() {
             }}>
               {t('program.otherPrograms')}
             </div>
-            <Glass padding={0} style={{ overflow: 'hidden' }}>
+            <Glass flat padding={0} style={{ overflow: 'hidden' }}>
               {otherPrograms.map((p, i) => (
                 <button
                   key={p.id}

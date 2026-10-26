@@ -45,6 +45,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
       }}
     >
       <Glass
+        flat // поверх уже размытой подложки
         padding="20px"
         radius={16}
         role="dialog"

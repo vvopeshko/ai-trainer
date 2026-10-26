@@ -216,7 +216,7 @@ import BigStepper from '../../components/ui/BigStepper.jsx'
 ### Правила
 
 1. **Не хардкодить цвета** — использовать токены (`var(--fg-primary)`, `var(--success)` и т.д.).
-2. **Glass — основа** для всех карточек. Не создавать `<div>` с ручным `background + backdrop-filter`.
+2. **Glass — основа** для всех карточек. Не создавать `<div>` с ручным `background + backdrop-filter`. Элементы списков и карточки внутри другого Glass/шита — `<Glass flat>` (без blur: `backdrop-filter` — самое дорогое в отрисовке).
 3. **Визуальная спецификация экранов** — в [BRD.md §12](product/BRD.md#12-спецификация-экранов-мини-аппа), дизайн-бриф — в [DESIGN_BRIEF.md](product/design/DESIGN_BRIEF.md).
 
 ## Критичные правила

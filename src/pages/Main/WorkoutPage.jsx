@@ -982,7 +982,7 @@ export default function WorkoutPage() {
                       onClick={() => setExpandedDoneIndex(isExpanded ? null : i)}
                     />
                     {isExpanded && (
-                      <Glass padding="0" radius="0 0 10px 10px" style={{ borderTop: 'none', marginTop: -1 }}>
+                      <Glass flat padding="0" radius="0 0 10px 10px" style={{ borderTop: 'none', marginTop: -1 }}>
                         <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
                           {item.sets.map((s, si) => (
                             <DoneSetRow
