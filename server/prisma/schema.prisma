@@ -285,6 +285,10 @@ model Exercise {
 
   // Откуда пришло упражнение: seed (из базы), ai_generated (auto-created при resolve), user_created (юзер добавил).
   source           ExerciseSource     @default(seed)
+  // Своё упражнение юзера (source: user_created) видно только автору: не в общем
+  // каталоге, поиске, аналогах, генерации и резолвере. Без FK — как exerciseSlug
+  // в настройках: удаление юзера не должно трогать историю подходов.
+  createdByUserId  String?
 
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -294,6 +298,7 @@ model Exercise {
   @@index([category])
   @@index([targetMuscle])
   @@index([movementPattern])
+  @@index([createdByUserId])
   @@index([aliases], type: Gin) // поиск по массиву алиасов (unnest/@> в exerciseResolver)
 }
 
@@ -315,7 +320,7 @@ enum ExerciseCategory {
 enum ExerciseSource {
   seed           // из seed-скрипта (Free Exercise DB + обогащение)
   ai_generated   // auto-created через exerciseResolver при LLM resolve
-  user_created   // юзер добавил вручную (будущее)
+  user_created   // юзер добавил сам (createdByUserId), видно только ему
 }
 
 // ═══════════════════════════════════════════════

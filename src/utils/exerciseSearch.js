@@ -42,9 +42,10 @@ export function searchExercises(exercises, query) {
     .map(r => r.ex)
 }
 
-/** Catalog browsing order without a query: popular first, then alphabetical. */
+/** Catalog browsing order without a query: own exercises, popular, then alphabetical. */
 export function byPopularity(exercises) {
-  return [...exercises].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
+  return [...exercises].sort((a, b) => (b.own ? 1 : 0) - (a.own ? 1 : 0)
+    || (b.popularity ?? 0) - (a.popularity ?? 0)
     || (a.nameRu ?? '').localeCompare(b.nameRu ?? '', 'ru'))
 }
 

@@ -115,9 +115,10 @@ export async function generateProgram(userId, profile) {
   const equipmentFilter = EQUIPMENT_PRESETS[profile.equipmentPreset]
 
   const catalog = await prisma.exercise.findMany({
-    where: equipmentFilter
-      ? { equipment: { hasSome: equipmentFilter } }
-      : undefined,
+    where: {
+      source: { not: 'user_created' }, // свои упражнения юзеров — приватные
+      ...(equipmentFilter && { equipment: { hasSome: equipmentFilter } }),
+    },
     select: {
       slug: true,
       nameRu: true,

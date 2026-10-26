@@ -81,6 +81,8 @@ export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
   const pool = await prisma.exercise.findMany({
     where: {
       id: { not: target.id }, targetMuscle: muscle,
+      // Own exercises of other users are private.
+      OR: [{ source: { not: 'user_created' } }, { createdByUserId: userId }],
       ...(target.source === 'seed' ? { category: target.category } : { category: { in: ['compound', 'isolation'] } }),
     },
     select: SELECT,

@@ -34,7 +34,7 @@ const RU_TRANSLIT = {
 }
 
 /** Превращает "Smith Machine Bench Press" → "smith-machine-bench-press", "Жим лёжа" → "zhim-lezha" */
-function slugify(str) {
+export function slugify(str) {
   return str
     .toLowerCase()
     .replace(/[а-яё]/g, (ch) => RU_TRANSLIT[ch] ?? '')
@@ -42,7 +42,7 @@ function slugify(str) {
     .replace(/^-|-$/g, '')
 }
 
-const normKey = s => s.toLowerCase().replace(/ё/g, 'е').trim()
+export const normKey = s => s.toLowerCase().replace(/ё/g, 'е').trim()
 
 /** Шаги 1–2: точное совпадение по slug, названию или алиасу. */
 async function findExisting(input) {
@@ -52,7 +52,8 @@ async function findExisting(input) {
   const slug = inputSlug || (nameEn ? slugify(nameEn) : null)
   if (slug) {
     const bySlug = await prisma.exercise.findUnique({ where: { slug } })
-    if (bySlug) {
+    // Свои упражнения юзеров приватны: резолвер их не находит.
+    if (bySlug && bySlug.source !== 'user_created') {
       return { exerciseId: bySlug.id, exercise: bySlug, resolvedBy: 'slug' }
     }
   }
@@ -69,12 +70,14 @@ async function findExisting(input) {
 
     const found = await prisma.$queryRaw`
       SELECT * FROM "Exercise"
-      WHERE replace(lower("nameRu"), 'ё', 'е') = ${key}
+      WHERE source <> 'user_created' AND (
+        replace(lower("nameRu"), 'ё', 'е') = ${key}
         OR replace(lower(coalesce("nameEn", '')), 'ё', 'е') = ${key}
         OR EXISTS (
           SELECT 1 FROM unnest(aliases) AS a
           WHERE replace(lower(a), 'ё', 'е') = ${key}
         )
+      )
       ORDER BY
         (replace(lower("nameRu"), 'ё', 'е') = ${key}
           OR replace(lower(coalesce("nameEn", '')), 'ё', 'е') = ${key}) DESC,
@@ -132,7 +135,11 @@ async function createExercise(input, fields) {
       secondaryMuscles: fields?.secondaryMuscles ?? [],
       equipment: tool ? [tool] : [],
       ...(fields?.category && { category: fields.category }),
-      ...(fields && { targetMuscle: fields.targetMuscle ?? null, force: fields.force ?? null, unilateral: fields.unilateral ?? null }),
+      ...(fields && {
+        targetMuscle: fields.targetMuscle ?? null, force: fields.force ?? null, unilateral: fields.unilateral ?? null,
+        trackingType: fields.trackingType ?? null, movementPattern: fields.movementPattern ?? null,
+        jointStress: fields.jointStress ?? [], stable: fields.stable ?? null,
+      }),
       aliases: [...new Set([...searchTerms, input.slug].filter(Boolean).map(s => s.toLowerCase()))]
         .filter(a => normKey(a) !== normKey(fields?.nameRu || nameRu || '')),
       source: 'ai_generated',

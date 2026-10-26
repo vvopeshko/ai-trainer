@@ -3,6 +3,7 @@ import prisma from '../utils/prisma.js'
 import { findAlternatives } from '../services/exerciseAlternatives.js'
 import { exerciseImages } from '../utils/exerciseImages.js'
 import { catalogResponse } from '../services/exerciseCatalog.js'
+import { listCustomExercises, createCustomExercise } from '../services/customExercises.js'
 
 /**
  * GET /api/v1/exercises
@@ -21,6 +22,31 @@ export async function list(req, res) {
     .parse(req.query)
 
   res.type('json').send(await catalogResponse({ muscle, limit }))
+}
+
+/**
+ * GET /api/v1/exercises/custom
+ *
+ * Свои упражнения юзера (в общем каталоге их нет — он один на всех и кэшируется).
+ */
+export async function listCustom(req, res) {
+  res.json({ exercises: await listCustomExercises(req.user.id) })
+}
+
+/**
+ * POST /api/v1/exercises/custom  { nameRu, force? }
+ *
+ * Создать своё упражнение. Если в каталоге, похоже, такое есть — 200
+ * { suggestion } (ничего не создано); force: true — создать всё равно.
+ * Точное совпадение названия — { exercise, created: false }.
+ */
+export async function createCustom(req, res) {
+  const body = z.object({
+    nameRu: z.string().trim().min(2).max(80),
+    force: z.boolean().optional(),
+  }).parse(req.body)
+  const result = await createCustomExercise(req.user.id, body)
+  res.status(result.created ? 201 : 200).json(result)
 }
 
 /**
@@ -68,7 +94,8 @@ export async function search(req, res) {
       replace(lower(coalesce(e."nameEn", '')), 'ё', 'е') AS en,
       ARRAY(SELECT replace(lower(a), 'ё', 'е') FROM unnest(e.aliases) a) AS aliases
     ) n
-    WHERE NOT EXISTS (
+    WHERE (e.source <> 'user_created' OR e."createdByUserId" = ${req.user.id})
+      AND NOT EXISTS (
       SELECT 1 FROM unnest(${words}::text[]) w
       WHERE position(w IN n.ru || ' | ' || n.en || ' | ' || array_to_string(n.aliases, ' | ')) = 0
     )

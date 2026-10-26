@@ -36,6 +36,7 @@ it('queries exercises with the same target muscle and category and counts the us
   const list = await findAlternatives('u1', 'machine', { limit: 2 })
   expect(mock.exercise.findMany.mock.calls[0][0].where).toEqual({
     id: { not: 'machine' }, category: 'isolation', targetMuscle: 'biceps',
+    OR: [{ source: { not: 'user_created' } }, { createdByUserId: 'u1' }],
   })
   expect(mock.workoutSet.groupBy.mock.calls[0][0].where).toMatchObject({ isWarmup: false, workout: { userId: 'u1', finishedAt: { not: null } } })
   expect(list.map(e => e.id)).toEqual(['cable', 'db'])

@@ -179,3 +179,21 @@ export function useCancelSubscription() {
     },
   })
 }
+
+/**
+ * Своё упражнение (POST /exercises/custom): { exercise, created } или
+ * { suggestion } — в каталоге, похоже, такое уже есть (force — создать всё равно).
+ * Созданное сразу появляется в каталоге, без ожидания рефетча.
+ */
+export function useCreateCustomExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ nameRu, force = false }) => apiPost('/api/v1/exercises/custom', { nameRu, force }),
+    onSuccess: (result) => {
+      if (!result?.created) return
+      queryClient.setQueryData(queryKeys.exercises.catalog, (list = []) =>
+        [{ ...result.exercise, own: true }, ...list.filter(ex => ex.id !== result.exercise.id)])
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.catalog })
+    },
+  })
+}

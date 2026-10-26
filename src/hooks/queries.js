@@ -176,9 +176,14 @@ function persistedCatalogOnce() {
 export function exerciseCatalogQueryOptions() {
   return {
     queryKey: queryKeys.exercises.catalog,
+    // Общий каталог (кэшируется сервером для всех) + свои упражнения юзера:
+    // они приватные и приходят отдельно, помечены own.
     queryFn: async () => {
-      const d = await apiGet('/api/v1/exercises?limit=1500')
-      const list = d.exercises || []
+      const [d, own] = await Promise.all([
+        apiGet('/api/v1/exercises?limit=1500'),
+        apiGet('/api/v1/exercises/custom').catch(() => ({ exercises: [] })),
+      ])
+      const list = [...(own.exercises || []).map(ex => ({ ...ex, own: true })), ...(d.exercises || [])]
       writePersistedCatalog(list)
       return list
     },

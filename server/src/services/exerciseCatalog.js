@@ -57,7 +57,8 @@ export async function catalogResponse({ muscle, limit }) {
 
   const [exercises, popularity] = await Promise.all([
     prisma.exercise.findMany({
-      where: muscle ? { primaryMuscles: { has: muscle } } : {},
+      // Shared by all users: their own exercises come separately (GET /exercises/custom).
+      where: { source: { not: 'user_created' }, ...(muscle && { primaryMuscles: { has: muscle } }) },
       orderBy: { nameRu: 'asc' },
       take: limit,
       select: {

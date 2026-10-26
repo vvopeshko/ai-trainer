@@ -11,6 +11,7 @@ import prisma from '../utils/prisma.js'
 import { chat } from '../utils/llm.js'
 import { parseJsonFromLLM } from '../utils/parseJsonFromLLM.js'
 import { TARGET_MUSCLES } from './exerciseTargets.js'
+import { TRACKING_TYPES, MOVEMENT_PATTERNS, JOINTS } from './exerciseAttributes.js'
 
 const MAX_CANDIDATES = 8
 const LLM_BATCH = 15
@@ -65,7 +66,11 @@ const SYSTEM = `Ты сопоставляешь названия упражне�
   category — compound | isolation | stretch | cardio,
   targetMuscle — одна из: ${TARGET_MUSCLES.join(', ')} или none,
   force — push | pull | static,
-  unilateral — true, если одной рукой/ногой за раз.
+  unilateral — true, если одной рукой/ногой за раз,
+  trackingType — ${TRACKING_TYPES.join(' | ')} (вес×повторы; свой вес; гравитрон/резинка; время; дистанция),
+  movementPattern — один из: ${MOVEMENT_PATTERNS.join(', ')},
+  jointStress — суставы, при травме которых тренер исключил бы упражнение, из: ${JOINTS.join(', ')} (тренажёры обычно []),
+  stable — true, если тренажёр/блок/опора.
 Не выдумывай совпадение: если сомневаешься — new.
 Ответ — только JSON {"<id пункта>": {"match": "..."} | {"new": {...}}, ...} для всех пунктов.`
 
@@ -79,6 +84,10 @@ const newSchema = z.object({
   targetMuscle: z.string().optional().nullable().transform(t => (TARGET_MUSCLES.includes(t) ? t : null)),
   force: z.enum(['push', 'pull', 'static']).optional().catch(undefined),
   unilateral: z.boolean().optional().catch(undefined),
+  trackingType: z.enum(TRACKING_TYPES).optional().catch(undefined),
+  movementPattern: z.enum(MOVEMENT_PATTERNS).optional().catch(undefined),
+  jointStress: z.array(z.enum(JOINTS)).max(7).optional().catch(undefined),
+  stable: z.boolean().optional().catch(undefined),
 })
 
 // Aliases matter: «Румынская тяга с гантелями» is only an alias of the catalog's
@@ -111,7 +120,9 @@ export function parseDecisions(answer, items) {
 let catalogCache = null
 async function catalog() {
   if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS) return catalogCache.list
+  // Users' own exercises are private: never a candidate for someone else's name.
   const list = await prisma.exercise.findMany({
+    where: { source: { not: 'user_created' } },
     select: { id: true, slug: true, nameRu: true, nameEn: true, aliases: true, equipment: true, source: true },
   })
   catalogCache = { at: Date.now(), list }
@@ -126,20 +137,25 @@ export function forgetCatalog() {
 /**
  * Decides for inputs the resolver did not find exactly. Never throws: on an
  * LLM or parse failure the affected inputs are simply absent from the result.
+ * `classifyOnly` — no candidates: the user already said it is a new exercise,
+ * only its fields are wanted.
  *
  * @param {Array<[string, {slug?, nameEn?, nameRu?}]>} entries — [key, input]
  * @returns {Promise<Map<string, {match: object} | {fields: object}>>}
  */
-export async function matchUnknownExercises(entries) {
+export async function matchUnknownExercises(entries, { classifyOnly = false } = {}) {
   const decisions = new Map()
   if (!entries.length) return decisions
-  let list
-  try {
-    list = await catalog()
-  } catch {
-    return decisions
+  let list = []
+  if (!classifyOnly) {
+    try {
+      list = await catalog()
+    } catch (e) {
+      console.warn('[exerciseMatcher] catalog load failed:', e.message)
+      return decisions
+    }
   }
-  const items = entries.map(([key, input], i) => ({ key, id: String(i + 1), input, candidates: rankCandidates(input, list) }))
+  const items = entries.map(([key, input], i) => ({ key, id: String(i + 1), input, candidates: classifyOnly ? [] : rankCandidates(input, list) }))
   for (let i = 0; i < items.length; i += LLM_BATCH) {
     const batch = items.slice(i, i + LLM_BATCH)
     const prompt = batch.map(it => [
