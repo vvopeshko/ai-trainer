@@ -10,7 +10,7 @@ import { enqueueNotification } from '../scheduler/notificationPlanner.js'
 const SET_EXERCISE_SELECT = {
   id: true, slug: true, nameRu: true, nameEn: true,
   primaryMuscles: true, secondaryMuscles: true, equipment: true,
-  difficulty: true, category: true, targetMuscle: true, force: true, unilateral: true,
+  difficulty: true, category: true, targetMuscle: true, force: true, unilateral: true, trackingType: true,
   imageUrl: true, gifUrl: true,
 }
 

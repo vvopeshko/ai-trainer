@@ -5,6 +5,7 @@
  *
  * Используется из бот-сцены /program и потенциально из API.
  */
+import { loadsInjured } from '../exerciseAttributes.js'
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -80,9 +81,9 @@ function buildUserPrompt(profile, exercises) {
     female: 'Женщина',
   }
 
-  // Компактный список упражнений: slug | nameRu | muscles | equipment
+  // Компактный список упражнений: slug | nameRu | muscles | equipment | pattern
   const exerciseList = exercises
-    .map(ex => `${ex.slug} | ${ex.nameRu} | ${ex.primaryMuscles.join(',')} | ${ex.equipment.join(',')}`)
+    .map(ex => `${ex.slug} | ${ex.nameRu} | ${ex.primaryMuscles.join(',')} | ${ex.equipment.join(',')} | ${ex.movementPattern ?? ''}`)
     .join('\n')
 
   return `## Профиль пользователя
@@ -95,7 +96,7 @@ function buildUserPrompt(profile, exercises) {
 - Оборудование: ${profile.equipmentPreset || 'полный зал'}
 - Ограничения: ${profile.constraints?.length ? profile.constraints.join(', ') : 'нет'}
 
-## Доступные упражнения (slug | nameRu | muscles | equipment)
+## Доступные упражнения (slug | nameRu | muscles | equipment | паттерн движения)
 
 ${exerciseList}`
 }
@@ -113,7 +114,7 @@ export async function generateProgram(userId, profile) {
   // 1. Получить список упражнений с фильтрацией по оборудованию
   const equipmentFilter = EQUIPMENT_PRESETS[profile.equipmentPreset]
 
-  const exercises = await prisma.exercise.findMany({
+  const catalog = await prisma.exercise.findMany({
     where: equipmentFilter
       ? { equipment: { hasSome: equipmentFilter } }
       : undefined,
@@ -123,9 +124,14 @@ export async function generateProgram(userId, profile) {
       primaryMuscles: true,
       equipment: true,
       category: true,
+      movementPattern: true,
+      jointStress: true,
     },
     orderBy: { slug: 'asc' },
   })
+  // Травмы из профиля: упражнения, нагружающие эти зоны, LLM просто не видит —
+  // надёжнее, чем просьба в промпте их не назначать.
+  const exercises = catalog.filter(ex => !loadsInjured(ex, profile.constraints))
 
   if (exercises.length === 0) {
     return { success: false, error: 'Нет упражнений в базе. Запустите seed.' }

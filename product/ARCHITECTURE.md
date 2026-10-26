@@ -1099,6 +1099,7 @@ LLM → resolveExercise() → slug-match → alias-search → LLM-match с ка�
 
 | Скрипт | Команда | Что делает |
 |--------|---------|-----------|
+| `classifyExerciseAttributes.js` | `node --env-file=.env scripts/classifyExerciseAttributes.js [--joints]` | Разовая LLM-разметка trackingType / movementPattern / jointStress / stable (результат уже в каталоге) |
 | `pullAliases.js` | `node --env-file=.env scripts/pullAliases.js [--write]` | Алиасы, выученные резолвером на проде, → в каталог (перед `seedExercises --only=aliases`); только читает БД |
 | `cleanProgramAlternatives.js` | `node --env-file=.env scripts/cleanProgramAlternatives.js [--apply]` | Убирает из программ аналоги удалённых упражнений; по умолчанию dry-run |
 | `mergeExercises.js` | `node --env-file=.env scripts/mergeExercises.js [--apply]` | Слияние дублей по data/exercise-merges.json: подходы, настройки, программы → каноническое упражнение; по умолчанию dry-run |

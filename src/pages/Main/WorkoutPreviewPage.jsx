@@ -141,7 +141,7 @@ export default function WorkoutPreviewPage() {
                 muscle={getExerciseMuscle(pe, catalogById)}
                 lastResults={lastResults[pe.exerciseId]}
                 progress={(() => {
-                  const settings = getExerciseSettings(pe.slug)
+                  const settings = getExerciseSettings(pe.slug, pe.trackingType)
                   return <ExerciseProgress exerciseId={pe.exerciseId} plan={pe} unit={settings.unit}
                     step={settings.step} stepUnit={settings.stepUnit} timed={settings.type === 'timer'} />
                 })()}

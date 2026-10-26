@@ -893,6 +893,28 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
         </div>
       </div>
 
+      {/* Machine setup: shown next to the exercise during a workout */}
+      <div>
+        <SectionLabel>{t('exercise.settings.setupNote')}</SectionLabel>
+        <textarea
+          value={settings.setupNote ?? ''}
+          onChange={e => onSettingsChange({ ...settings, setupNote: e.target.value })}
+          placeholder={t('exercise.settings.setupNotePlaceholder')}
+          maxLength={200}
+          rows={2}
+          style={{
+            width: '100%', borderRadius: 12, resize: 'none',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'var(--fg-primary)', fontSize: 14, fontFamily: 'var(--font-sans)',
+            padding: '10px 14px', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ fontSize: 10.5, color: 'rgba(236,234,239,0.4)', marginTop: 6, padding: '0 2px' }}>
+          {t('exercise.settings.setupNoteHint')}
+        </div>
+      </div>
+
       {/* Save button */}
       {onSave && (
         <button

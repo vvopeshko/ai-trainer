@@ -160,3 +160,16 @@ describe('stepWeight', () => {
     })
   })
 })
+
+describe('getExerciseSettings default type', () => {
+  it('starts duration exercises with the timer until the user chooses', async () => {
+    const store = {}
+    globalThis.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v } }
+    const { getExerciseSettings, setExerciseSettings } = await import('./weightUnit.js')
+    expect(getExerciseSettings('front-plank', 'duration').type).toBe('timer')
+    expect(getExerciseSettings('leg-press', 'weight_reps').type).toBe('reps')
+    setExerciseSettings('front-plank', { type: 'reps' })
+    expect(getExerciseSettings('front-plank', 'duration').type).toBe('reps')
+    delete globalThis.localStorage
+  })
+})

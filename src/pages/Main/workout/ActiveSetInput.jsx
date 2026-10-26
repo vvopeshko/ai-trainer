@@ -4,7 +4,14 @@ import { kgToLbs, lbsToKg, stepWeight } from '../../../utils/weightUnit.js'
 
 // ─── ActiveSetInput (accent-tinted stepper card) ────────────────────────
 
-export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepUnitProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, target, onDone }) {
+// mode — what the set records (catalog trackingType + the user's timer setting):
+// 'reps' (weight × reps), 'timer' (seconds go into reps), 'bodyweight' (the
+// weight is extra weight), 'assisted' (the weight is assistance — гравитрон).
+const TIMER_STEP = 5
+const TIMER_DEFAULT = 30
+
+export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepUnitProp, minWeight: minProp, maxWeight: maxProp, setOrder, plannedSets, lastWeight, lastReps, plannedReps, target, onDone, mode = 'reps' }) {
+  const timed = mode === 'timer'
   const { t } = useTranslation()
   const prevUnit = useRef(unit)
   const [edited, setEdited] = useState(false)
@@ -12,7 +19,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
     const raw = lastWeight ?? 0
     return unit === 'lbs' ? kgToLbs(raw) : raw
   })
-  const [reps, setReps] = useState(lastReps ?? plannedReps ?? 10)
+  const [reps, setReps] = useState(lastReps || plannedReps || (timed ? TIMER_DEFAULT : 10))
 
   const step = stepProp ?? (unit === 'lbs' ? 5 : 2.5)
   const stepUnit = stepUnitProp || unit
@@ -25,7 +32,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
     if (edited) return
     const raw = lastWeight ?? 0
     setWeight(unit === 'lbs' ? kgToLbs(raw) : raw)
-    setReps(lastReps ?? plannedReps ?? 10)
+    setReps(lastReps || plannedReps || (timed ? TIMER_DEFAULT : 10))
     prevUnit.current = unit
   }, [exercise.id, lastWeight, lastReps, plannedReps, edited]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -85,6 +92,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
               {displayWeight}
             </div>
             <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {mode === 'assisted' ? `${t('units.assistance')}, ` : mode === 'bodyweight' ? `${t('units.extra')} ` : ''}
               {unit === 'lbs' ? t('units.lbs') : t('units.kg')}
             </div>
           </div>
@@ -99,17 +107,17 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
           background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button onClick={() => { setEdited(true); setReps(r => Math.max(1, r - 1)) }} style={{
+          <button onClick={() => { setEdited(true); setReps(r => Math.max(1, r - (timed ? TIMER_STEP : 1))) }} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>−</button>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 700, color: '#fff' }}>{reps}</div>
             <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {t('units.reps')}
+              {timed ? t('units.sec') : t('units.reps')}
             </div>
           </div>
-          <button onClick={() => { setEdited(true); setReps(r => Math.min(100, r + 1)) }} style={{
+          <button onClick={() => { setEdited(true); setReps(r => Math.min(timed ? 3600 : 100, r + (timed ? TIMER_STEP : 1))) }} style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', fontSize: 17, cursor: 'pointer',
           }}>+</button>
@@ -121,7 +129,7 @@ export function ActiveSetInput({ exercise, unit, step: stepProp, stepUnit: stepU
         background: '#fff', color: 'hsl(var(--accent-h,158),50%,22%)',
         fontSize: 13, fontWeight: 700, letterSpacing: 0.4, cursor: 'pointer',
       }}>
-        {t('workout.done').toUpperCase()} · {displayWeight} × {reps}
+        {t('workout.done').toUpperCase()} · {timed && !weight ? `${reps} ${t('units.sec')}` : `${displayWeight} × ${reps}${timed ? ` ${t('units.sec')}` : ''}`}
       </button>
     </div>
   )

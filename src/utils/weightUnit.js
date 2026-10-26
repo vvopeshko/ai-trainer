@@ -100,7 +100,7 @@ export function stepWeight(current, direction, step, stepUnit, unit) {
 const STORAGE_KEY = 'exercise-weight-units'
 const SETTINGS_KEY = 'exercise-settings'
 
-const DEFAULT_SETTINGS = { unit: 'kg', minWeight: 0, maxWeight: 500, step: 2.5, stepUnit: 'kg', preset: null, type: 'reps' }
+const DEFAULT_SETTINGS = { unit: 'kg', minWeight: 0, maxWeight: 500, step: 2.5, stepUnit: 'kg', preset: null, type: 'reps', setupNote: null }
 
 // Настройки читаются на каждый рендер для каждой строки тренировки — JSON.parse
 // всего хранилища каждый раз дорого. Кэшируем разобранное значение, пока строка
@@ -133,16 +133,21 @@ export function setExerciseUnit(slug, unit) {
   setExerciseSettings(slug, { ...settings, unit })
 }
 
-export function getExerciseSettings(slug) {
-  if (!slug) return { ...DEFAULT_SETTINGS }
+/**
+ * Settings of one exercise. trackingType (catalog) picks the default input until
+ * the user chooses: duration exercises (планка, вис) start with the timer.
+ */
+export function getExerciseSettings(slug, trackingType) {
+  const defaults = trackingType === 'duration' ? { ...DEFAULT_SETTINGS, type: 'timer' } : { ...DEFAULT_SETTINGS }
+  if (!slug) return defaults
   try {
     const all = readJson(SETTINGS_KEY)
-    if (all[slug]) return { ...DEFAULT_SETTINGS, ...all[slug] }
+    if (all[slug]) return { ...defaults, ...all[slug] }
     // Migrate from old format if exists
     const oldUnits = readJson(STORAGE_KEY)
-    if (oldUnits[slug]) return { ...DEFAULT_SETTINGS, unit: oldUnits[slug] }
-    return { ...DEFAULT_SETTINGS }
-  } catch { return { ...DEFAULT_SETTINGS } }
+    if (oldUnits[slug]) return { ...defaults, unit: oldUnits[slug] }
+    return defaults
+  } catch { return defaults }
 }
 
 export function setExerciseSettings(slug, settings) {
@@ -183,10 +188,11 @@ let _apiPut = null
 export function saveSettingsToServer(slug, settings) {
   if (!slug) return
   const send = (put) => {
-    const { preset, unit, step, stepUnit, minWeight, maxWeight, type } = settings
+    const { preset, unit, step, stepUnit, minWeight, maxWeight, type, setupNote } = settings
     put(`/api/v1/exercises/settings/${encodeURIComponent(slug)}`, {
       preset: preset || null,
       unit, step, stepUnit, minWeight, maxWeight, type,
+      setupNote: setupNote?.trim() || null,
     }).catch(() => { /* silent — localStorage is the fallback */ })
   }
   if (_apiPut) { send(_apiPut); return }

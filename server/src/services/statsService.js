@@ -10,6 +10,7 @@
  *
  * tz — IANA-таймзона юзера (из getUserTimezone(req) в API или User.timezone в шедулере).
  */
+import { countsTonnage, TONNAGE_SQL } from './exerciseAttributes.js'
 import prisma from '../utils/prisma.js'
 import { getPeriodBoundaries } from '../utils/dateUtils.js'
 
@@ -199,7 +200,8 @@ export async function getPeriodStats(userId, tz, period = 'month') {
            AND w."finishedAt" >= (SELECT cur_start FROM bounds)) AS cur_workouts,
       (SELECT COALESCE(SUM(ws."weightKg" * ws.reps), 0)::float FROM "WorkoutSet" ws
          JOIN "Workout" w ON ws."workoutId" = w.id
-         WHERE w."userId" = $2 AND w."finishedAt" IS NOT NULL
+         JOIN "Exercise" e ON e.id = ws."exerciseId"
+         WHERE w."userId" = $2 AND w."finishedAt" IS NOT NULL AND ${TONNAGE_SQL}
            AND w."finishedAt" >= (SELECT cur_start FROM bounds)) AS cur_tonnage,
       (SELECT COUNT(*)::int FROM "Workout" w
          WHERE w."userId" = $2 AND w."finishedAt" IS NOT NULL
@@ -207,7 +209,8 @@ export async function getPeriodStats(userId, tz, period = 'month') {
            AND w."finishedAt" < (SELECT cur_start FROM bounds)) AS prev_workouts,
       (SELECT COALESCE(SUM(ws."weightKg" * ws.reps), 0)::float FROM "WorkoutSet" ws
          JOIN "Workout" w ON ws."workoutId" = w.id
-         WHERE w."userId" = $2 AND w."finishedAt" IS NOT NULL
+         JOIN "Exercise" e ON e.id = ws."exerciseId"
+         WHERE w."userId" = $2 AND w."finishedAt" IS NOT NULL AND ${TONNAGE_SQL}
            AND w."finishedAt" >= (SELECT prev_start FROM bounds)
            AND w."finishedAt" < (SELECT cur_start FROM bounds)) AS prev_tonnage
     `,
@@ -633,7 +636,7 @@ export async function getWorkoutSummary(workoutId) {
     where: { id: workoutId },
     include: {
       sets: {
-        include: { exercise: { select: { slug: true, nameRu: true } } },
+        include: { exercise: { select: { slug: true, nameRu: true, trackingType: true } } },
         orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }],
       },
     },
@@ -645,7 +648,7 @@ export async function getWorkoutSummary(workoutId) {
   const byExercise = new Map()
   let tonnageKg = 0
   for (const s of workout.sets) {
-    if (s.weightKg && s.reps) tonnageKg += s.weightKg * s.reps
+    if (s.weightKg && s.reps && countsTonnage(s.exercise?.trackingType)) tonnageKg += s.weightKg * s.reps
     if (s.isWarmup) continue
     const key = s.exerciseId
     if (!byExercise.has(key)) {
@@ -660,7 +663,7 @@ export async function getWorkoutSummary(workoutId) {
     }
     const agg = byExercise.get(key)
     agg.sets += 1
-    agg.volumeKg += (s.weightKg || 0) * s.reps
+    if (countsTonnage(s.exercise?.trackingType)) agg.volumeKg += (s.weightKg || 0) * s.reps
     const w = s.weightKg || 0
     if (!agg.topSet || w > agg.topSet.weightKg) {
       agg.topSet = { weightKg: w, reps: s.reps }

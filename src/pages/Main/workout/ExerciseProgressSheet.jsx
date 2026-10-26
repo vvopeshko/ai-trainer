@@ -94,7 +94,9 @@ function Segmented({ options, value, onChange }) {
   </div>
 }
 
-export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progress, data, text, unit, timed }) {
+// assisted (гравитрон): strength status, charts and «how it is counted» assume
+// that more weight is progress — hidden like for timed; the history list stays.
+export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progress, data, text, unit, timed, assisted = false }) {
   const { t } = useTranslation()
   const { webApp } = useTelegram()
   const [showAll, setShowAll] = useState(false)
@@ -129,7 +131,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
           <Icon name="x" size={16} />
         </button>
       </div>
-      {!timed && <>
+      {!timed && !assisted && <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusPill trend={progress.trend} />
           <span style={muted}>{text.period} · {text.date(sessions[0].time)}–{text.date(sessions.at(-1).time)}</span>
@@ -206,7 +208,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
         {workouts.length > 8 && <button onClick={() => setShowAll(!showAll)} style={{ background: 'none', border: 0, padding: '6px 0', color: 'inherit' }}>{t(showAll ? 'exerciseProgress.less' : 'exerciseProgress.more')}</button>}
       </details>
 
-      {!timed && <details style={{ marginTop: 10 }}>
+      {!timed && !assisted && <details style={{ marginTop: 10 }}>
         <summary style={{ cursor: 'pointer', color: 'var(--fg-primary)' }}>{t('exerciseProgress.how')}</summary>
         {volume.size && <>
           <p>{t(volume.metric === 'tonnage' ? 'exerciseProgress.volumeDefinition' : 'exerciseProgress.repsDefinition')}</p>

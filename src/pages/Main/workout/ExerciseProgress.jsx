@@ -9,14 +9,17 @@ import { useProgressText } from './useProgressText.js'
 
 // memo: WorkoutPage ре-рендерится на каждый подход/таймер, а пропсы карточки
 // (id, план, настройки) при этом не меняются — статистика не пересчитывается
-export const ExerciseProgress = memo(function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit, timed = false }) {
+// assisted: the weight is assistance (гравитрон) — less is progress, so the
+// strength status and «add weight» advice do not apply: the card names the
+// last session, like for timed exercises.
+export const ExerciseProgress = memo(function ExerciseProgress({ exerciseId, plan, unit = 'kg', step, stepUnit, timed = false, assisted = false }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const { data, isPending, isError, refetch } = useExerciseHistory(exerciseId)
   const workouts = data?.workouts ?? []
   const progress = useMemo(
-    () => exerciseProgress(workouts, timed ? null : plan, { experienceLevel: data?.experienceLevel }),
-    [workouts, timed, plan, data?.experienceLevel],
+    () => exerciseProgress(workouts, timed || assisted ? null : plan, { experienceLevel: data?.experienceLevel }),
+    [workouts, timed, assisted, plan, data?.experienceLevel],
   )
   const text = useProgressText(progress, { plan, unit, step, stepUnit })
   const style = { margin: '0 12px 12px', fontSize: 11.5, color: 'var(--fg-secondary)', lineHeight: 1.45 }
@@ -29,7 +32,7 @@ export const ExerciseProgress = memo(function ExerciseProgress({ exerciseId, pla
       <span style={{ flex: 1 }} />
       <Skeleton width={56} height={18} radius={4} />
     </div>
-    {plan && !timed && <Skeleton width="75%" height={13} style={{ marginTop: 9 }} />}
+    {plan && !timed && !assisted && <Skeleton width="75%" height={13} style={{ marginTop: 9 }} />}
   </div>
   if (isError) return <div style={style}><button onClick={() => refetch()} style={{ color: 'inherit', background: 'none', border: 0, padding: 0 }}>{t('exerciseProgress.retry')}</button></div>
   if (!progress) return <div style={style}>{t('exerciseProgress.empty')}</div>
@@ -41,25 +44,28 @@ export const ExerciseProgress = memo(function ExerciseProgress({ exerciseId, pla
       ...style, display: 'block', width: 'calc(100% - 24px)', textAlign: 'left', cursor: 'pointer',
       ...box,
     }}>
-      {!timed && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {!timed && !assisted && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <StatusPill trend={progress.trend} />
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text.reason}</span>
         {progress.records.latest.length > 0 && <Icon name="trophy" size={13} style={{ color: 'var(--success)', flexShrink: 0 }} />}
         <Sparkline chart={progress.charts[0]} trend={progress.trend} />
         <Icon name="chevronRight" size={14} style={{ flexShrink: 0, color: 'var(--fg-tertiary)' }} />
       </div>}
-      {!timed && text.action && <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginTop: 7, fontSize: 13, color: 'var(--fg-primary)' }}>
+      {!timed && !assisted && text.action && <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginTop: 7, fontSize: 13, color: 'var(--fg-primary)' }}>
         <Icon name="target" size={15} style={{ flexShrink: 0, marginTop: 1, color: progress.ready ? 'var(--success)' : progress.plateau ? 'var(--warning)' : 'var(--accent-color)' }} />
         <span>{text.action}</span>
       </div>}
-      {timed && <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--fg-tertiary)' }}>
+      {(timed || assisted) && <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--fg-tertiary)' }}>
         <span style={{ flex: 1, minWidth: 0 }}>{t('exerciseProgress.lastTime', {
-          date: text.date(last.time), sets: `${last.sets.map(s => s.reps).join(' / ')} ${t('exerciseProgress.seconds')}`,
+          date: text.date(last.time),
+          sets: timed
+            ? `${last.sets.map(s => s.reps).join(' / ')} ${t('exerciseProgress.seconds')}`
+            : `${t('exerciseProgress.assistance')} ${last.sets.map(s => `${text.weight(s.weightKg)} ${text.unitLabel} × ${s.reps}`).join(' / ')}`,
         })}</span>
         <Icon name="chevronRight" size={14} style={{ flexShrink: 0 }} />
       </div>}
     </button>
     <ExerciseProgressSheet open={open} onClose={() => setOpen(false)} exerciseId={exerciseId}
-      progress={progress} data={data} text={text} unit={unit} timed={timed} />
+      progress={progress} data={data} text={text} unit={unit} timed={timed} assisted={assisted} />
   </>
 })

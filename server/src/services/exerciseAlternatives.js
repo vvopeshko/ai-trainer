@@ -1,5 +1,7 @@
 import prisma from '../utils/prisma.js'
-const SELECT = { id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true, targetMuscle: true }
+import { loadsInjured } from './exerciseAttributes.js'
+
+const SELECT = { id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true, targetMuscle: true, movementPattern: true, jointStress: true }
 const MAX_ALTERNATIVES = 6
 
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x))
@@ -46,8 +48,12 @@ export function rankAlternatives(target, pool, usage = new Map()) {
     .filter((ex, i, all) => all.findIndex(o => baseName(o.nameRu) === baseName(ex.nameRu)) === i)
   // Within one target muscle, keep the same movement (жим ногами ↔ жим ногами,
   // not lunges) when there is any; the user's history only orders the list —
-  // doing lunges does not make them a leg press alternative.
-  const close = sorted.filter(sameMovement)
+  // doing lunges does not make them a leg press alternative. The catalog's
+  // movement pattern decides when known (жим в тренажёре ↔ жим гантелей, not
+  // сведение); name stems are the fallback for exercises without one.
+  const samePattern = ex => ex.movementPattern === target.movementPattern
+  const byPattern = target.movementPattern ? sorted.filter(samePattern) : []
+  const close = byPattern.length ? byPattern : sorted.filter(sameMovement)
   const ranked = close.length ? close : sorted
   // Variety at the top: at most two of the same tool before the rest.
   const perTool = new Map(), head = [], tail = []
@@ -81,13 +87,18 @@ export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
   })
   if (!pool.length) return []
   // Working sets per exercise: what the user actually does ranks first.
-  const usage = await prisma.workoutSet.groupBy({
-    by: ['exerciseId'],
-    where: { exerciseId: { in: pool.map(e => e.id) }, isWarmup: false, workout: { userId, finishedAt: { not: null } } },
-    _count: { workoutId: true },
-  })
+  // Injuries from the profile ('knee', 'shoulder'…): never offer what loads them.
+  const [usage, profile] = await Promise.all([
+    prisma.workoutSet.groupBy({
+      by: ['exerciseId'],
+      where: { exerciseId: { in: pool.map(e => e.id) }, isWarmup: false, workout: { userId, finishedAt: { not: null } } },
+      _count: { workoutId: true },
+    }),
+    prisma.userProfile.findUnique({ where: { userId }, select: { constraints: true } }),
+  ])
   const used = new Map(usage.map(u => [u.exerciseId, u._count.workoutId]))
-  return rankAlternatives(target, pool, used).slice(0, limit)
+  const safe = pool.filter(ex => !loadsInjured(ex, profile?.constraints))
+  return rankAlternatives(target, safe, used).slice(0, limit)
 }
 
 async function activeProgram(userId) {

@@ -109,7 +109,7 @@ export async function enrichPlanExercises(planJson) {
   const exercises = exerciseIds.length > 0
     ? await prisma.exercise.findMany({
         where: { id: { in: [...new Set(exerciseIds)] } },
-        select: { id: true, primaryMuscles: true, secondaryMuscles: true, equipment: true },
+        select: { id: true, primaryMuscles: true, secondaryMuscles: true, equipment: true, trackingType: true },
       })
     : []
 
@@ -126,6 +126,7 @@ export async function enrichPlanExercises(planJson) {
           primaryMuscles: info?.primaryMuscles || [],
           secondaryMuscles: info?.secondaryMuscles || [],
           equipment: info?.equipment || [],
+          trackingType: info?.trackingType ?? null,
         }
       }),
     })),

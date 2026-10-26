@@ -109,6 +109,7 @@ export async function getAllSettings(req, res) {
       minWeight: row.minWeight,
       maxWeight: row.maxWeight,
       type: row.type,
+      setupNote: row.setupNote,
       updatedAt: row.updatedAt,
     }
   }
@@ -135,6 +136,8 @@ export async function upsertSettings(req, res) {
     minWeight: z.number().min(0).optional(),
     maxWeight: z.number().positive().optional(),
     type: z.enum(['reps', 'timer']).optional(),
+    // «сиденье 3, рычаг 1» — пустая строка стирает заметку
+    setupNote: z.string().trim().max(200).nullable().optional().transform(v => (v === '' ? null : v)),
   })
     .refine((b) => b.minWeight == null || b.maxWeight == null || b.minWeight <= b.maxWeight, {
       message: 'minWeight must be <= maxWeight',
@@ -166,6 +169,7 @@ export async function upsertSettings(req, res) {
       minWeight: record.minWeight,
       maxWeight: record.maxWeight,
       type: record.type,
+      setupNote: record.setupNote,
       updatedAt: record.updatedAt,
     },
   })

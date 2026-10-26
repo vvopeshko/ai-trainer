@@ -4,6 +4,7 @@ const mock = vi.hoisted(() => ({
   workoutSet: { groupBy: vi.fn() },
   program: { findFirst: vi.fn(), update: vi.fn() },
   workout: { findMany: vi.fn() },
+  userProfile: { findUnique: vi.fn() },
 }))
 vi.mock('../utils/prisma.js', () => ({ default: mock }))
 import { rankAlternatives, findAlternatives, updateSlot, fillProgramAlternatives, makeMainHints } from './exerciseAlternatives.js'
@@ -176,4 +177,25 @@ it('does not trust the default kind of exercises created outside the catalog', a
   mock.exercise.findMany.mockResolvedValue([])
   await findAlternatives('u1', 'machine')
   expect(mock.exercise.findMany.mock.calls[0][0].where.category).toEqual({ in: ['compound', 'isolation'] })
+})
+
+it('keeps the same movement pattern when the catalog knows it', () => {
+  const press = { ...ex('machine-press', 'Жим от груди в тренажёре', ['chest'], ['machine']), movementPattern: 'horizontal_push' }
+  const pool = [
+    { ...ex('db-press', 'Жим гантелей лёжа', ['chest'], ['dumbbell']), movementPattern: 'horizontal_push' },
+    { ...ex('fly', 'Сведение рук в тренажёре', ['chest'], ['machine']), movementPattern: 'chest_fly' },
+    { ...ex('pushup', 'Отжимания', ['chest'], ['body only']), movementPattern: 'horizontal_push' },
+  ]
+  expect(rankAlternatives(press, pool).map(e => e.id).sort()).toEqual(['db-press', 'pushup'])
+})
+
+it('does not offer alternatives that load the user’s injured joints', async () => {
+  mock.exercise.findUnique.mockResolvedValue(curlMachine)
+  mock.exercise.findMany.mockResolvedValue([
+    { ...pool[0], jointStress: ['elbow'] },
+    { ...pool[1], jointStress: [] },
+  ])
+  mock.workoutSet.groupBy.mockResolvedValue([])
+  mock.userProfile.findUnique.mockResolvedValue({ constraints: ['elbow'] })
+  expect((await findAlternatives('u1', 'machine')).map(e => e.id)).toEqual(['cable'])
 })

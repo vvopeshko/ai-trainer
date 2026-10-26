@@ -1,3 +1,7 @@
+// Как countsTonnage на сервере (services/exerciseAttributes.js): вес × повторы —
+// тоннаж только там, где вес поднимают; не противовес гравитрона и не секунды/метры.
+const NO_TONNAGE = new Set(['assisted_bodyweight', 'duration', 'distance'])
+
 /** Считает сводку по данным GET /workouts/:id (workout.sets c include exercise). */
 export function summarizeWorkout(workout) {
   if (!workout) return null
@@ -9,7 +13,7 @@ export function summarizeWorkout(workout) {
 
   for (const s of sets) {
     exerciseIds.add(s.exerciseId)
-    if (s.weightKg && s.reps) tonnageKg += s.weightKg * s.reps
+    if (s.weightKg && s.reps && !NO_TONNAGE.has(s.exercise?.trackingType)) tonnageKg += s.weightKg * s.reps
     for (const m of s.exercise?.primaryMuscles ?? []) muscleSet.add(m)
   }
 

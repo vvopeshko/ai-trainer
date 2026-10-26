@@ -269,6 +269,11 @@ model Exercise {
   targetMuscle     String?
   force            String?            // 'push' | 'pull' | 'static' — для баланса тяни/толкай
   unilateral       Boolean?           // одной рукой/ногой за раз; вес и подходы — на сторону
+  // Атрибуты каталога (списки и смысл — services/exerciseAttributes.js):
+  trackingType     String?            // weight_reps | bodyweight_reps | assisted_bodyweight | duration | distance
+  movementPattern  String?            // horizontal_push, hinge, … — основа аналогов и баланса
+  jointStress      String[]           @default([]) // ['knee', 'lower_back'] ↔ UserProfile.constraints
+  stable           Boolean?           // тренажёр/блок/опора: мало стабилизации
 
   youtubeUrl       String?
   imageUrl         String?
@@ -288,6 +293,7 @@ model Exercise {
 
   @@index([category])
   @@index([targetMuscle])
+  @@index([movementPattern])
   @@index([aliases], type: Gin) // поиск по массиву алиасов (unnest/@> в exerciseResolver)
 }
 
@@ -467,6 +473,7 @@ model UserExerciseSettings {
   minWeight    Float    @default(0)
   maxWeight    Float    @default(500)
   type         String   @default("reps")
+  setupNote    String?  // «сиденье 3, рычаг 1» — настройка тренажёра у юзера
 
   updatedAt    DateTime @updatedAt
 

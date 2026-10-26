@@ -120,6 +120,8 @@ export default function WorkoutPage() {
   const { data: overview } = useExerciseOverview()
   const { data: catalog } = useExerciseCatalog()
   const catalogById = useMemo(() => new Map((catalog ?? []).map(ex => [ex.id, ex])), [catalog])
+  // Plan items and restored state carry only id/slug/name: the catalog knows the type.
+  const trackingTypeOf = ex => ex?.trackingType ?? catalogById.get(ex?.id)?.trackingType ?? null
   const trendById = useMemo(() => new Map((overview?.exercises ?? []).map(ex => [ex.id,
     exerciseProgress(ex.workouts, ex.plan, { experienceLevel: overview.experienceLevel })?.trend])), [overview])
   const [detailExerciseId, setDetailExerciseId] = useState(null)
@@ -151,9 +153,9 @@ export default function WorkoutPage() {
   // ── Exercise settings (unit, step, weight range) ──
   useEffect(() => {
     if (currentExercise?.slug) {
-      setExerciseSettingsState(getExerciseSettings(currentExercise.slug))
+      setExerciseSettingsState(getExerciseSettings(currentExercise.slug, trackingTypeOf(currentExercise)))
     }
-  }, [currentExercise?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentExercise?.id, catalogById]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleExerciseSettingsChange = (newSettings) => {
     setExerciseSettingsState(newSettings)
@@ -365,9 +367,12 @@ export default function WorkoutPage() {
   })
   const nextSet = suggestionFor(doneSets.length)
   // Same progress as the card (same history query) so the set target agrees with it.
-  const progress = useMemo(() => exerciseHistory?.workouts && exerciseSettings.type !== 'timer'
+  // Weight progression (targets, records) — not for timed sets nor for assisted
+  // exercises, where the weight is assistance and less of it is progress.
+  const assisted = trackingTypeOf(currentExercise) === 'assisted_bodyweight'
+  const progress = useMemo(() => exerciseHistory?.workouts && exerciseSettings.type !== 'timer' && !assisted
     ? exerciseProgress(exerciseHistory.workouts, currentPlanExercise, { experienceLevel: exerciseHistory.experienceLevel })
-    : null, [exerciseHistory, currentPlanExercise, exerciseSettings.type])
+    : null, [exerciseHistory, currentPlanExercise, exerciseSettings.type, assisted])
   const readyWeightKg = (() => {
     if (!progress?.ready?.weightKg || !exerciseSettings.step) return null
     const lbs = exerciseSettings.unit === 'lbs'
@@ -485,7 +490,7 @@ export default function WorkoutPage() {
     // «Новый рекорд»: только против загруженной истории, иначе второй подход
     // «побил» бы первый. Подходы этой тренировки тоже считаются прошлыми.
     const pastWorkouts = exerciseHistory?.workouts ?? []
-    if (pastWorkouts.length && exerciseSettings.type !== 'timer') {
+    if (pastWorkouts.length && exerciseSettings.type !== 'timer' && !assisted) {
       const prior = [...pastWorkouts.flatMap(w => w.sets), ...doneSets, ...(partialSets[currentExercise.id] ?? []),
         ...allExercises.filter(ex => ex.exercise.id === currentExercise.id).flatMap(ex => ex.sets)]
       const [record] = newRecords([newSet], prior)
@@ -1060,6 +1065,16 @@ export default function WorkoutPage() {
               </div>
             )}
 
+            {exerciseSettings.setupNote && (
+              <div style={{
+                margin: '0 12px 8px', display: 'flex', gap: 6, alignItems: 'flex-start',
+                fontSize: 12.5, color: 'var(--fg-secondary)', lineHeight: 1.4,
+              }}>
+                <Icon name="pen" size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--fg-tertiary)' }} />
+                <span><span style={{ color: 'var(--fg-tertiary)' }}>{t('workout.setupNote')}: </span>{exerciseSettings.setupNote}</span>
+              </div>
+            )}
+
             <ExerciseProgress
               key={currentExercise.id}
               exerciseId={currentExercise.id}
@@ -1068,6 +1083,7 @@ export default function WorkoutPage() {
               step={exerciseSettings.step}
               stepUnit={exerciseSettings.stepUnit}
               timed={exerciseSettings.type === 'timer'}
+              assisted={assisted}
             />
 
             {/* Done sets inline */}
@@ -1166,6 +1182,9 @@ export default function WorkoutPage() {
                   plannedReps={currentPlanExercise?.repsMin || null}
                   target={setTarget}
                   onDone={handleSetDone}
+                  mode={exerciseSettings.type === 'timer' ? 'timer'
+                    : assisted ? 'assisted'
+                      : trackingTypeOf(currentExercise) === 'bodyweight_reps' ? 'bodyweight' : 'reps'}
                 />
               )}
 
@@ -1300,7 +1319,7 @@ export default function WorkoutPage() {
                         lastResults={lastResultsCache[pe.exerciseId]}
                         partialSets={partial}
                         progress={(() => {
-                          const settings = getExerciseSettings(pe.slug)
+                          const settings = getExerciseSettings(pe.slug, trackingTypeOf({ id: pe.exerciseId, ...pe }))
                           return <ExerciseProgress exerciseId={pe.exerciseId} plan={pe} unit={settings.unit}
                             step={settings.step} stepUnit={settings.stepUnit} timed={settings.type === 'timer'} />
                         })()}
