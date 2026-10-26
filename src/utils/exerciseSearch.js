@@ -6,7 +6,8 @@
  *   0 exact name or alias · 1 name starts with the query · 2 query at a word
  *   start in the name · 3 query inside the name · 4 all words in the name ·
  *   5 matched only via English name / aliases;
- * ties: shorter name first, then alphabetical.
+ * ties: more popular first (catalog `popularity` — how many people do it; the
+ * server search has no such tie-break), then shorter name, then alphabetical.
  */
 
 export const normalizeSearch = s => (s ?? '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim()
@@ -35,7 +36,18 @@ export function searchExercises(exercises, query) {
     .map(ex => ({ ex, rank: searchRank(ex, query) }))
     .filter(r => r.rank !== null)
     .sort((a, b) => a.rank - b.rank
+      || (b.ex.popularity ?? 0) - (a.ex.popularity ?? 0)
       || (a.ex.nameRu?.length ?? 0) - (b.ex.nameRu?.length ?? 0)
       || (a.ex.nameRu ?? '').localeCompare(b.ex.nameRu ?? '', 'ru'))
     .map(r => r.ex)
 }
+
+/** Catalog browsing order without a query: popular first, then alphabetical. */
+export function byPopularity(exercises) {
+  return [...exercises].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
+    || (a.nameRu ?? '').localeCompare(b.nameRu ?? '', 'ru'))
+}
+
+// Not strength work: shown only on request or when searched by name.
+const NOT_STRENGTH = new Set(['stretch', 'cardio', 'warmup', 'mobility'])
+export const isStretchOrCardio = ex => NOT_STRENGTH.has(ex.category)

@@ -409,10 +409,11 @@ export const translations = {
     // Equipment
     'library.equip.barbell': 'Штанга',
     'library.equip.dumbbell': 'Гантели',
-    'library.equip.cable': 'Тросы',
+    'library.equip.cable': 'Блоки',
     'library.equip.machine': 'Тренажёр',
     'library.equip.body only': 'Своё тело',
     'library.equip.other': 'Другое',
+    'library.stretchCardio': 'Растяжка и кардио',
     // Difficulty
     'library.diff.beginner': 'Начинающий',
     'library.diff.intermediate': 'Средний',

@@ -4,10 +4,10 @@ import { useExerciseAlternatives, useExerciseCatalog } from '../../../hooks/quer
 import { Icon, Skeleton } from '../../../components/ui/index.js'
 import { kgToLbs } from '../../../utils/weightUnit.js'
 import { StatusPill } from './ProgressStatus.jsx'
+import { searchExercises } from '../../../utils/exerciseSearch.js'
 
 const MAX_ROWS = 8
 const MAX_FOUND = 8
-const norm = s => s.toLowerCase().replace(/ё/g, 'е')
 
 // "Аналоги" tab of the exercise info sheet during a workout. Variants of one
 // program slot: its main exercise (if something else is done today), its own
@@ -27,7 +27,7 @@ export function AlternativesPanel({ current, slot, lastResults, onNeedLastResult
     .filter(a => a.exerciseId !== current?.id).slice(0, MAX_ROWS)
   const listed = new Set([current?.id, ...rows.map(r => r.exerciseId)])
   const found = query.trim().length >= 2
-    ? catalog.filter(e => !listed.has(e.id) && norm(e.nameRu).includes(norm(query.trim())))
+    ? searchExercises(catalog.filter(e => !listed.has(e.id)), query)
       .slice(0, MAX_FOUND).map(e => ({ exerciseId: e.id, nameRu: e.nameRu, slug: e.slug }))
     : []
   const missing = [...rows, ...found].map(r => r.exerciseId).filter(id => !(id in lastResults)).join(',')

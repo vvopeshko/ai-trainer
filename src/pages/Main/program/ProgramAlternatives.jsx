@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { useExerciseAlternatives, useExerciseCatalog } from '../../../hooks/queries.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
+import { searchExercises } from '../../../utils/exerciseSearch.js'
 
 const MAX_ALTERNATIVES = 6
-const norm = s => s.toLowerCase().replace(/ё/g, 'е')
 const chip = {
   padding: '6px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
   background: 'rgba(255,255,255,0.06)', color: 'var(--fg-secondary)', fontSize: 'var(--text-xs)',
@@ -24,7 +24,7 @@ export function ProgramAlternatives({ exercise, onChange }) {
   const full = alternatives.length >= MAX_ALTERNATIVES
   const suggestions = (suggested?.alternatives ?? []).filter(a => !taken.has(a.exerciseId)).slice(0, 5)
   const results = query.trim().length >= 2
-    ? catalog.filter(e => !taken.has(e.id) && norm(e.nameRu).includes(norm(query.trim()))).slice(0, 6)
+    ? searchExercises(catalog.filter(e => !taken.has(e.id)), query).slice(0, 6)
     : []
 
   const add = id => {

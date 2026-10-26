@@ -134,10 +134,12 @@ export function useExerciseSettings() {
   })
 }
 
-// Персист каталога (924 упр., ~320 KB) в localStorage: холодный старт мини-аппа
+// Персист каталога (880 упр., ~320 KB) в localStorage: холодный старт мини-аппа
 // показывает каталог мгновенно, без скелетона и без 66 KB gzip по сети.
-// Версионированный ключ — при смене формы данных бампнуть суффикс.
-const CATALOG_LS_KEY = 'ai-trainer:catalog-v1'
+// Версионированный ключ — при смене формы данных или состава каталога бампнуть
+// суффикс (v2: слиты дубли — в v1 остались удалённые упражнения, + popularity).
+const CATALOG_LS_KEY = 'ai-trainer:catalog-v2'
+const STALE_CATALOG_KEYS = ['ai-trainer:catalog-v1']
 
 function readPersistedCatalog() {
   try {
@@ -150,6 +152,7 @@ function readPersistedCatalog() {
 
 function writePersistedCatalog(data) {
   try {
+    for (const key of STALE_CATALOG_KEYS) localStorage.removeItem(key)
     localStorage.setItem(CATALOG_LS_KEY, JSON.stringify({ ts: Date.now(), data }))
   } catch { /* quota / приватный режим — не критично, просто не кэшируем */ }
 }

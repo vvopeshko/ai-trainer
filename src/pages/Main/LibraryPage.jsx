@@ -3,12 +3,15 @@
  *
  * Загружает все упражнения (лёгкие поля) одним запросом.
  * Клиентская фильтрация: текстовый поиск + мышечная группа + оборудование.
+ * Без запроса — силовые упражнения, популярные сверху; растяжки и кардио —
+ * отдельным чипом (поиск по названию находит их и без чипа).
  * Детали — в BottomSheet по тапу (полный запрос GET /exercises/:id).
  */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../hooks/queries.js'
-import { searchExercises } from '../../utils/exerciseSearch.js'
+import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
+import { searchExercises, byPopularity, isStretchOrCardio } from '../../utils/exerciseSearch.js'
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { MuscleIcon } from '../../components/ui/MuscleIcon.jsx'
@@ -132,10 +135,12 @@ function ChipRow({ children }) {
 // ─── Exercise Row ─────────────────────────────────────────────────────
 
 function ExerciseRow({ exercise, isLast, onClick }) {
+  // Same as the detail sheet header: target muscle (or main muscle) · equipment
+  const muscle = exercise.targetMuscle ?? exercise.primaryMuscles?.[0]
   const subtitle = [
-    ...(exercise.primaryMuscles || []).slice(0, 2),
-    ...(exercise.equipment || []).slice(0, 1),
-  ].join(' · ')
+    muscle && getMuscleName(muscle),
+    exercise.equipment?.[0] && getEquipmentName(exercise.equipment[0]),
+  ].filter(Boolean).join(' · ')
 
   return (
     <button
@@ -213,6 +218,7 @@ export default function LibraryPage() {
   const debouncedQuery = useDebounce(query, DEBOUNCE_MS)
   const [selectedMuscle, setSelectedMuscle] = useState(null)
   const [selectedEquipment, setSelectedEquipment] = useState(null)
+  const [stretchCardio, setStretchCardio] = useState(false)
 
   // Detail sheet
   const [detailExerciseId, setDetailExerciseId] = useState(null)
@@ -220,12 +226,13 @@ export default function LibraryPage() {
 
   // Client-side filtering
   const filtered = useMemo(() => {
-    let list = allExercises
+    const searching = Boolean(debouncedQuery.trim())
+    let list = stretchCardio
+      ? allExercises.filter(isStretchOrCardio)
+      : searching ? allExercises : allExercises.filter(ex => !isStretchOrCardio(ex))
 
-    // Text search: ranked, best match first
-    if (debouncedQuery.trim()) {
-      list = searchExercises(list, debouncedQuery)
-    }
+    // Text search: ranked, best match first; otherwise popular first
+    list = searching ? searchExercises(list, debouncedQuery) : byPopularity(list)
 
     // Muscle group filter
     if (selectedMuscle) {
@@ -245,7 +252,7 @@ export default function LibraryPage() {
     }
 
     return list
-  }, [allExercises, debouncedQuery, selectedMuscle, selectedEquipment])
+  }, [allExercises, debouncedQuery, selectedMuscle, selectedEquipment, stretchCardio])
 
   // Open detail sheet
   const openDetail = useCallback((exerciseId) => {
@@ -310,6 +317,11 @@ export default function LibraryPage() {
                 onClick={() => toggleEquipment(eq)}
               />
             ))}
+            <Chip
+              label={t('library.stretchCardio')}
+              active={stretchCardio}
+              onClick={() => setStretchCardio(v => !v)}
+            />
           </ChipRow>
 
           {/* Count */}

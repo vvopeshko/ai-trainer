@@ -3,6 +3,7 @@ import { useTranslation } from '../../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../../hooks/queries.js'
 import { getMuscleName, getEquipmentName } from '../../../utils/muscleMapping.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
+import { searchExercises, byPopularity, isStretchOrCardio } from '../../../utils/exerciseSearch.js'
 
 // ─── ExercisePicker ─────────────────────────────────────────────────────
 
@@ -15,16 +16,11 @@ export function ExercisePicker({ onSelect }) {
   const { data: catalog = [], isLoading } = useExerciseCatalog()
   const [query, setQuery] = useState('')
 
+  // Without a query: what people actually do, strength work only. A search
+  // covers the whole catalog, stretches included, best match first.
   const exercises = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return catalog.slice(0, MAX_RESULTS)
-    return catalog
-      .filter(ex => {
-        const hay = [ex.nameRu, ex.nameEn, ...(ex.primaryMuscles || []), ...(ex.equipment || [])]
-          .filter(Boolean).join(' ').toLowerCase()
-        return hay.includes(q)
-      })
-      .slice(0, MAX_RESULTS)
+    if (!query.trim()) return byPopularity(catalog.filter(ex => !isStretchOrCardio(ex))).slice(0, MAX_RESULTS)
+    return searchExercises(catalog, query).slice(0, MAX_RESULTS)
   }, [catalog, query])
 
   const loading = isLoading && catalog.length === 0

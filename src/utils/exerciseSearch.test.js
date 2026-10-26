@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeSearch, searchRank, searchExercises } from './exerciseSearch.js'
+import { normalizeSearch, searchRank, searchExercises, byPopularity, isStretchOrCardio } from './exerciseSearch.js'
 
 const ex = (nameRu, extra = {}) => ({ nameRu, nameEn: null, aliases: [], ...extra })
 
@@ -51,5 +51,31 @@ describe('searchExercises', () => {
     expect(searchExercises(list, 'жим').map(e => e.nameRu))
       .toEqual(['Жим лёжа', 'Жим штанги стоя', 'Жим гантелей лёжа', 'Французский жим', 'Отжимания на брусьях'])
     expect(searchExercises(list, 'армейский жим').map(e => e.nameRu)).toEqual(['Жим штанги стоя'])
+  })
+})
+
+describe('popularity', () => {
+  it('puts what people do above exotic names with the same rank', () => {
+    const list = [ex('Жим JM'), ex('Жим Тейта'), ex('Жим штанги лёжа средним хватом', { popularity: 2 })]
+    expect(searchExercises(list, 'жим').map(e => e.nameRu))
+      .toEqual(['Жим штанги лёжа средним хватом', 'Жим JM', 'Жим Тейта'])
+  })
+
+  it('never lets popularity beat a closer match', () => {
+    const list = [ex('Французский жим', { popularity: 4 }), ex('Жим Тейта')]
+    expect(searchExercises(list, 'жим').map(e => e.nameRu)).toEqual(['Жим Тейта', 'Французский жим'])
+  })
+
+  it('browses popular first, then alphabetically', () => {
+    const list = [ex('Ягодичный мост'), ex('Бабочка', { popularity: 1 }), ex('Армейский жим'), ex('Подтягивания', { popularity: 3 })]
+    expect(byPopularity(list).map(e => e.nameRu)).toEqual(['Подтягивания', 'Бабочка', 'Армейский жим', 'Ягодичный мост'])
+  })
+})
+
+describe('isStretchOrCardio', () => {
+  it('separates stretches and cardio from strength work', () => {
+    expect(isStretchOrCardio({ category: 'stretch' })).toBe(true)
+    expect(isStretchOrCardio({ category: 'cardio' })).toBe(true)
+    expect(isStretchOrCardio({ category: 'compound' })).toBe(false)
   })
 })

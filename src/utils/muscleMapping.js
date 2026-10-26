@@ -70,7 +70,7 @@ export function getMuscleName(key) {
 
 export const EQUIPMENT_NAME = {
   barbell: 'штанга', dumbbell: 'гантели', 'body only': 'своё тело',
-  cable: 'тренажёр', machine: 'тренажёр', kettlebells: 'гиря',
+  cable: 'блок', machine: 'тренажёр', kettlebells: 'гиря',
   bands: 'резинка', 'e-z curl bar': 'EZ-гриф', 'foam roll': 'ролл',
   'exercise ball': 'фитбол', 'medicine ball': 'медбол',
   other: 'другое', medicine_ball: 'медбол',
