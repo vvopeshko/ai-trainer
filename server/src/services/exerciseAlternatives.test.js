@@ -7,6 +7,7 @@ const mock = vi.hoisted(() => ({
   userProfile: { findUnique: vi.fn() },
 }))
 vi.mock('../utils/prisma.js', () => ({ default: mock }))
+vi.mock('./exerciseCatalog.js', () => ({ exercisePopularity: async () => new Map() }))
 import { rankAlternatives, findAlternatives, updateSlot, fillProgramAlternatives, makeMainHints } from './exerciseAlternatives.js'
 beforeEach(() => {
   vi.resetAllMocks()
@@ -199,4 +200,46 @@ it('does not offer alternatives that load the user’s injured joints', async ()
   mock.workoutSet.groupBy.mockResolvedValue([])
   mock.userProfile.findUnique.mockResolvedValue({ constraints: ['elbow'] })
   expect((await findAlternatives('u1', 'machine')).map(e => e.id)).toEqual(['cable'])
+})
+
+const swap = (id, nameRu, extra = {}) => ({ id, nameRu, slug: id, primaryMuscles: ['lats'], equipment: ['cable'], category: 'compound', source: 'seed',
+  targetMuscle: 'lats', movementPattern: 'vertical_pull', trackingType: 'weight_reps', difficulty: 'beginner', isCore: true, ...extra })
+
+it('puts the catalog core above rare variations and keeps swaps not much harder', () => {
+  const gravitron = swap('gravitron', 'Подтягивания в гравитроне', { equipment: ['machine'], trackingType: 'assisted_bodyweight' })
+  const ranked = rankAlternatives(gravitron, [
+    swap('one-arm', 'Подтягивание на одной руке', { equipment: ['body only'], trackingType: 'bodyweight_reps', difficulty: 'advanced', isCore: false }),
+    swap('pulldown', 'Тяга верхнего блока широким хватом'),
+    swap('pullup', 'Подтягивания', { equipment: ['body only'], trackingType: 'bodyweight_reps', difficulty: 'intermediate' }),
+  ])
+  expect(ranked.map(e => e.id).at(-1)).toBe('one-arm')
+})
+
+it('does not offer timed holds for rep exercises ahead of rep ones', () => {
+  const plank = swap('plank', 'Планка', { primaryMuscles: ['abdominals'], equipment: ['body only'], movementPattern: 'core_stability', trackingType: 'duration', targetMuscle: 'abdominals' })
+  const ranked = rankAlternatives(plank, [
+    swap('deadbug', 'Мёртвый жук', { primaryMuscles: ['abdominals'], equipment: ['body only'], movementPattern: 'core_stability', trackingType: 'bodyweight_reps', targetMuscle: 'abdominals' }),
+    swap('hollow', 'Удержание лодочки', { primaryMuscles: ['abdominals'], equipment: ['body only'], movementPattern: 'core_stability', trackingType: 'duration', targetMuscle: 'abdominals' }),
+  ])
+  expect(ranked[0].id).toBe('hollow')
+})
+
+it('queries by target muscle and movement pattern, not by compound/isolation', async () => {
+  mock.exercise.findUnique.mockResolvedValue(swap('thrust', 'Хип-траст со штангой', { targetMuscle: 'glutes', movementPattern: 'hip_extension' }))
+  mock.exercise.findMany.mockResolvedValue([])
+  await findAlternatives('u1', 'thrust')
+  expect(mock.exercise.findMany.mock.calls[0][0].where).toEqual({
+    id: { not: 'thrust' }, targetMuscle: 'glutes', movementPattern: 'hip_extension',
+    OR: [{ source: { not: 'user_created' } }, { createdByUserId: 'u1' }],
+  })
+})
+
+it('prefers what more people do among otherwise equal swaps', () => {
+  const pullup = swap('pullup', 'Подтягивания', { equipment: ['body only'], trackingType: 'bodyweight_reps' })
+  const ranked = rankAlternatives(pullup, [
+    swap('one-arm-pd', 'Тяга верхнего блока одной рукой'),
+    swap('reverse-pd', 'Тяга верхнего блока обратным хватом'),
+    swap('wide-pd', 'Тяга верхнего блока широким хватом', { popularity: 3 }),
+  ])
+  expect(ranked[0].id).toBe('wide-pd')
 })

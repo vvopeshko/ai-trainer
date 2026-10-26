@@ -1,7 +1,11 @@
 import prisma from '../utils/prisma.js'
 import { loadsInjured } from './exerciseAttributes.js'
+import { exercisePopularity } from './exerciseCatalog.js'
 
-const SELECT = { id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true, targetMuscle: true, movementPattern: true, jointStress: true }
+const SELECT = {
+  id: true, nameRu: true, slug: true, equipment: true, primaryMuscles: true, category: true, source: true,
+  targetMuscle: true, movementPattern: true, jointStress: true, isCore: true, difficulty: true, trackingType: true,
+}
 const MAX_ALTERNATIVES = 6
 
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x))
@@ -20,11 +24,20 @@ const TOOL = /^(штанг|гантел|гир|блок|тренаж|кабел|
 const stems = (name, { tools = true } = {}) => new Set(name.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я]+/)
   .filter(w => w.length >= 3 && !STOP.has(w) && (tools || !TOOL.test(w))).map(w => w.slice(0, 5)))
 
+const LEVEL = { beginner: 0, intermediate: 1, advanced: 2 }
+// Sets of the same kind are a cleaner swap; seconds instead of reps is not one.
+const REPS = new Set(['weight_reps', 'bodyweight_reps', 'assisted_bodyweight'])
+function trackingFit(a, b) {
+  if (!a || !b || a === b) return a && a === b ? 1 : 0
+  return REPS.has(a) === REPS.has(b) ? 0 : -3
+}
+
 /**
  * Pure ranking of catalog candidates for one exercise ("суть одна"): the same
- * main muscle and category are required by the query; here the same movement
- * (shared name stems) and muscle set weigh most, then a gym tool different
- * from the original, catalog entries, and anything the user already trains.
+ * target muscle (and movement pattern, when known) is required by the query;
+ * here the same movement and muscle set weigh most, then the catalog core, a
+ * difficulty not above the original, the same kind of sets, how many people do
+ * it, a gym tool different from the original, and anything the user trains.
  */
 export function rankAlternatives(target, pool, usage = new Map()) {
   const own = stems(target.nameRu)
@@ -37,7 +50,13 @@ export function rankAlternatives(target, pool, usage = new Map()) {
       + (sameSet(ex.primaryMuscles, target.primaryMuscles) ? 2 : 0)
       + (ex.equipment.some(e => GYM.has(e)) ? 1.5 : 0) - (ex.equipment.some(e => ODD.has(e)) ? 3 : 0)
       + (sameSet(ex.equipment, target.equipment) ? 0 : 1)
-      + (ex.source === 'seed' ? 0.5 : 0)
+      // What ordinary programs use beats rare variations («подтягивание на одной руке»).
+      + (ex.isCore ? 2 : 0)
+      // A swap should not be much harder: who needs the гравитрон does not get one-arm pull-ups.
+      - 1.5 * Math.max(0, (LEVEL[ex.difficulty] ?? 0) - (LEVEL[target.difficulty] ?? 0))
+      + trackingFit(ex.trackingType, target.trackingType)
+      // How many people do it: «тяга верхнего блока широким хватом» over rare grips.
+      + 0.5 * Math.min(ex.popularity ?? 0, 3)
   }
   const sorted = pool
     .filter(ex => ex.id !== target.id && baseName(ex.nameRu) !== baseName(target.nameRu) && !NOT_A_SWAP.test(ex.nameRu))
@@ -68,8 +87,10 @@ export function rankAlternatives(target, pool, usage = new Map()) {
 
 /**
  * Close catalog alternatives for an exercise, ranked for this user: the SAME
- * target muscle ("верх груди", not just "грудь") and the same kind of exercise
- * (compound ↔ compound, isolation ↔ isolation). No known target — no
+ * target muscle ("верх груди", not just "грудь") and the same movement
+ * pattern (жим ↔ жим, not сведение). The pattern decides over compound/
+ * isolation — that label kept the hip thrust machine away from the barbell hip
+ * thrust; without a pattern the kind is the fallback. No known target — no
  * alternatives: better none than a wrong one.
  */
 export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
@@ -78,28 +99,31 @@ export async function findAlternatives(userId, exerciseId, { limit = 8 } = {}) {
   if (!muscle) return []
   // The kind (compound/isolation) is reliable for catalog exercises only:
   // exercises created later get the default 'compound'.
+  const sameKind = target.source === 'seed' ? { category: target.category } : { category: { in: ['compound', 'isolation'] } }
   const pool = await prisma.exercise.findMany({
     where: {
       id: { not: target.id }, targetMuscle: muscle,
       // Own exercises of other users are private.
       OR: [{ source: { not: 'user_created' } }, { createdByUserId: userId }],
-      ...(target.source === 'seed' ? { category: target.category } : { category: { in: ['compound', 'isolation'] } }),
+      ...(target.movementPattern ? { movementPattern: target.movementPattern } : sameKind),
     },
     select: SELECT,
   })
   if (!pool.length) return []
   // Working sets per exercise: what the user actually does ranks first.
   // Injuries from the profile ('knee', 'shoulder'…): never offer what loads them.
-  const [usage, profile] = await Promise.all([
+  const [usage, profile, popularity] = await Promise.all([
     prisma.workoutSet.groupBy({
       by: ['exerciseId'],
       where: { exerciseId: { in: pool.map(e => e.id) }, isWarmup: false, workout: { userId, finishedAt: { not: null } } },
       _count: { workoutId: true },
     }),
     prisma.userProfile.findUnique({ where: { userId }, select: { constraints: true } }),
+    exercisePopularity().catch(() => new Map()),
   ])
   const used = new Map(usage.map(u => [u.exerciseId, u._count.workoutId]))
   const safe = pool.filter(ex => !loadsInjured(ex, profile?.constraints))
+    .map(ex => ({ ...ex, popularity: popularity.get(ex.id) ?? 0 }))
   return rankAlternatives(target, safe, used).slice(0, limit)
 }
 
