@@ -10,12 +10,17 @@
  * Алгоритм:
  * 1. slug-match   — slugify(nameEn) → точное совпадение Exercise.slug
  * 2. name/alias   — точное совпадение с nameRu/nameEn/aliases[] (регистр, ё/е не важны; детерминированный порядок)
- * 3. auto-create  — INSERT Exercise с source: 'ai_generated'
+ * 3. match        — похожие упражнения каталога + LLM (exerciseMatcher.js): то же
+ *                   упражнение под другим названием → оно, а название запоминается
+ *                   алиасом (в следующий раз сработает шаг 2 без LLM)
+ * 4. auto-create  — INSERT Exercise с source: 'ai_generated', размеченное LLM
+ *                   (мышцы, оборудование, целевая мышца…); без LLM — как есть
  *
  * Возвращает { exerciseId, exercise, resolvedBy } или null, если из входа
  * не получается осмысленный slug (защита общего каталога от мусора).
  */
 import prisma from '../utils/prisma.js'
+import { matchUnknownExercises, forgetCatalog } from './exerciseMatcher.js'
 
 // Транслитерация ru→lat для slugify: без неё кириллические названия
 // ('Жим лёжа') коллапсировали в пустой slug '' — и все русские имена
@@ -36,18 +41,11 @@ function slugify(str) {
     .replace(/^-|-$/g, '')
 }
 
-/**
- * @param {object} input
- * @param {string} [input.nameEn]  — английское название (основной ключ)
- * @param {string} [input.nameRu]  — русское название (fallback для alias-поиска)
- * @param {string} [input.slug]    — готовый slug (если есть)
- * @param {string[]} [input.primaryMuscles] — для auto-create
- * @param {string} [input.equipment]        — для auto-create
- * @returns {Promise<null | { exerciseId: string, exercise: object, resolvedBy: 'slug'|'alias'|'auto-create' }>}
- *          null — если из входа не получился валидный slug (упражнение не создаём)
- */
-export async function resolveExercise(input) {
-  const { nameEn, nameRu, slug: inputSlug, primaryMuscles, equipment } = input
+const normKey = s => s.toLowerCase().replace(/ё/g, 'е').trim()
+
+/** Шаги 1–2: точное совпадение по slug, названию или алиасу. */
+async function findExisting(input) {
+  const { nameEn, nameRu, slug: inputSlug } = input
 
   // 1. Slug match
   const slug = inputSlug || (nameEn ? slugify(nameEn) : null)
@@ -65,9 +63,8 @@ export async function resolveExercise(input) {
   // Slug тоже ищем среди алиасов: у слитых дублей старый slug остаётся алиасом
   // канонического упражнения (scripts/mergeExercises.js), и LLM, помнящая
   // 'rfess-l-db', попадает в него, а не создаёт дубль заново.
-  const searchTerms = [nameEn, nameRu].filter(Boolean)
-  for (const term of [...searchTerms, inputSlug].filter(Boolean)) {
-    const key = term.toLowerCase().replace(/ё/g, 'е').trim()
+  for (const term of [nameEn, nameRu, inputSlug].filter(Boolean)) {
+    const key = normKey(term)
 
     const found = await prisma.$queryRaw`
       SELECT * FROM "Exercise"
@@ -90,12 +87,26 @@ export async function resolveExercise(input) {
       return { exerciseId: exercise.id, exercise, resolvedBy: 'alias' }
     }
   }
+  return null
+}
 
-  // 3. Auto-create — создаём новое упражнение с source: 'ai_generated'
-  const newSlug = slug || slugify(nameEn || nameRu || '')
+/** Slug нового упражнения; '' — вход мусорный (эмодзи, пунктуация), не создаём. */
+const newSlugOf = (input, fields) => input.slug || slugify(input.nameEn || fields?.nameEn || input.nameRu || '')
 
-  // Пустой slug (эмодзи, пунктуация, мусор от LLM) — не создаём упражнение:
-  // каталог общий для всех юзеров, upsert по slug '' склеивал бы весь мусор в одну запись.
+/** Шаг 3: LLM узнала упражнение — запоминаем названия входа его алиасами. */
+async function learnAliases(exercise, input) {
+  const known = new Set([exercise.nameRu, exercise.nameEn, ...(exercise.aliases ?? [])].filter(Boolean).map(normKey))
+  const add = [...new Set([input.nameRu, input.nameEn, input.slug].filter(Boolean).map(t => t.trim().toLowerCase()))]
+    .filter(t => !known.has(normKey(t)))
+  if (!add.length) return exercise
+  forgetCatalog()
+  return prisma.exercise.update({ where: { id: exercise.id }, data: { aliases: { push: add } } })
+}
+
+/** Шаг 4: новое упражнение — с разметкой от LLM (fields) или как есть. */
+async function createExercise(input, fields) {
+  const { nameEn, nameRu, primaryMuscles, equipment } = input
+  const newSlug = newSlugOf(input, fields)
   if (!newSlug) return null
 
   // Проверяем что slug не занят (может быть чуть другое написание)
@@ -104,6 +115,8 @@ export async function resolveExercise(input) {
     return { exerciseId: existingSlug.id, exercise: existingSlug, resolvedBy: 'slug' }
   }
 
+  const searchTerms = [nameEn, nameRu].filter(Boolean)
+  const tool = fields?.equipment ?? equipment
   // upsert вместо create: check-then-create гоняется с параллельным резолвом
   // того же имени (P2002 на unique slug); upsert атомарен — при гонке вернёт существующее
   const exercise = await prisma.exercise.upsert({
@@ -111,22 +124,54 @@ export async function resolveExercise(input) {
     update: {},
     create: {
       slug: newSlug,
-      nameEn: nameEn || null,
-      nameRu: nameRu || nameEn || newSlug,
-      primaryMuscles: primaryMuscles || [],
-      secondaryMuscles: [],
-      equipment: equipment ? [equipment] : [],
-      aliases: searchTerms.map(s => s.toLowerCase()),
+      nameEn: nameEn || fields?.nameEn || null,
+      nameRu: fields?.nameRu || nameRu || nameEn || newSlug,
+      primaryMuscles: fields?.primaryMuscles?.length ? fields.primaryMuscles : primaryMuscles || [],
+      secondaryMuscles: fields?.secondaryMuscles ?? [],
+      equipment: tool ? [tool] : [],
+      ...(fields?.category && { category: fields.category }),
+      ...(fields && { targetMuscle: fields.targetMuscle ?? null, force: fields.force ?? null, unilateral: fields.unilateral ?? null }),
+      aliases: [...new Set([...searchTerms, input.slug].filter(Boolean).map(s => s.toLowerCase()))]
+        .filter(a => normKey(a) !== normKey(fields?.nameRu || nameRu || '')),
       source: 'ai_generated',
     },
   })
+  forgetCatalog()
 
   return { exerciseId: exercise.id, exercise, resolvedBy: 'auto-create' }
 }
 
+/** Шаги 3–4 для того, что не нашлось точно; decision — ответ exerciseMatcher. */
+async function resolveUnknown(input, decision) {
+  if (decision?.match) {
+    const exercise = await learnAliases(decision.match, input)
+    return { exerciseId: exercise.id, exercise, resolvedBy: 'match' }
+  }
+  return createExercise(input, decision?.fields)
+}
+
+/**
+ * @param {object} input
+ * @param {string} [input.nameEn]  — английское название (основной ключ)
+ * @param {string} [input.nameRu]  — русское название (fallback для alias-поиска)
+ * @param {string} [input.slug]    — готовый slug (если есть)
+ * @param {string[]} [input.primaryMuscles] — для auto-create без LLM
+ * @param {string} [input.equipment]        — для auto-create без LLM
+ * @returns {Promise<null | { exerciseId: string, exercise: object, resolvedBy: 'slug'|'alias'|'match'|'auto-create' }>}
+ *          null — если из входа не получился валидный slug (упражнение не создаём)
+ */
+export async function resolveExercise(input) {
+  const existing = await findExisting(input)
+  if (existing) return existing
+  if (!newSlugOf(input)) return null
+  const decisions = await matchUnknownExercises([['1', input]])
+  return resolveUnknown(input, decisions.get('1'))
+}
+
 /**
  * Батч-резолв: дедуплицирует входы и резолвит их параллельно чанками —
- * вместо последовательных await в цикле (N+1 запросов к БД при импорте/генерации).
+ * вместо последовательных await в цикле (N+1 запросов к БД при импорте/генерации);
+ * всё ненайденное сопоставляется одним вызовом LLM на батч.
  *
  * @param {Array<{slug?: string, nameEn?: string, nameRu?: string}>} inputs
  * @param {object} [opts]
@@ -134,6 +179,8 @@ export async function resolveExercise(input) {
  * @returns {Promise<Map<string, object|null>>} ключ — slug || nameEn || nameRu;
  *          значение — результат resolveExercise (null, если не зарезолвилось/упало)
  */
+const FAILED = Symbol('failed')
+
 export async function resolveExercisesBatch(inputs, { concurrency = 8 } = {}) {
   const keyOf = (input) => input.slug || input.nameEn || input.nameRu || ''
 
@@ -145,11 +192,23 @@ export async function resolveExercisesBatch(inputs, { concurrency = 8 } = {}) {
 
   const results = new Map()
   const entries = [...unique.entries()]
+  const misses = []
   for (let i = 0; i < entries.length; i += concurrency) {
     const chunk = entries.slice(i, i + concurrency)
-    const resolved = await Promise.all(
-      chunk.map(([, input]) => resolveExercise(input).catch(() => null)),
-    )
+    // Упавший поиск — не «не нашлось»: иначе ошибка БД создавала бы дубль.
+    const found = await Promise.all(chunk.map(([, input]) => findExisting(input).catch(() => FAILED)))
+    chunk.forEach(([key, input], j) => {
+      if (found[j] && found[j] !== FAILED) results.set(key, found[j])
+      else if (!found[j] && newSlugOf(input)) misses.push([key, input])
+      else results.set(key, null)
+    })
+  }
+
+  // Всё, что не нашлось точно, — одним вызовом LLM на батч, а не по одному.
+  const decisions = await matchUnknownExercises(misses)
+  for (let i = 0; i < misses.length; i += concurrency) {
+    const chunk = misses.slice(i, i + concurrency)
+    const resolved = await Promise.all(chunk.map(([key, input]) => resolveUnknown(input, decisions.get(key)).catch(() => null)))
     chunk.forEach(([key], j) => results.set(key, resolved[j]))
   }
   return results

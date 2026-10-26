@@ -10,12 +10,17 @@ const mockPrisma = {
 }
 
 vi.mock('../utils/prisma.js', () => ({ default: mockPrisma }))
+// LLM matching is its own module (exerciseMatcher.test.js); here it answers nothing by default.
+const matcher = vi.hoisted(() => ({ matchUnknownExercises: vi.fn(async () => new Map()), forgetCatalog: vi.fn() }))
+vi.mock('./exerciseMatcher.js', () => matcher)
 
 const { resolveExercise, resolveExercisesBatch } = await import('./exerciseResolver.js')
 
 describe('exerciseResolver', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    matcher.matchUnknownExercises.mockImplementation(async () => new Map())
+    mockPrisma.exercise.update = vi.fn(async ({ data }) => ({ id: 'seed-1', slug: 'incline-bench-db', aliases: data.aliases.push }))
   })
 
   describe('slug path', () => {
@@ -187,6 +192,65 @@ describe('exerciseResolver', () => {
 
       expect(results.size).toBe(0)
       expect(mockPrisma.exercise.findUnique).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('LLM match before creating', () => {
+    it('takes the catalog exercise the matcher recognised and remembers the name as an alias', async () => {
+      mockPrisma.exercise.findUnique.mockResolvedValue(null)
+      mockPrisma.$queryRaw.mockResolvedValue([])
+      const known = { id: 'seed-1', slug: 'incline-bench-db', nameRu: 'Жим гантелей на наклонной', nameEn: null, aliases: ['жим на наклонной'] }
+      matcher.matchUnknownExercises.mockResolvedValue(new Map([['1', { match: known }]]))
+
+      const result = await resolveExercise({ slug: 'incline-db-press', nameRu: 'Жим гантелей под углом' })
+
+      expect(result).toMatchObject({ exerciseId: 'seed-1', resolvedBy: 'match' })
+      expect(mockPrisma.exercise.update).toHaveBeenCalledWith({
+        where: { id: 'seed-1' }, data: { aliases: { push: ['жим гантелей под углом', 'incline-db-press'] } },
+      })
+      expect(mockPrisma.exercise.upsert).not.toHaveBeenCalled()
+    })
+
+    it('creates a new exercise classified by the matcher', async () => {
+      mockPrisma.exercise.findUnique.mockResolvedValue(null)
+      mockPrisma.$queryRaw.mockResolvedValue([])
+      mockPrisma.exercise.upsert.mockImplementation(async ({ create }) => ({ id: 'new', ...create }))
+      matcher.matchUnknownExercises.mockResolvedValue(new Map([['1', { fields: {
+        nameRu: 'Пулловер в тренажёре', nameEn: 'Machine Pullover', primaryMuscles: ['lats'], secondaryMuscles: ['chest'],
+        equipment: 'machine', category: 'isolation', targetMuscle: 'lats', force: 'pull', unilateral: false,
+      } }]]))
+
+      const result = await resolveExercise({ nameRu: 'пуловер на тренажере' })
+
+      expect(result.resolvedBy).toBe('auto-create')
+      expect(mockPrisma.exercise.upsert.mock.calls[0][0].create).toMatchObject({
+        slug: 'machine-pullover', nameRu: 'Пулловер в тренажёре', nameEn: 'Machine Pullover',
+        primaryMuscles: ['lats'], equipment: ['machine'], category: 'isolation', targetMuscle: 'lats',
+        force: 'pull', unilateral: false, aliases: ['пуловер на тренажере'], source: 'ai_generated',
+      })
+    })
+
+    it('asks the matcher once per batch, only for what was not found exactly', async () => {
+      mockPrisma.exercise.findUnique.mockImplementation(async ({ where }) => (where.slug === 'known' ? { id: 'k', slug: 'known' } : null))
+      mockPrisma.$queryRaw.mockResolvedValue([])
+      mockPrisma.exercise.upsert.mockImplementation(async ({ create }) => ({ id: create.slug, ...create }))
+
+      const results = await resolveExercisesBatch([{ slug: 'known' }, { slug: 'new-a' }, { slug: 'new-b' }])
+
+      expect(matcher.matchUnknownExercises).toHaveBeenCalledTimes(1)
+      expect(matcher.matchUnknownExercises.mock.calls[0][0].map(([key]) => key)).toEqual(['new-a', 'new-b'])
+      expect(results.get('known').resolvedBy).toBe('slug')
+      expect(results.get('new-a').resolvedBy).toBe('auto-create')
+    })
+
+    it('does not create anything when the lookup itself failed', async () => {
+      mockPrisma.exercise.findUnique.mockRejectedValue(new Error('db down'))
+
+      const results = await resolveExercisesBatch([{ slug: 'whatever' }])
+
+      expect(results.get('whatever')).toBeNull()
+      expect(matcher.matchUnknownExercises.mock.calls[0][0]).toEqual([])
+      expect(mockPrisma.exercise.upsert).not.toHaveBeenCalled()
     })
   })
 })

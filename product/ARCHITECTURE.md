@@ -272,7 +272,7 @@ node-cron '0 4 * * *' (суточная чистка; scheduler/retention.js)
         │   ├── scenes/                # WizardScene для /program (generateProgram.js)
         │   └── commands.txt           # для setMyCommands в BotFather
         ├── services/
-        │   ├── exerciseResolver.js    # slug → alias → auto-create
+        │   ├── exerciseResolver.js    # slug → alias → LLM-match (exerciseMatcher.js) → auto-create
         │   └── aiTrainer/             # generateProgram, importProgram, identifyMachine, промпты
         ├── scheduler/                 # node-cron: напоминания
         └── utils/
@@ -1090,7 +1090,7 @@ server/src/services/aiTrainer/
 LLM возвращает упражнения как свободный текст. `exerciseResolver.js` — единая точка привязки к каноничной базе:
 
 ```
-LLM → resolveExercise() → slug-match → alias-search → auto-create (source: 'ai_generated')
+LLM → resolveExercise() → slug-match → alias-search → LLM-match с кандидатами каталога → auto-create (source: 'ai_generated', размечено LLM)
 ```
 
 Подробности resolve-слоя и seed-скрипта — в [docs/implementation-plan.md](docs/implementation-plan.md#11-resolve-слой-упражнений-вариант-c-seed--auto-create).

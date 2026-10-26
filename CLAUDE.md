@@ -178,7 +178,7 @@ cd server && npx prisma generate       # регенерация клиента (
 - Все роуты под `/api/v1/*`, защищены единым `auth` middleware (tma → telegramAuth | Bearer → Better Auth).
 - Health-check: `GET /api/health`; Better Auth: `/api/auth/*` (монтаж до `express.json()`); admin-диагностика очереди: `GET /api/v1/admin/notifications?key=ANALYTICS_SECRET`.
 - **Контроллеры тонкие, сервисы толстые.** LLM-логика — в `services/aiTrainer/`, промпты — в git как `.md`-файлы.
-- `services/exerciseResolver.js` — резолвит названия упражнений от LLM в ID (slug → alias → auto-create). Использует raw SQL (`unnest(aliases)`) для поиска по массиву алиасов.
+- `services/exerciseResolver.js` — резолвит названия упражнений от LLM в ID (slug → name/alias → LLM-match → auto-create). Использует raw SQL (`unnest(aliases)`) для поиска по массиву алиасов. Ненайденное точно уходит в `services/exerciseMatcher.js`: похожие по словам упражнения каталога + один вызов LLM на батч решают «это то же упражнение» (название запоминается алиасом) или «новое» (создаётся уже размеченным). Без LLM — прежний auto-create.
 - `utils/parseJsonFromLLM.js` — извлечение JSON из LLM-ответов (markdown code fences, etc.).
 - LLM-промпты хранятся как `.md`-файлы в `services/aiTrainer/prompts/` и читаются `readFileSync` при импорте модуля (не динамически).
 - Импорт программы (`importProgram.js`) запускает два LLM-вызова параллельно (структура + гайдлайны) для ускорения.
