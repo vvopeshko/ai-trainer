@@ -38,37 +38,48 @@ function buildFact(top) {
 }
 
 /**
- * Сгенерировать дневной инсайт. Без кэша (его держит контроллер).
+ * Подготовить дневной инсайт. Без кэша (его держит контроллер).
+ *
+ * Детекция (SQL) — сразу; LLM-реплика — отдельным шагом generate(), чтобы
+ * контроллер мог не держать ответ на LLM: fallback — шаблонный текст детектора
+ * (он уже человекочитаемый), им же деградирует generate() при фейле LLM.
  *
  * @param {string} userId
  * @param {string} [tz]
- * @returns {Promise<{ text: string|null, factType?: string }>}
+ * @returns {Promise<{ fallback: { text: string|null, factType?: string },
+ *   generate: null | (() => Promise<{ text: string, factType: string }>) }>}
  */
-export async function buildDailyInsight(userId, tz = DEFAULT_TZ) {
+export async function prepareDailyInsight(userId, tz = DEFAULT_TZ) {
   const { facts } = await getInsights(userId, tz)
-  if (!facts.length) return { text: null }
+  if (!facts.length) return { fallback: { text: null }, generate: null }
 
   const top = facts[0]
+  const fallback = { text: top.detail, factType: top.type }
 
-  try {
-    const userContext = await buildUserContext(userId, {
-      recentWorkouts: false,
-      records: false,
-    })
-    const system = userContext
-      ? `${SYSTEM_BASE}\n\n---\n\n# Контекст пользователя\n${userContext}`
-      : SYSTEM_BASE
-    const res = await llm.chat([{ role: 'user', content: buildFact(top) }], {
-      system,
-      maxTokens: 400,
-      meta: { userId, feature: 'daily_insight' },
-    })
-    const text = res.text?.trim()
-    if (text) return { text, factType: top.type }
-  } catch (err) {
-    console.error('[dailyInsight] LLM failed, degrading to templated detail:', err.message)
+  async function generate() {
+    try {
+      const userContext = await buildUserContext(userId, {
+        recentWorkouts: false,
+        records: false,
+      })
+      const system = userContext
+        ? `${SYSTEM_BASE}\n\n---\n\n# Контекст пользователя\n${userContext}`
+        : SYSTEM_BASE
+      const res = await llm.chat([{ role: 'user', content: buildFact(top) }], {
+        system,
+        maxTokens: 400,
+        // Фоновая генерация: шаблон уже показан, долгие ретраи не нужны
+        timeout: 20_000,
+        retries: 0,
+        meta: { userId, feature: 'daily_insight' },
+      })
+      const text = res.text?.trim()
+      if (text) return { text, factType: top.type }
+    } catch (err) {
+      console.error('[dailyInsight] LLM failed, degrading to templated detail:', err.message)
+    }
+    return fallback
   }
 
-  // Деградация: отдаём шаблонный текст из детектора (он уже человекочитаемый).
-  return { text: top.detail, factType: top.type }
+  return { fallback, generate }
 }

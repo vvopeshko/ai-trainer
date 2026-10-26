@@ -8,7 +8,11 @@
 //    - Перед `db push` на проде — зафиксировать timestamp (для PITR-отката).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // include/select связей — одним запросом с LATERAL JOIN вместо запроса на
+  // каждый уровень (тренировка → подходы → упражнения было 3 round trip до Neon).
+  // Только генерация клиента: схема БД не меняется, db push не нужен.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

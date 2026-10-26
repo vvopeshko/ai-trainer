@@ -11,6 +11,7 @@
  * tz — IANA-таймзона юзера (из getUserTimezone(req) в API или User.timezone в шедулере).
  */
 import prisma from '../utils/prisma.js'
+import { getPeriodBoundaries } from '../utils/dateUtils.js'
 
 // ─── Маппинг мышц (перенесено из progressController) ────────────────
 
@@ -130,19 +131,6 @@ const PERIODS = {
   year: { trunc: 'year', interval: '1 year' },
 }
 
-/**
- * Границы периодов (начало недели/месяца) в TZ юзера, посчитанные в Postgres
- * для consistency с остальными запросами.
- */
-async function getBoundaries(tz) {
-  const [row] = await prisma.$queryRaw`
-    SELECT
-      (DATE_TRUNC('week', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS "weekStart",
-      (DATE_TRUNC('month', NOW() AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS "monthStart"
-  `
-  return row
-}
-
 // ─── Streak ─────────────────────────────────────────────────────────
 
 /**
@@ -160,10 +148,7 @@ export async function computeStreak(userId, tz) {
 
   if (rows.length === 0) return 0
 
-  const todayResult = await prisma.$queryRaw`
-    SELECT DATE(NOW() AT TIME ZONE ${tz}) AS today
-  `
-  const today = todayResult[0].today
+  const { today } = getPeriodBoundaries(tz)
 
   const dateSet = new Set(rows.map((r) => r.d.toISOString().slice(0, 10)))
   const todayStr = today.toISOString().slice(0, 10)
@@ -280,7 +265,7 @@ export async function getWorkoutState(userId) {
 // ─── Соответствие плану (неделя) ────────────────────────────────────
 
 export async function getPlanAdherence(userId, tz) {
-  const { weekStart } = await getBoundaries(tz)
+  const { weekStart } = getPeriodBoundaries(tz)
 
   const [weekWorkouts, activeProgram] = await Promise.all([
     prisma.workout.findMany({
@@ -311,7 +296,7 @@ export async function getPlanAdherence(userId, tz) {
 // ─── Объём по мышцам (неделя): факт vs цель из программы ─────────────
 
 export async function getMuscleVolume(userId, tz) {
-  const { weekStart } = await getBoundaries(tz)
+  const { weekStart } = getPeriodBoundaries(tz)
 
   const [weekSets, activeProgram] = await Promise.all([
     prisma.workoutSet.findMany({
@@ -426,7 +411,7 @@ export async function getMuscleVolume(userId, tz) {
  * @param {'week'|'month'} period
  */
 export async function getRecords(userId, tz, period = 'month') {
-  const { weekStart, monthStart } = await getBoundaries(tz)
+  const { weekStart, monthStart } = getPeriodBoundaries(tz)
   const start = period === 'week' ? weekStart : monthStart
 
   const rows = await prisma.$queryRaw`

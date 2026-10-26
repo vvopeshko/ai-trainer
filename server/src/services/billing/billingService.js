@@ -82,9 +82,25 @@ export async function getBillingStatus(userId) {
   }
 }
 
+// requirePremium дёргает isPremium на каждом данных-запросе. Кэшируем только
+// положительный ответ: оплата/промокод открывают доступ сразу (негатив не
+// кэшируется), а отзыв (рефанд, истечение) доходит не позже чем через минуту.
+const PREMIUM_CACHE_MS = 60_000
+const premiumUntil = new Map() // userId → timestamp, до которого юзер считается Premium
+
 export async function isPremium(userId) {
+  const cachedUntil = premiumUntil.get(userId)
+  if (cachedUntil && cachedUntil > Date.now()) return true
+
   const sub = await findSubscription(userId)
-  return isSubscriptionActive(sub, { graceHours: graceHours() })
+  const active = isSubscriptionActive(sub, { graceHours: graceHours() })
+  if (active) {
+    if (premiumUntil.size > 10_000) premiumUntil.clear()
+    premiumUntil.set(userId, Date.now() + PREMIUM_CACHE_MS)
+  } else {
+    premiumUntil.delete(userId)
+  }
+  return active
 }
 
 // ======================================

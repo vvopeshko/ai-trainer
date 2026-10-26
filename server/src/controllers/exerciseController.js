@@ -2,30 +2,7 @@ import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { findAlternatives } from '../services/exerciseAlternatives.js'
 import { exerciseImages } from '../utils/exerciseImages.js'
-
-/**
- * Популярность: сколько пользователей делают упражнение — записывали подходы
- * или держат его в программе (жим лёжа из программы считается, даже если его
- * ещё не записали). Поднимает обычные зальные упражнения над экзотикой в поиске.
- * @returns {Promise<Map<string, number>>} exerciseId → число пользователей
- */
-export async function exercisePopularity() {
-  const rows = await prisma.$queryRaw`
-    WITH used AS (
-      SELECT DISTINCT w."userId", s."exerciseId"
-      FROM "WorkoutSet" s JOIN "Workout" w ON w.id = s."workoutId"
-      UNION
-      SELECT DISTINCT p."userId", ex->>'exerciseId'
-      FROM "Program" p
-      CROSS JOIN LATERAL jsonb_array_elements(
-        CASE WHEN jsonb_typeof(p."planJson"->'days') = 'array' THEN p."planJson"->'days' ELSE '[]'::jsonb END) d
-      CROSS JOIN LATERAL jsonb_array_elements(
-        CASE WHEN jsonb_typeof(d->'exercises') = 'array' THEN d->'exercises' ELSE '[]'::jsonb END) ex
-    )
-    SELECT "exerciseId" AS id, count(DISTINCT "userId")::int AS users FROM used GROUP BY 1
-  `
-  return new Map(rows.map(r => [r.id, r.users]))
-}
+import { catalogResponse } from '../services/exerciseCatalog.js'
 
 /**
  * GET /api/v1/exercises
@@ -43,25 +20,7 @@ export async function list(req, res) {
     })
     .parse(req.query)
 
-  const where = {}
-  if (muscle) {
-    where.primaryMuscles = { has: muscle }
-  }
-
-  const exercises = await prisma.exercise.findMany({
-    where,
-    orderBy: { nameRu: 'asc' },
-    take: limit,
-    select: {
-      id: true, slug: true, nameRu: true, nameEn: true,
-      primaryMuscles: true, secondaryMuscles: true, equipment: true,
-      difficulty: true, category: true, gifUrl: true, aliases: true,
-      targetMuscle: true, unilateral: true,
-    },
-  })
-
-  const popularity = await exercisePopularity()
-  res.json({ exercises: exercises.map(e => ({ ...e, popularity: popularity.get(e.id) ?? 0 })) })
+  res.type('json').send(await catalogResponse({ muscle, limit }))
 }
 
 /**

@@ -70,20 +70,16 @@ export async function getNextWorkout(req, res) {
 
   // Индекс следующего дня по циклу — общий хелпер (его же использует
   // get_program_details в чат-инструментах, чтобы scope: 'next' лёг на тот день).
-  const nextDayIndex = await computeNextDayIndex(req.user.id, program.id, days.length)
-
-  // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b):
-  // если есть — подмешиваем переопределённые упражнения поверх шаблона дня.
-  const override = await prisma.workoutPlanOverride.findUnique({
-    where: {
-      userId_programId_dayIndex: {
-        userId: req.user.id,
-        programId: program.id,
-        dayIndex: nextDayIndex,
-      },
-    },
-    select: { exercises: true },
-  })
+  // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b): индекс ещё
+  // не известен, поэтому параллельно берём все оверрайды программы (их ≤ дней).
+  const [nextDayIndex, overrides] = await Promise.all([
+    computeNextDayIndex(req.user.id, program.id, days.length),
+    prisma.workoutPlanOverride.findMany({
+      where: { userId: req.user.id, programId: program.id },
+      select: { dayIndex: true, exercises: true },
+    }),
+  ])
+  const override = overrides.find(o => o.dayIndex === nextDayIndex)
 
   const day = override
     ? { ...days[nextDayIndex], exercises: override.exercises }

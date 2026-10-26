@@ -109,6 +109,8 @@ export function useDailyInsight() {
     queryKey: queryKeys.insights.today,
     queryFn: () => apiGet('/api/v1/insights/today'),
     staleTime: 30 * 60_000, // 30 min — генерится раз в день, кэш на бэке
+    // LLM не успела за бюджет бэка — пришёл шаблонный текст, реплика тренера дописывается в фоне
+    refetchInterval: (query) => (query.state.data?.pending ? 5000 : false),
   })
 }
 

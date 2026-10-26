@@ -21,6 +21,7 @@
  */
 import prisma from '../utils/prisma.js'
 import { matchUnknownExercises, forgetCatalog } from './exerciseMatcher.js'
+import { forgetCatalogResponse } from './exerciseCatalog.js'
 
 // Транслитерация ru→lat для slugify: без неё кириллические названия
 // ('Жим лёжа') коллапсировали в пустой slug '' — и все русские имена
@@ -100,6 +101,7 @@ async function learnAliases(exercise, input) {
     .filter(t => !known.has(normKey(t)))
   if (!add.length) return exercise
   forgetCatalog()
+  forgetCatalogResponse()
   return prisma.exercise.update({ where: { id: exercise.id }, data: { aliases: { push: add } } })
 }
 
@@ -137,6 +139,7 @@ async function createExercise(input, fields) {
     },
   })
   forgetCatalog()
+  forgetCatalogResponse()
 
   return { exerciseId: exercise.id, exercise, resolvedBy: 'auto-create' }
 }

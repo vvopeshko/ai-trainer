@@ -5,6 +5,15 @@ import { makeMainHints } from '../services/exerciseAlternatives.js'
 import { sendPostWorkoutSummary } from '../services/aiTrainer/postWorkoutSummary.js'
 import { enqueueNotification } from '../scheduler/notificationPlanner.js'
 
+// Упражнение при подходе: без длинных текстов (описание, техника, ошибки) и
+// видео — их отдаёт GET /exercises/:id. Иначе каждый подход тащил килобайты.
+const SET_EXERCISE_SELECT = {
+  id: true, slug: true, nameRu: true, nameEn: true,
+  primaryMuscles: true, secondaryMuscles: true, equipment: true,
+  difficulty: true, category: true, targetMuscle: true, force: true, unilateral: true,
+  imageUrl: true, gifUrl: true,
+}
+
 /**
  * POST /api/v1/workouts
  *
@@ -31,7 +40,7 @@ export async function create(req, res) {
       const existing = await tx.workout.findFirst({
         where: { userId: req.user.id, finishedAt: null },
         include: {
-          sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+          sets: { include: { exercise: { select: SET_EXERCISE_SELECT } }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
         },
       })
 
@@ -97,7 +106,7 @@ export async function getActive(req, res) {
   const workout = await prisma.workout.findFirst({
     where: { userId: req.user.id, finishedAt: null },
     include: {
-      sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+      sets: { include: { exercise: { select: SET_EXERCISE_SELECT } }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
     },
   })
 
@@ -106,15 +115,15 @@ export async function getActive(req, res) {
   let planDayTitle = null
 
   if (workout?.programId && workout.programDayIndex != null) {
-    const program = await prisma.program.findFirst({
-      where: { id: workout.programId, userId: req.user.id },
-      select: { planJson: true },
-    })
-    const day = program?.planJson?.days?.[workout.programDayIndex]
-    if (day) {
+    // Программа и разовый оверрайд зависят только от workout — читаем параллельно
+    const [program, override] = await Promise.all([
+      prisma.program.findFirst({
+        where: { id: workout.programId, userId: req.user.id },
+        select: { planJson: true },
+      }),
       // Разовый оверрайд «только следующая» (рефайн через чат, фаза 5b):
       // если для этого дня есть оверрайд — берём его упражнения вместо шаблона.
-      const override = await prisma.workoutPlanOverride.findUnique({
+      prisma.workoutPlanOverride.findUnique({
         where: {
           userId_programId_dayIndex: {
             userId: req.user.id,
@@ -123,26 +132,33 @@ export async function getActive(req, res) {
           },
         },
         select: { exercises: true },
-      })
-
+      }),
+    ])
+    const day = program?.planJson?.days?.[workout.programDayIndex]
+    if (day) {
       planExercises = override ? override.exercises : day.exercises
       planDayTitle = day.title
 
       // Slot identity survives a swap during the workout; "make it main?" hint
       // after the same alternative was chosen in the last two workouts of this day.
-      const hints = await makeMainHints(req.user.id, workout.programId, workout.programDayIndex, planExercises)
+      // Подсказка ссылается на id из alternatives, поэтому оба запроса — параллельно.
+      const allAltIds = planExercises.flatMap(pe => pe.alternatives || [])
+      const [hints, altExercises] = await Promise.all([
+        makeMainHints(req.user.id, workout.programId, workout.programDayIndex, planExercises),
+        allAltIds.length > 0
+          ? prisma.exercise.findMany({
+            where: { id: { in: allAltIds } },
+            select: { id: true, nameRu: true, slug: true },
+          })
+          : [],
+      ])
       for (const pe of planExercises) {
         pe.mainExerciseId = pe.exerciseId
         if (hints.has(pe.exerciseId)) pe.suggestMain = hints.get(pe.exerciseId)
       }
 
       // Обогатить alternatives: UUID[] → { exerciseId, nameRu, slug }[]
-      const allAltIds = planExercises.flatMap(pe => pe.alternatives || [])
       if (allAltIds.length > 0) {
-        const altExercises = await prisma.exercise.findMany({
-          where: { id: { in: allAltIds } },
-          select: { id: true, nameRu: true, slug: true },
-        })
         const altMap = Object.fromEntries(altExercises.map(e => [e.id, e]))
         for (const pe of planExercises) {
           if (pe.suggestMain) {
@@ -229,7 +245,7 @@ export async function getById(req, res) {
   const workout = await prisma.workout.findFirst({
     where: { id, userId: req.user.id },
     include: {
-      sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+      sets: { include: { exercise: { select: SET_EXERCISE_SELECT } }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
     },
   })
 
@@ -285,7 +301,7 @@ export async function logSet(req, res) {
       rpe: data.rpe ?? null,
       isWarmup: data.isWarmup,
     },
-    include: { exercise: true },
+    include: { exercise: { select: SET_EXERCISE_SELECT } },
   })
 
   track(req.user.id, 'set_logged', {
@@ -413,7 +429,7 @@ export async function update(req, res) {
       notes: data.notes ?? workout.notes,
     },
     include: {
-      sets: { include: { exercise: true }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+      sets: { include: { exercise: { select: SET_EXERCISE_SELECT } }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
     },
   })
 

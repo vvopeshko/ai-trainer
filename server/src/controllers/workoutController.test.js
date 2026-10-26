@@ -512,7 +512,7 @@ describe('logSet', () => {
         rpe: null,
         isWarmup: false,
       },
-      include: { exercise: true },
+      include: { exercise: { select: expect.objectContaining({ id: true, nameRu: true, slug: true }) } },
     })
     expect(res.statusCode).toBe(201)
     expect(res.body).toEqual({ set })

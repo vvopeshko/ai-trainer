@@ -14,6 +14,7 @@ import apiRoutes from './routes/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { globalLimiter } from './middleware/rateLimiter.js'
 import prisma from './utils/prisma.js'
+import { invalidateKey } from './utils/userCache.js'
 
 // BigInt → JSON monkey-patch.
 //
@@ -52,6 +53,12 @@ app.use(compression())
 // Better Auth (web-авторизация): монтаж строго ДО express.json() —
 // BA сам читает body своих запросов. Без BETTER_AUTH_SECRET выключен.
 if (betterAuth) {
+  // sign-out/revoke и прочие мутации BA: bearer-токен в кэше юзеров больше не валиден
+  app.use('/api/auth', (req, res, next) => {
+    const header = req.header('authorization') || ''
+    if (req.method !== 'GET' && header.startsWith('Bearer ')) invalidateKey(`bearer:${header.slice(7).trim()}`)
+    next()
+  })
   app.all('/api/auth/{*any}', toNodeHandler(betterAuth))
 }
 

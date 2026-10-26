@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import prisma from '../utils/prisma.js'
 import { trackSeen } from '../utils/sessionTracking.js'
+import { getCachedUser, setCachedUser, invalidateAfterMutation } from '../utils/userCache.js'
 
 // Middleware: валидация Telegram initData и upsert User в req.user.
 // Документация: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
@@ -41,8 +42,17 @@ export async function telegramAuth(req, res, next) {
       tgUser = parsed.user
     }
 
-    // Upsert User по telegramId — update: {} пустой, чтобы не писать в БД на каждый запрос
+    // HMAC проверен на каждом запросе; кэшируется только поход в БД за юзером
     const tz = req.header('X-Timezone') || null
+    const cacheKey = `tg:${tgUser.id}`
+    const cached = req.method === 'GET' ? getCachedUser(cacheKey) : null
+    if (cached) {
+      req.user = cached
+      trackSeen(cached, { timezone: tz, path: req.path })
+      return next()
+    }
+
+    // Upsert User по telegramId — update: {} пустой, чтобы не писать в БД на каждый запрос
     const user = await prisma.user.upsert({
       where: { telegramId: BigInt(tgUser.id) },
       create: {
@@ -58,6 +68,8 @@ export async function telegramAuth(req, res, next) {
     })
 
     req.user = user
+    if (req.method === 'GET') setCachedUser(cacheKey, user)
+    invalidateAfterMutation(req, res)
 
     // Fire-and-forget lastSeenAt + timezone + analytics (debounce внутри trackSeen)
     trackSeen(user, { timezone: tz, path: req.path })

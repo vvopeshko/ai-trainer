@@ -3,6 +3,7 @@ import { auth as betterAuth } from '../auth/index.js'
 import { telegramAuth } from './telegramAuth.js'
 import prisma from '../utils/prisma.js'
 import { trackSeen } from '../utils/sessionTracking.js'
+import { getCachedUser, setCachedUser, invalidateAfterMutation } from '../utils/userCache.js'
 
 // Единый auth middleware (см. product/ARCHITECTURE_WEB_AUTH.md §4.3):
 //
@@ -26,6 +27,14 @@ export async function auth(req, res, next) {
       return res.status(401).json({ error: 'Web auth is not configured' })
     }
     try {
+      const cacheKey = `bearer:${header.slice(7).trim()}`
+      const cached = req.method === 'GET' ? getCachedUser(cacheKey) : null
+      if (cached) {
+        req.user = cached
+        trackSeen(cached, { timezone: req.header('X-Timezone') || null, path: req.path })
+        return next()
+      }
+
       const session = await betterAuth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       })
@@ -39,6 +48,12 @@ export async function auth(req, res, next) {
         return res.status(401).json({ error: 'User not found' })
       }
       req.user = user
+      if (req.method === 'GET') {
+        // Не дольше жизни самой сессии
+        const expiresAt = new Date(session.session?.expiresAt ?? 0).getTime()
+        setCachedUser(cacheKey, user, expiresAt ? expiresAt - Date.now() : undefined)
+      }
+      invalidateAfterMutation(req, res)
 
       // Fire-and-forget lastSeenAt + timezone + analytics (debounce внутри)
       trackSeen(user, { timezone: req.header('X-Timezone') || null, path: req.path })
