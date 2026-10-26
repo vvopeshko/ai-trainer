@@ -1,7 +1,7 @@
 /**
  * Seed-скрипт: загружает обогащённые упражнения в таблицу Exercise.
  *
- * Источник: server/data/enriched-exercises.json (924 упр.)
+ * Источник: server/data/enriched-exercises.json (880 упр.)
  * Данные получены из Free Exercise DB + ExerciseDB OSS + ручная русификация.
  *
  * По умолчанию создаёт недостающие упражнения (по slug) и у существующих
@@ -13,10 +13,18 @@
  * node --env-file=.env scripts/seedExercises.js --only=category,difficulty
  * Только описания и ошибки (= --only=description,typicalMistakes):
  * node --env-file=.env scripts/seedExercises.js --content-only
+ *
+ * Флаги:
+ *   --dry-run   — только отчёт, ничего не пишет
+ *   --clear     — с --only: пустое значение каталога тоже записывается
+ *                 (по умолчанию пустое никогда ничего не стирает)
+ *   --drop-db-aliases — с --only=aliases: разрешить удалить алиасы, которых нет
+ *                 в каталоге. Без флага сид останавливается и перечисляет их:
+ *                 резолвер учит алиасы на проде — сначала scripts/pullAliases.js.
  */
 import { createRequire } from 'module'
 import { PrismaClient } from '@prisma/client'
-import { mapExercise, seedUpdate } from '../src/utils/exerciseSeed.js'
+import { mapExercise, seedUpdate, droppedAliases } from '../src/utils/exerciseSeed.js'
 
 const require = createRequire(import.meta.url)
 const exercises = require('../data/enriched-exercises.json')
@@ -38,37 +46,58 @@ function parseOnly(argv) {
 
 async function main() {
   const only = parseOnly(process.argv)
-  console.log(`Seeding ${exercises.length} exercises${only ? ` (overwrite: ${only.join(', ')})` : ''}...\n`)
+  const dryRun = process.argv.includes('--dry-run')
+  const clear = process.argv.includes('--clear')
+  if (clear && !only) throw new Error('--clear works only with --only=<fields>')
+  console.log(`Seeding ${exercises.length} exercises${only ? ` (overwrite: ${only.join(', ')}${clear ? ', empty values too' : ''})` : ''}${dryRun ? ' — DRY RUN' : ''}...\n`)
 
-  let created = 0
-  let updated = 0
+  // Plan everything read-only first: the alias guard must stop before any write.
+  const existingBySlug = new Map((await prisma.exercise.findMany()).map(e => [e.slug, e]))
+  const creates = []
+  const updates = []
   let unchanged = 0
-
+  const dropped = []
   for (const raw of exercises) {
     const data = mapExercise(raw)
-    const existing = await prisma.exercise.findUnique({ where: { slug: data.slug } })
-
+    const existing = existingBySlug.get(data.slug)
     if (!existing) {
-      if (only) continue
-      await prisma.exercise.create({ data })
-      created++
-      console.log(`  + ${data.slug} (${data.nameRu})`)
+      if (!only) creates.push(data)
       continue
     }
-
-    const update = seedUpdate(existing, data, only)
+    const update = seedUpdate(existing, data, only, { clear })
     if (Object.keys(update).length === 0) {
       unchanged++
       continue
     }
-    await prisma.exercise.update({ where: { slug: data.slug }, data: update })
-    updated++
-    console.log(`  ~ ${data.slug}: ${Object.keys(update).join(', ')}`)
+    updates.push({ slug: data.slug, update })
+    const lost = droppedAliases(existing, update)
+    if (lost.length) dropped.push({ slug: data.slug, lost })
   }
 
-  console.log(`\n=== SEED COMPLETE ===`)
-  console.log(`Created: ${created}`)
-  console.log(`Updated: ${updated}`)
+  if (dropped.length) {
+    console.log(`Aliases in the database but not in the catalog (${dropped.length} exercises):`)
+    for (const d of dropped) console.log(`  ${d.slug}: ${d.lost.join('; ')}`)
+    if (!process.argv.includes('--drop-db-aliases') && !dryRun) {
+      console.log('\nStopped, nothing written. Copy them into the catalog (scripts/pullAliases.js)')
+      console.log('or re-run with --drop-db-aliases to delete them.')
+      process.exitCode = 1
+      return
+    }
+    console.log()
+  }
+
+  for (const data of creates) {
+    if (!dryRun) await prisma.exercise.create({ data })
+    console.log(`  + ${data.slug} (${data.nameRu})`)
+  }
+  for (const { slug, update } of updates) {
+    if (!dryRun) await prisma.exercise.update({ where: { slug }, data: update })
+    console.log(`  ~ ${slug}: ${Object.keys(update).join(', ')}`)
+  }
+
+  console.log(`\n=== ${dryRun ? 'DRY RUN — nothing written' : 'SEED COMPLETE'} ===`)
+  console.log(`Created: ${creates.length}`)
+  console.log(`Updated: ${updates.length}`)
   console.log(`Unchanged: ${unchanged}`)
   console.log(`Total in DB: ${await prisma.exercise.count()}`)
 }

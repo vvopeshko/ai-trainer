@@ -69,14 +69,29 @@ const KEEP = new Set(['slug'])
 /**
  * Update for an existing row. Without `only`: seed values for fields that are
  * empty in the database. With `only`: seed values for exactly those fields,
- * overwriting. An empty seed value never erases anything.
+ * overwriting. An empty seed value never erases anything — unless `clear`
+ * (--clear), and then only in the listed fields.
  */
-export function seedUpdate(existing, data, only = null) {
+export function seedUpdate(existing, data, only = null, { clear = false } = {}) {
   const update = {}
   for (const [field, value] of Object.entries(data)) {
-    if (KEEP.has(field) || isEmpty(value)) continue
-    if (JSON.stringify(existing[field]) === JSON.stringify(value)) continue
+    if (KEEP.has(field)) continue
+    if (isEmpty(value) && !(clear && only?.includes(field))) continue
+    if (JSON.stringify(existing[field] ?? null) === JSON.stringify(value ?? null)) continue
     if (only ? only.includes(field) : isEmpty(existing[field])) update[field] = value
   }
   return update
+}
+
+const aliasKey = a => a.trim().toLowerCase().replace(/ё/g, 'е')
+
+/**
+ * Aliases an update would remove from the database: ones the catalog does not
+ * have — learned by the resolver in production, or deleted from the catalog on
+ * purpose. scripts/pullAliases.js copies them into the catalog first.
+ */
+export function droppedAliases(existing, update) {
+  if (!Array.isArray(update.aliases)) return []
+  const kept = new Set(update.aliases.map(aliasKey))
+  return (existing.aliases ?? []).filter(a => !kept.has(aliasKey(a)))
 }

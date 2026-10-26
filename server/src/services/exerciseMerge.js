@@ -76,3 +76,30 @@ export function mergedAliases(canonical, merged) {
   }
   return out
 }
+
+/**
+ * Drops alternatives that point to exercises no longer in the catalog (left by
+ * earlier merges). Main exercises are not touched — a missing one is reported.
+ * @param {Set<string>} knownIds
+ * @returns {{ plan, removed: number, missingMain: string[] }}
+ */
+export function dropUnknownAlternatives(plan, knownIds) {
+  if (!Array.isArray(plan?.days)) return { plan, removed: 0, missingMain: [] }
+  let removed = 0
+  const missingMain = []
+  const days = plan.days.map(day => {
+    if (!Array.isArray(day.exercises)) return day
+    let changed = false
+    const exercises = day.exercises.map(ex => {
+      if (!knownIds.has(ex.exerciseId)) missingMain.push(ex.slug ?? ex.exerciseId)
+      if (!Array.isArray(ex.alternatives)) return ex
+      const kept = ex.alternatives.filter(id => knownIds.has(id))
+      if (kept.length === ex.alternatives.length) return ex
+      removed += ex.alternatives.length - kept.length
+      changed = true
+      return { ...ex, alternatives: kept }
+    })
+    return changed ? { ...day, exercises } : day
+  })
+  return { plan: removed ? { ...plan, days } : plan, removed, missingMain }
+}

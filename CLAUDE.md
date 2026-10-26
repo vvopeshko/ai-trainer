@@ -60,6 +60,10 @@ cd server && npm run seed:exercises && npm run seed:dev
 # Seed упражнений (880 штук по slug: создаёт недостающие, у существующих заполняет только пустые поля;
 # перезапись конкретных полей — `-- --only=category`)
 cd server && npm run seed:exercises
+# Перед сидом алиасов — забрать в каталог алиасы, выученные резолвером на проде
+# (иначе `--only=aliases` их сотрёт; сид остановится и перечислит их). Флаги сида: --dry-run, --clear
+cd server && node --env-file=.env scripts/pullAliases.js --write
+cd server && node --env-file=.env scripts/seedExercises.js --only=aliases --dry-run
 
 # Исправления русских названий упражнений (data/exercise-name-fixes.json) — только nameRu
 # перечисленных slug и только если в базе ещё старое значение; по умолчанию dry run

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { mapCategory, mapExercise, seedUpdate } from './exerciseSeed.js'
+import { mapCategory, mapExercise, seedUpdate, droppedAliases } from './exerciseSeed.js'
 
 describe('mapCategory', () => {
   it('keeps stretches and cardio as their own kind', () => {
@@ -68,4 +68,21 @@ describe('seedUpdate', () => {
     expect(seedUpdate({ ...data }, data)).toEqual({})
     expect(seedUpdate({ ...data }, data, ['category', 'nameRu'])).toEqual({})
   })
+
+  it('clears with an empty catalog value only when asked, and only in listed fields', () => {
+    const existing = { ...data, aliases: ['жим платформы'], targetMuscle: 'quadriceps' }
+    const empty = { ...data, aliases: [], targetMuscle: null }
+    expect(seedUpdate(existing, empty, ['aliases'])).toEqual({})
+    expect(seedUpdate(existing, empty, ['aliases'], { clear: true })).toEqual({ aliases: [] })
+    expect(seedUpdate(existing, empty, null, { clear: true })).toEqual({})
+  })
 })
+
+describe('droppedAliases', () => {
+  it('lists database aliases the update would remove, ignoring case and ё', () => {
+    const existing = { aliases: ['Жим лёжа', 'выученный резолвером', 'incline-db-press'] }
+    expect(droppedAliases(existing, { aliases: ['жим лежа', 'incline-db-press'] })).toEqual(['выученный резолвером'])
+    expect(droppedAliases(existing, { nameRu: 'X' })).toEqual([])
+  })
+})
+

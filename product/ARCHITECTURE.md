@@ -1099,8 +1099,10 @@ LLM → resolveExercise() → slug-match → alias-search → LLM-match с ка�
 
 | Скрипт | Команда | Что делает |
 |--------|---------|-----------|
+| `pullAliases.js` | `node --env-file=.env scripts/pullAliases.js [--write]` | Алиасы, выученные резолвером на проде, → в каталог (перед `seedExercises --only=aliases`); только читает БД |
+| `cleanProgramAlternatives.js` | `node --env-file=.env scripts/cleanProgramAlternatives.js [--apply]` | Убирает из программ аналоги удалённых упражнений; по умолчанию dry-run |
 | `mergeExercises.js` | `node --env-file=.env scripts/mergeExercises.js [--apply]` | Слияние дублей по data/exercise-merges.json: подходы, настройки, программы → каноническое упражнение; по умолчанию dry-run |
-| `seedExercises.js` | `npm run seed:exercises` | 880 упражнений из enriched-exercises.json по slug: создаёт недостающие, у существующих заполняет только пустые поля; `--only=поля` — явная перезапись |
+| `seedExercises.js` | `npm run seed:exercises` | 880 упражнений из enriched-exercises.json по slug: создаёт недостающие, у существующих заполняет только пустые поля; `--only=поля` — явная перезапись, `--clear` — и пустыми значениями, `--dry-run`; `--only=aliases` останавливается, если сотрёт алиасы из БД, которых нет в каталоге |
 | `seedDevData.js` | `npm run seed:dev` | Создаёт dev user (telegramId=0) + 60 тренировок + PPL+Arms программа |
 | `importWorkouts.js` | `node scripts/importWorkouts.js` | Импорт тренировок из workouts.json (для прод-юзера) |
 | `seedProgram.js` | `node scripts/seedProgram.js` | PPL+Arms программа для прод-юзера |
