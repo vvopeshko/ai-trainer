@@ -98,6 +98,7 @@ export function useFinishWorkout() {
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.recent })
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
       queryClient.invalidateQueries({ queryKey: ['exerciseHistory'] })
+      queryClient.invalidateQueries({ queryKey: ['workoutResults'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
       // Инсайты считаются по завершённым тренировкам
       queryClient.invalidateQueries({ queryKey: ['insights'] })
@@ -133,6 +134,9 @@ export function useDeleteWorkout() {
       queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
       // Детали закэшированы со staleTime: Infinity — убираем мёртвую запись.
       queryClient.removeQueries({ queryKey: queryKeys.workouts.detail(id) })
+      // Deleting historical sets changes all-time records of later workouts.
+      queryClient.invalidateQueries({ queryKey: ['workoutResults'] })
+      queryClient.removeQueries({ queryKey: queryKeys.workouts.results(id) })
     },
   })
 }

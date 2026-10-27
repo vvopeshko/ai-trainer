@@ -7,6 +7,7 @@ export const queryKeys = {
     recent: ['workouts', 'recent'],
     active: ['workouts', 'active'],
     detail: (id) => ['workouts', 'detail', id],
+    results: (id) => ['workoutResults', id],
   },
   programs: {
     active: ['programs', 'active'],

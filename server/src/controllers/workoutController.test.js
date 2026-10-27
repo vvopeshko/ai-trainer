@@ -11,6 +11,7 @@ const mockPrisma = {
     deleteMany: vi.fn(),
   },
   workoutSet: {
+    findMany: vi.fn(),
     create: vi.fn(),
     findFirst: vi.fn(),
     delete: vi.fn(),
@@ -25,6 +26,7 @@ const mockPrisma = {
   exercise: {
     findMany: vi.fn(),
   },
+  userExerciseSettings: { findMany: vi.fn() },
   $transaction: vi.fn(),
 }
 
@@ -38,7 +40,7 @@ vi.mock('../services/aiTrainer/postWorkoutSummary.js', () => ({
   sendPostWorkoutSummary: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { create, update, logSet, deleteSet, destroy } = await import('./workoutController.js')
+const { create, update, logSet, deleteSet, destroy, getResults } = await import('./workoutController.js')
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const USER_ID = 'user-1'
@@ -68,6 +70,28 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Default: $transaction just runs the callback with mockPrisma as `tx`
   mockPrisma.$transaction.mockImplementation(async (cb) => cb(mockPrisma))
+})
+
+describe('getResults', () => {
+  it('requires a finished workout owned by the authenticated user before reading history', async () => {
+    mockPrisma.workout.findFirst.mockResolvedValue(null)
+    const res = mockRes()
+    await getResults(mockReq({ params: { id: WORKOUT_ID } }), res)
+    expect(mockPrisma.workout.findFirst.mock.calls[0][0].where).toEqual({ id: WORKOUT_ID, userId: USER_ID, finishedAt: { not: null } })
+    expect(res.statusCode).toBe(404)
+    expect(mockPrisma.workoutSet.findMany).not.toHaveBeenCalled()
+  })
+  it('returns calculated records for an owned completed workout', async () => {
+    mockPrisma.workout.findFirst.mockResolvedValue({ id: WORKOUT_ID, startedAt: new Date('2026-10-27'),
+      sets: [{ exerciseId: EXERCISE_ID, weightKg: 24, reps: 10, exercise: { slug: 'press', nameRu: 'Жим' } }] })
+    mockPrisma.workoutSet.findMany.mockResolvedValue([{ exerciseId: EXERCISE_ID, workoutId: 'prior', weightKg: 24, reps: 8,
+      workout: { startedAt: '2026-10-20', finishedAt: '2026-10-20' } }])
+    mockPrisma.userExerciseSettings.findMany.mockResolvedValue([])
+    const res = mockRes()
+    await getResults(mockReq({ params: { id: WORKOUT_ID } }), res)
+    expect(res.body.exercises[0]).toMatchObject({ status: 'up', comparison: { delta: 2 } })
+    expect(res.body.exercises[0].records).toHaveLength(1)
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

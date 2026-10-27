@@ -4,6 +4,7 @@ import { track } from '../utils/analytics.js'
 import { makeMainHints } from '../services/exerciseAlternatives.js'
 import { sendPostWorkoutSummary } from '../services/aiTrainer/postWorkoutSummary.js'
 import { enqueueNotification } from '../scheduler/notificationPlanner.js'
+import { getWorkoutResults } from '../services/workoutResults.js'
 
 // Упражнение при подходе: без длинных текстов (описание, техника, ошибки) и
 // видео — их отдаёт GET /exercises/:id. Иначе каждый подход тащил килобайты.
@@ -267,11 +268,23 @@ export async function getById(req, res) {
 }
 
 /**
- * POST /api/v1/workouts/:id/sets
- *
- * Залогировать подход. Вызывается при нажатии "Сделал".
- * Оптимистичный UI: фронт добавляет подход мгновенно, этот запрос идёт в фоне.
+ * GET /api/v1/workouts/:id/results
+ * Records and comparisons are independent of the finish write: retrying this
+ * read cannot accidentally complete or advance a workout twice.
  */
+export async function getResults(req, res) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+  const workout = await prisma.workout.findFirst({
+    where: { id, userId: req.user.id, finishedAt: { not: null } },
+    include: {
+      sets: { include: { exercise: { select: SET_EXERCISE_SELECT } }, orderBy: [{ exerciseOrder: 'asc' }, { setOrder: 'asc' }] },
+    },
+  })
+  if (!workout) return res.status(404).json({ error: 'Finished workout not found' })
+  res.json(await getWorkoutResults(req.user.id, workout))
+}
+
+/** Log a set on an active workout (optimistic rows are confirmed by this POST). */
 export async function logSet(req, res) {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
 

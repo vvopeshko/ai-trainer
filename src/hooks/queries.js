@@ -38,6 +38,14 @@ export function useActiveWorkoutQuery() {
   return useQuery(activeWorkoutQueryOptions())
 }
 
+export function useWorkoutResults(id) {
+  return useQuery({
+    queryKey: queryKeys.workouts.results(id),
+    queryFn: ({ signal }) => apiGet(`/api/v1/workouts/${id}/results`, { signal }),
+    enabled: !!id,
+  })
+}
+
 export function useWorkoutDetail(id) {
   return useQuery({
     queryKey: queryKeys.workouts.detail(id),

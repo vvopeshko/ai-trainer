@@ -4,12 +4,13 @@ import { useEffect, useRef, useState, useCallback } from 'react'
  * Bottom Sheet — модалка снизу экрана.
  * Анимация открытия/закрытия, backdrop, Glass-стиль.
  */
-export function BottomSheet({ open, onClose, children }) {
+export function BottomSheet({ open, onClose, children, className, style, labelledBy, trapFocus = false, swipeToClose = false }) {
   const sheetRef = useRef(null)
   // Таймеры анимации закрытия храним в ref, чтобы очищать в cleanup эффекта /
   // при анмаунте — иначе setTimeout мог выстрелить setState на размонтированном
   // компоненте.
   const closeTimerRef = useRef(null)
+  const dragStartRef = useRef(null)
   // visible = рендерим DOM, closing = проигрываем анимацию выхода
   const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -50,10 +51,23 @@ export function BottomSheet({ open, onClose, children }) {
   // Escape
   useEffect(() => {
     if (!visible) return
-    const handler = (e) => { if (e.key === 'Escape') handleClose() }
+    const handler = (e) => {
+      if (e.key === 'Escape') handleClose()
+      if (e.key === 'Tab' && trapFocus) {
+        const targets = [...(sheetRef.current?.querySelectorAll('button, a[href], input, textarea, select, summary, [tabindex="0"]') ?? [])]
+          .filter(el => !el.disabled && el.getClientRects().length > 0)
+        const first = targets[0], last = targets.at(-1)
+        if (!first) { e.preventDefault(); return }
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === sheetRef.current)) {
+          e.preventDefault(); last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus()
+        }
+      }
+    }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [visible, handleClose])
+  }, [visible, handleClose, trapFocus])
 
   // Lock body scroll
   useEffect(() => {
@@ -69,11 +83,13 @@ export function BottomSheet({ open, onClose, children }) {
     if (!open || !visible) return
     const el = sheetRef.current
     if (!el) return
+    const previous = document.activeElement
     const focusable = el.querySelector(
       'button, a[href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
     )
-    ;(focusable || el).focus?.()
-  }, [open, visible])
+    ;(labelledBy ? el : focusable || el).focus?.()
+    return () => { if (trapFocus && previous?.isConnected) previous.focus?.() }
+  }, [open, visible, labelledBy, trapFocus])
 
   if (!visible) return null
 
@@ -107,6 +123,8 @@ export function BottomSheet({ open, onClose, children }) {
         ref={sheetRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={labelledBy}
+        className={className}
         tabIndex={-1}
         style={{
           position: 'relative',
@@ -121,9 +139,21 @@ export function BottomSheet({ open, onClose, children }) {
           animation: closing
             ? `bsSlideDown ${DURATION}ms ease-in forwards`
             : `bsSlideUp ${DURATION}ms ease-out`,
+          ...style,
         }}
       >
         {/* Drag handle */}
+        <div onPointerDown={e => {
+          if (!swipeToClose) return
+          dragStartRef.current = e.clientY
+          e.currentTarget.setPointerCapture(e.pointerId)
+        }}
+          onPointerUp={e => {
+            if (dragStartRef.current != null && e.clientY - dragStartRef.current > 60) handleClose()
+            dragStartRef.current = null
+          }}
+          onPointerCancel={() => { dragStartRef.current = null }}
+          style={swipeToClose ? { padding: '6px 0 10px', touchAction: 'none' } : undefined}>
         <div style={{
           width: 36,
           height: 4,
@@ -131,6 +161,7 @@ export function BottomSheet({ open, onClose, children }) {
           background: 'rgba(255,255,255,0.2)',
           margin: '0 auto var(--space-4)',
         }} />
+        </div>
 
         {children}
       </div>

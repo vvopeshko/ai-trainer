@@ -1,187 +1,100 @@
-/**
- * Summary Page — экран "Готово!" после завершения тренировки (BRD §12.3).
- *
- * Показывает: зелёную галочку, "Готово!", 2×2 stat-tiles (подходы, время, упражнения, тоннаж),
- * мышечные группы как chips, CTA "К программе".
- *
- * Данные: серверный ответ завершения в query cache или GET /workouts/:id.
- */
 import { useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from '../../i18n/useTranslation.js'
-import { Glass } from '../../components/ui/Glass.jsx'
-import { Button } from '../../components/ui/Button.jsx'
-import { Icon } from '../../components/ui/Icon.jsx'
-import { MuscleTile } from '../../components/ui/MuscleTile.jsx'
-import { MUSCLE_GROUP } from '../../utils/muscleMapping.js'
+import { useWorkoutDetail, useWorkoutResults } from '../../hooks/queries.js'
 import { summarizeWorkout } from '../../utils/workoutSummary.js'
-import { useWorkoutDetail } from '../../hooks/queries.js'
+import { BottomSheet } from '../../components/ui/BottomSheet.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Glass } from '../../components/ui/Glass.jsx'
+import { Icon } from '../../components/ui/Icon.jsx'
+import { WorkoutResults } from './summary/WorkoutResults.jsx'
+import './summary/summary.css'
 
+/** The summary URL survives reloads; the background is a read-only snapshot of
+ * the finished workout, never a live WorkoutPage that could start another one. */
 export default function SummaryPage() {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { state } = useLocation()
+  const { t } = useTranslation()
+  const { data, isPending, isError, refetch } = useWorkoutDetail(id)
+  const workout = data?.workout
+  const summary = useMemo(() => summarizeWorkout(workout), [workout])
+  const results = useWorkoutResults(workout?.finishedAt ? id : null)
+  const close = () => navigate('/', { replace: true })
+  const exercises = useMemo(() => {
+    const grouped = new Map()
+    for (const s of workout?.sets ?? []) {
+      const entry = grouped.get(s.exerciseId) ?? { name: s.exercise?.nameRu || s.exercise?.nameEn, count: 0 }
+      entry.count++
+      grouped.set(s.exerciseId, entry)
+    }
+    return [...grouped.values()]
+  }, [workout])
 
-  // Finish seeds this query with the server response. Reloads fetch the same data.
-  const { data: detailData, isPending, isError, refetch } = useWorkoutDetail(id)
-  const fetched = useMemo(
-    () => summarizeWorkout(detailData?.workout),
-    [detailData?.workout],
-  )
-
-  const totalSets = fetched?.totalSets ?? 0
-  const totalExercises = fetched?.totalExercises ?? 0
-  const elapsedSec = fetched?.elapsedSec ?? 0
-  const tonnageKg = fetched?.tonnageKg ?? null
-  const muscles = fetched?.muscles ?? []
-
-  // Deduplicate muscles by group name for display
-  const muscleGroups = [...new Set(muscles.map(m => MUSCLE_GROUP[m]).filter(Boolean))]
-
-  const formatTime = (sec) => {
-    if (sec < 60) return t('summary.timeSec', { s: sec })
-    const h = Math.floor(sec / 3600)
-    const m = Math.floor((sec % 3600) / 60)
-    if (h > 0) return t('summary.timeHm', { h, hUnit: t('units.hoursShort'), m, mUnit: t('units.minsShort') })
-    return t('summary.timeMin', { m })
-  }
-
-  // Haptic feedback при монтировании
   useEffect(() => {
+    if (!workout?.finishedAt) return
     try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
-  }, [])
+  }, [workout?.finishedAt])
 
-  const statTileLabel = {
-    fontSize: 'var(--text-2xs)',
-    fontWeight: 'var(--weight-semi)',
-    color: 'var(--fg-tertiary)',
-    textTransform: 'uppercase',
-    letterSpacing: 'var(--tracking-caps)',
-    marginBottom: 'var(--space-1)',
+  const formatTime = sec => {
+    if (sec < 60) return t('summary.timeSec', { s: sec })
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60)
+    return h ? t('summary.timeHm', { h, hUnit: t('units.hoursShort'), m, mUnit: t('units.minsShort') })
+      : t('summary.timeMin', { m })
   }
-
-  const statTileValue = {
-    fontFamily: 'var(--font-mono)',
-    fontSize: 'var(--text-xl)',
-    fontWeight: 'var(--weight-bold)',
-    color: 'var(--fg-primary)',
-  }
-
-  if (isPending || isError || !fetched) return (
-    <div style={{ padding: 24, color: 'var(--fg-primary)' }}>
-      <p>{t(isPending ? 'common.loading' : 'errors.network')}</p>
-      {!isPending && <Button onClick={() => refetch()}>{t('common.retry')}</Button>}
-    </div>
-  )
+  const tonnage = summary?.tonnageKg ?? 0
 
   return (
-    <div style={{
-      background: 'var(--bg-app)',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'calc(var(--space-6) + var(--safe-top, 0px)) var(--space-6) calc(var(--space-6) + var(--safe-bottom, 0px))',
-    }}>
-      {/* Green check circle */}
-      <div style={{
-        width: 80,
-        height: 80,
-        borderRadius: '50%',
-        background: 'hsla(140, 55%, 40%, 0.2)',
-        border: '2px solid hsla(140, 55%, 55%, 0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 'var(--space-5)',
-      }}>
-        <Icon name="check" size={40} style={{ color: 'hsl(140, 55%, 65%)' }} />
-      </div>
-
-      {/* Title */}
-      <h1 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: 'var(--text-2xl)',
-        fontWeight: 'var(--weight-bold)',
-        color: 'var(--fg-primary)',
-        margin: 0,
-        marginBottom: 'var(--space-2)',
-      }}>
-        {t('summary.title')}
-      </h1>
-
-      {/* Subtitle */}
-      <p style={{
-        fontSize: 'var(--text-sm)',
-        color: 'var(--fg-secondary)',
-        margin: 0,
-        marginBottom: 'var(--space-6)',
-        textAlign: 'center',
-      }}>
-        {t('summary.subtitle')}
-      </p>
-
-      {/* Stat tiles — 2×2 grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: 'var(--space-3)',
-        width: '100%',
-        maxWidth: 360,
-        marginBottom: muscleGroups.length > 0 ? 'var(--space-5)' : 'var(--space-8)',
-      }}>
-        <Glass padding="14px" style={{ textAlign: 'center' }}>
-          <div style={statTileLabel}>{t('summary.sets')}</div>
-          <div style={statTileValue}>{totalSets}</div>
-        </Glass>
-
-        <Glass padding="14px" style={{ textAlign: 'center' }}>
-          <div style={statTileLabel}>{t('summary.time')}</div>
-          <div style={statTileValue}>{formatTime(elapsedSec)}</div>
-        </Glass>
-
-        <Glass padding="14px" style={{ textAlign: 'center' }}>
-          <div style={statTileLabel}>{t('summary.exercises')}</div>
-          <div style={statTileValue}>{totalExercises}</div>
-        </Glass>
-
-        {tonnageKg !== null && (
-          <Glass padding="14px" style={{ textAlign: 'center' }}>
-            <div style={statTileLabel}>{t('summary.tonnage')}</div>
-            <div style={statTileValue}>
-              {tonnageKg >= 1000 ? `${(tonnageKg / 1000).toFixed(1)}${t('units.tonnes')}` : `${tonnageKg}${t('units.kg')}`}
-            </div>
+    <div className="workout-summary-page">
+      <div className="workout-summary-background" aria-hidden="true" inert>
+        <h1>{t('summary.completedTitle')}</h1>
+        {exercises.map((exercise, i) => (
+          <Glass flat padding="16px" key={i} style={{ marginBottom: 10 }}>
+            <span>{i + 1}</span><div><strong>{exercise.name}</strong><p>{t('summary.setCount', { count: exercise.count })}</p></div>
+            <Icon name="check" style={{ color: 'var(--gd-accent-ink)' }} />
           </Glass>
-        )}
+        ))}
       </div>
+      <BottomSheet open trapFocus swipeToClose onClose={close} className="workout-completion-sheet" labelledBy="workout-completion-title"
+        style={{ background: 'var(--home-bg)', width: '100%', maxWidth: 480, margin: '0 auto',
+          maxHeight: 'calc(100dvh - var(--safe-top, 0px) - 12px)', overflowY: 'auto',
+          padding: '4px 16px 0', border: '1px solid var(--gd-line)', borderBottom: 0 }}>
+        <header className="completion-header">
+          <span className="completion-check"><Icon name="check" size={21} /></span>
+          <div><h2 id="workout-completion-title">{t('summary.completedTitle')}</h2>
+            <p>{state?.planDayTitle && <>{state.planDayTitle} · </>}{t('summary.exerciseCount', { count: summary?.totalExercises ?? 0 })}</p>
+          </div>
+          <button className="completion-close" onClick={close} aria-label={t('summary.close')}><Icon name="x" size={20} /></button>
+        </header>
 
-      {/* Muscle group chips */}
-      {muscleGroups.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: 8,
-          width: '100%',
-          marginBottom: 'var(--space-8)',
-          maxWidth: 360,
-        }}>
-          {muscleGroups.map(g => (
-            <MuscleTile key={g} muscle={g}>{g}</MuscleTile>
-          ))}
-        </div>
-      )}
-
-      {/* CTA */}
-      <Button
-        variant="accent"
-        size="lg"
-        block
-        onClick={() => navigate('/', { replace: true })}
-        style={{ maxWidth: 360 }}
-      >
-        {t('summary.backHome')}
-      </Button>
+        {isPending ? <p role="status">{t('common.loading')}</p> : isError || !summary || !workout.finishedAt ? (
+          <div className="completion-error" role="alert">
+            <p>{t(isError ? 'errors.network' : 'summary.notFinished')}</p>
+            {isError && <Button variant="secondary" onClick={() => refetch()}>{t('common.retry')}</Button>}
+          </div>
+        ) : <>
+          <Glass flat className="completion-stats" padding="14px 0" style={{ background: 'var(--goal-surface)', borderColor: 'var(--goal-border)' }}>
+            {[
+              ['clock', formatTime(summary.elapsedSec), 'summary.time'],
+              ['dumbbell', tonnage >= 1000 ? `${(tonnage / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${t('units.tonnes')}` : `${tonnage} ${t('units.kg')}`, 'summary.tonnage'],
+              ['list', summary.totalSets, 'summary.sets'],
+            ].map(([icon, value, label]) => <div key={label}>
+              <Icon name={icon} size={19} /><strong>{value}</strong><span>{t(label)}</span>
+            </div>)}
+          </Glass>
+          <div className="completion-results" aria-live="polite" aria-busy={results.isPending}>
+            {results.isPending ? <p className="completion-note" role="status">{t('summary.comparing')}</p>
+              : results.isError ? <div className="completion-error" role="alert">
+                <p>{t('summary.resultsError')}</p><Button variant="secondary" onClick={() => results.refetch()}>{t('common.retry')}</Button>
+              </div> : <WorkoutResults exercises={results.data?.exercises ?? []} />}
+          </div>
+        </>}
+        <footer className="completion-footer">
+          <Button variant="accent" size="lg" block icon="check" onClick={close}
+            style={{ background: 'var(--home-cta)', color: 'var(--home-cta-ink)', borderRadius: 13 }}>{t('summary.done')}</Button>
+        </footer>
+      </BottomSheet>
     </div>
   )
 }

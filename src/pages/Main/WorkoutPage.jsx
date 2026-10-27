@@ -795,7 +795,7 @@ export default function WorkoutPage() {
       // Summary reads the exact server response, including its authoritative
       // sets, finishedAt and totalPausedMs; no optimistic totals survive here.
       queryClient.setQueryData(queryKeys.workouts.detail(workoutId), result)
-      navigate(`/summary/${workoutId}`)
+      navigate(`/summary/${workoutId}`, { replace: true, state: { planDayTitle } })
     } catch (err) {
       console.error('Failed to finish workout:', err)
       toast.show(t('errors.workoutFinish'))

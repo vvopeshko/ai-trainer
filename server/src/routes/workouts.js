@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { auth } from '../middleware/auth.js'
 import { requirePremium } from '../middleware/requirePremium.js'
-import { create, getActive, getRecent, getById, logSet, deleteSet, update, destroy } from '../controllers/workoutController.js'
+import { create, getActive, getRecent, getById, getResults, logSet, deleteSet, update, destroy } from '../controllers/workoutController.js'
 
 const router = Router()
 
@@ -12,6 +12,7 @@ router.post('/', create)
 router.get('/active', getActive)
 router.get('/recent', getRecent)
 router.get('/:id', getById)
+router.get('/:id/results', getResults)
 router.post('/:id/sets', logSet)
 router.delete('/:id/sets/:setId', deleteSet)
 router.patch('/:id', update)
