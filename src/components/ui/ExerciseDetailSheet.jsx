@@ -29,13 +29,6 @@ function extractYouTubeId(url) {
   } catch { return null }
 }
 
-function isVideoUrl(url) {
-  try {
-    const path = new URL(url).pathname.toLowerCase()
-    return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov')
-  } catch { return false }
-}
-
 /** Format number with comma as decimal separator (2.5 → "2,5") */
 function formatDecimal(n) {
   return String(n).replace('.', ',')
@@ -177,65 +170,11 @@ function SectionLabel({ children }) {
   )
 }
 
-// ─── DemoMedia ───────────────────────────────────────────────────────
-
-function DemoMedia({ url, alt, isVideo }) {
-  const badge = isVideo ? 'Video' : 'GIF'
-
-  return (
-    <div style={{
-      aspectRatio: '4/3', borderRadius: 16, overflow: 'hidden',
-      position: 'relative',
-      background: 'radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,0.06), rgba(255,255,255,0.015))',
-      border: '1px solid rgba(255,255,255,0.07)',
-    }}>
-      {isVideo ? (
-        <video
-          src={url}
-          autoPlay loop muted playsInline
-          style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            display: 'block',
-          }}
-        />
-      ) : (
-        <img
-          src={url}
-          alt={alt}
-          decoding="async"
-          style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            display: 'block',
-          }}
-        />
-      )}
-
-      {/* Badge */}
-      <div style={{
-        position: 'absolute', bottom: 10, left: 10,
-        display: 'flex', alignItems: 'center', gap: 5,
-        height: 24, padding: '0 10px', borderRadius: 999,
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: 'hsl(var(--accent-h),55%,55%)',
-        }} />
-        <span style={{ fontSize: 10.5, color: 'var(--fg-primary)', fontWeight: 500 }}>
-          {badge}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 // ─── FramesMedia ─────────────────────────────────────────────────────
 
 const FRAME_MS = 1200
 
-// Start/end photos when there is no GIF: both frames are stacked and crossfade,
+// Start/end photos: both frames are stacked and crossfade,
 // so they read as the movement. Reduced motion: no autoplay, a tap switches.
 function FramesMedia({ images, alt, label }) {
   const [frame, setFrame] = useState(0)
@@ -565,8 +504,8 @@ function NumberField({ value, onChange, suffix }) {
 // One screen: what it looks like, which muscles it works, how to do it.
 function InfoTab({ exercise, t }) {
   const videos = exercise.videos || []
-  const frames = exercise.gifUrl ? [] : exercise.images ?? []
-  const hasMedia = exercise.gifUrl || frames.length > 0
+  const frames = exercise.images ?? []
+  const hasMedia = frames.length > 0
   const steps = exercise.instructions
     ? exercise.instructions.split('\n').map(s => s.trim()).filter(Boolean)
     : []
@@ -575,14 +514,8 @@ function InfoTab({ exercise, t }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* GIF / Video preview; start/end photos when there is none */}
-      {exercise.gifUrl ? (
-        <DemoMedia
-          url={exercise.gifUrl}
-          alt={exercise.nameRu}
-          isVideo={isVideoUrl(exercise.gifUrl)}
-        />
-      ) : frames.length > 0 && (
+      {/* Start/end photos for every exercise. */}
+      {frames.length > 0 && (
         <FramesMedia key={frames[0]} images={frames} alt={exercise.nameRu} label={t('exercise.photos')} />
       )}
 

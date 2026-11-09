@@ -35,6 +35,13 @@ describe('exercise detail content from the API', () => {
     expect(html).not.toContain('library.noResults')
   })
 
+  it('shows photos even when a legacy GIF is present', () => {
+    const html = renderExercise({ images: ['https://cdn.test/start.jpg', 'https://cdn.test/end.jpg'], gifUrl: 'https://cdn.test/demo.gif' })
+    expect(html).toContain('https://cdn.test/start.jpg')
+    expect(html).toContain('https://cdn.test/end.jpg')
+    expect(html).not.toContain('https://cdn.test/demo.gif')
+  })
+
   it('keeps the empty state for exercises without content', () => {
     const html = renderExercise({ description: null, typicalMistakes: null })
     expect(html).toContain('library.noResults')

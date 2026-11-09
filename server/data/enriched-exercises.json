@@ -42175,7 +42175,7 @@
       "Crunches/0.jpg",
       "Crunches/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/QUDd8WS.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "абдоминальные скручивания",
@@ -42225,7 +42225,7 @@
       "Side_Laterals_to_Front_Raise/0.jpg",
       "Side_Laterals_to_Front_Raise/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/dRTfGZT.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "махи в тренажёре",
@@ -42273,7 +42273,7 @@
       "Leverage_Chest_Press/0.jpg",
       "Leverage_Chest_Press/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/jHAnWmT.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "жим от груди",
@@ -42330,7 +42330,7 @@
       "Smith_Machine_Incline_Bench_Press/0.jpg",
       "Smith_Machine_Incline_Bench_Press/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/5v7KYld.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "жим в смите наклонный"
@@ -42380,7 +42380,7 @@
       "Dips_-_Chest_Version/0.jpg",
       "Dips_-_Chest_Version/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/X6C6i5Y.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "брусья",
@@ -42436,7 +42436,7 @@
       "Wide-Grip_Lat_Pulldown/0.jpg",
       "Wide-Grip_Lat_Pulldown/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/LEprlgG.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "тяга верхнего блока",
@@ -42489,7 +42489,7 @@
       "Hanging_Leg_Raise/0.jpg",
       "Hanging_Leg_Raise/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/I3tsCnC.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "подъём коленей в висе",
@@ -42543,7 +42543,7 @@
       "Leg_Press/0.jpg",
       "Leg_Press/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/7zdxRTl.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "жим платформы ногами"
@@ -42591,7 +42591,7 @@
       "Lying_Leg_Curls/0.jpg",
       "Lying_Leg_Curls/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/nnmCTLN.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "сгибание ног в тренажёре лёжа",
@@ -42643,7 +42643,7 @@
       "Cable_Rope_Overhead_Triceps_Extension/0.jpg",
       "Cable_Rope_Overhead_Triceps_Extension/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/2IxROQ1.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "разгибание трицепс канат",
@@ -42704,7 +42704,7 @@
       "Seated_Cable_Rows/0.jpg",
       "Seated_Cable_Rows/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/7I6LNUG.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "тяга нижнего блока",
@@ -42755,7 +42755,7 @@
       "Straight-Arm_Pulldown/0.jpg",
       "Straight-Arm_Pulldown/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/x69MAlq.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "тяга прямыми руками",
@@ -42904,7 +42904,7 @@
       "Leg_Extensions/0.jpg",
       "Leg_Extensions/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/my33uHU.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "разгибание ног",
@@ -43220,7 +43220,7 @@
       "Smith_Machine_Incline_Bench_Press/0.jpg",
       "Smith_Machine_Incline_Bench_Press/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/wDN97Ca.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "leverage-incline-chest-press",
@@ -43274,7 +43274,7 @@
       "Chin-Up/0.jpg",
       "Chin-Up/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/T2mxWqc.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "чин-ап"
@@ -43375,7 +43375,9 @@
       "Raise the handles outward and upward in an arc until arms are parallel to the floor.",
       "Pause at the top, then slowly lower to the starting position."
     ],
-    "images": [],
+    "images": [
+      "https://i0.wp.com/aestheticbeats.com/wp-content/uploads/2020/03/Machine-Lateral-Raise-%E2%80%93-Shoulders-exercise.png?fit=800%2C600&ssl=1"
+    ],
     "gifUrl": null,
     "source": "seed",
     "aliases": [
@@ -43587,7 +43589,7 @@
       "Dumbbell_Bench_Press/0.jpg",
       "Dumbbell_Bench_Press/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/SpYC0Kp.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "жим гантелей",
@@ -43840,7 +43842,7 @@
       "Upright_Barbell_Row/0.jpg",
       "Upright_Barbell_Row/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/UDlhcO8.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "протяжка",
@@ -43896,7 +43898,7 @@
       "Barbell_Curl/0.jpg",
       "Barbell_Curl/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/Yza7XrQ.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "бицепс со штангой",
@@ -44109,7 +44111,7 @@
       "Goblet_Squat/0.jpg",
       "Goblet_Squat/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/ZA8b5hc.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "гоблет"
@@ -44158,7 +44160,7 @@
       "Side_Bridge/0.jpg",
       "Side_Bridge/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/VO2qeJg.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "side-bridge",
@@ -44743,7 +44745,7 @@
       "EZ-Bar_Curl/0.jpg",
       "EZ-Bar_Curl/1.jpg"
     ],
-    "gifUrl": "https://static.exercisedb.dev/media/ae9UoXQ.gif",
+    "gifUrl": null,
     "source": "seed",
     "aliases": [
       "бицепс наклонная штанга"
@@ -44801,7 +44803,9 @@
     "typicalMistakes": "Отрывают грудь от упора и раскачиваются корпусом, тянут руками без сведения лопаток, бросают вес в нижней точке.",
     "bodyweight": false,
     "instructions": [],
-    "images": [],
+    "images": [
+      "https://titan.fitness/cdn/shop/files/402013_04.jpg?v=1757433145&width=1445"
+    ],
     "gifUrl": null,
     "source": "seed",
     "trackingType": "weight_reps",
@@ -44843,7 +44847,9 @@
     "typicalMistakes": "Слишком большой противовес и рывки ногами, неполная амплитуда, подъём плеч к ушам вместо работы спиной.",
     "bodyweight": false,
     "instructions": [],
-    "images": [],
+    "images": [
+      "https://steelfactor.ru/uploads/exercises/421_2.jpg"
+    ],
     "gifUrl": null,
     "source": "seed",
     "trackingType": "assisted_bodyweight",
@@ -44886,7 +44892,9 @@
     "typicalMistakes": "Прогибают поясницу в верхней точке вместо разгибания тазобедренного сустава, ставят стопы слишком близко или далеко, бросают вес вниз.",
     "bodyweight": false,
     "instructions": [],
-    "images": [],
+    "images": [
+      "https://cdn.motra.com/assets/00107719b2/mediumThumbnail.jpg"
+    ],
     "gifUrl": null,
     "source": "seed",
     "trackingType": "weight_reps",
@@ -44931,7 +44939,9 @@
     "typicalMistakes": "Неполная глубина, отрыв пяток, блокировка коленей в верхней точке, слишком быстрый спуск.",
     "bodyweight": false,
     "instructions": [],
-    "images": [],
+    "images": [
+      "https://www.primalstrength.com/cdn/shop/products/Primal-Strength-Pendulum-Hero.jpg?v=1646481482&width=1426"
+    ],
     "gifUrl": null,
     "source": "seed",
     "trackingType": "weight_reps",
@@ -44975,7 +44985,9 @@
     "typicalMistakes": "Тянут вес руками за рукояти, сводят колени внутрь, недоприседают.",
     "bodyweight": false,
     "instructions": [],
-    "images": [],
+    "images": [
+      "https://shop.lifefitness.com/cdn/shop/files/hammer-strength-outlet-plate-loaded-belt-squat-man-exercising-1000x1000.jpg?v=1748945151&width=900"
+    ],
     "gifUrl": null,
     "source": "seed",
     "trackingType": "weight_reps",
