@@ -102,10 +102,15 @@ export function progressChart(benchmark) {
   return { kind: benchmark.kind, anchor: benchmark.anchor, top: benchmark.top ?? false, points, line, fit, trend: benchmark.trend }
 }
 
-function volumeProgress(points) {
+function volumeMetric(points) {
   const allSets = points.flatMap(p => p.workout.sets)
-  const metric = allSets.every(s => (s.weightKg ?? 0) > 0) ? 'tonnage'
+  return allSets.every(s => (s.weightKg ?? 0) > 0) ? 'tonnage'
     : allSets.every(s => (s.weightKg ?? 0) === 0) ? 'reps' : null
+}
+
+function volumeProgress(history) {
+  const points = history.slice(-6)
+  const metric = volumeMetric(points)
   const last = points.at(-1), previous = points.at(-2)
   const latest = previous ? {
     from: metric ? previous[metric] : null, to: metric ? last[metric] : null,
@@ -113,8 +118,8 @@ function volumeProgress(points) {
     delta: metric ? last[metric] - previous[metric] : null,
     percent: metric && previous[metric] > 0 ? (last[metric] / previous[metric] - 1) * 100 : null,
   } : null
-  const size = Math.floor(points.length / 2)
-  if (!metric || size < 2) return { metric, status: 'unknown', latest }
+  const size = 3
+  if (!metric || points.length < 6) return { metric, status: 'unknown', latest }
   const mean = rows => rows.reduce((sum, p) => sum + p[metric], 0) / rows.length
   const from = mean(points.slice(0, size)), to = mean(points.slice(-size))
   const percent = (to / from - 1) * 100
@@ -123,9 +128,13 @@ function volumeProgress(points) {
   // false precision. The arithmetic comparison is still exposed in history.
   const tolerance = Math.max(2, 100 * median(values.map(v => Math.abs(v - center))) / center)
   const sameSets = points.every(p => p.count === last.count)
+  const recent = points.slice(-2)
+  const confirmedUp = recent.every(p => (p[metric] / from - 1) * 100 >= tolerance)
+  const confirmedDown = recent.every(p => (p[metric] / from - 1) * 100 <= -tolerance)
   return { metric, from, to, percent, size, tolerance, latest,
     fromPeriod: [points[0].time, points[size - 1].time], toPeriod: [points[points.length - size].time, last.time],
-    status: !sameSets ? 'changed' : Math.abs(percent) < tolerance ? 'same' : percent > 0 ? 'up' : 'down',
+    status: !sameSets ? 'changed' : percent >= tolerance && confirmedUp ? 'up'
+      : percent <= -tolerance && confirmedDown ? 'down' : 'same',
   }
 }
 
@@ -340,7 +349,7 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
       ? r.weightKg === p.value && (historyMain.top ? r.reps >= historyMain.anchor : r.reps === historyMain.anchor)
       : r.weightKg === historyMain.anchor && r.reps === p.value),
   }))
-  const historyVolume = volumeProgress(allPoints)
+  const historyVolume = { metric: volumeMetric(allPoints) }
   const views = {
     historyMain,
     e1rm: withHistory(e1rmSeries(points), e1rmSeries(allPoints)),

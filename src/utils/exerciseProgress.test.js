@@ -14,7 +14,7 @@ it('separates confirmed Smith performance, stable volume, and the latest session
     row('2026-08-10', [80,80,80,80], [10,10,10,8]),
     row('2026-08-05', [80,80,80,80], [10,10,10,10]),
   ], { sets: 4, repsMax: 10 })
-  expect(result).toMatchObject({ trend: 'up', band: { low: 80, high: 85, days: 75 }, evidence: { kind: 'weight', anchor: 10, from: 80, to: 85 }, volume: { status: 'same', from: 3070, to: 3065, size: 4, latest: { delta: 160, repDelta: 2, setDelta: 0 } }, goal: { set: 4, from: 6, to: 7 } })
+  expect(result).toMatchObject({ trend: 'up', band: { low: 80, high: 85, days: 75 }, evidence: { kind: 'weight', anchor: 10, from: 80, to: 85 }, volume: { status: 'same', from: 3080, to: 3020, size: 3, latest: { delta: 160, repDelta: 2, setDelta: 0 } }, goal: { set: 4, from: 6, to: 7 } })
 })
 it('recognizes a plateau when nothing beats the logbook, regardless of set order', () => {
   const data = history([10,9,10,10,9,10])
@@ -98,10 +98,10 @@ it('does not mistake added sets for improved performance', () => {
   const result = exerciseProgress(data)
   expect(result.trend).not.toBe('up')
   expect(result.trend).not.toBe('plateau')
-  expect(result.volume).toMatchObject({ status: 'changed', from: 1200, to: 1800 })
+  expect(result.volume.status).toBe('unknown')
 })
 it('reports removed or added sets in the last session', () => {
-  const data = history([10,10,10,10])
+  const data = history([10,10,10,10,10,10])
   data.at(-1).sets.pop()
   expect(exerciseProgress(data).volume).toMatchObject({ status: 'changed', latest: { setDelta: -1, delta: -600 } })
 })
@@ -115,7 +115,7 @@ it('keeps long term progress separate from a weaker last training', () => {
   expect(result).toMatchObject({ trend: 'up', volume: { latest: { delta: -120, repDelta: -2 } } })
 })
 it('uses reps for bodyweight and refuses misleading partial tonnage', () => {
-  expect(exerciseProgress(history([8,9,10,11], [0,0,0,0])).volume).toMatchObject({ metric: 'reps', from: 17, to: 21, status: 'up' })
+  expect(exerciseProgress(history([8,8,8,11,11,11], [0,0,0,0,0,0])).volume).toMatchObject({ metric: 'reps', from: 16, to: 22, status: 'up' })
   expect(exerciseProgress(history([10,10,10,10], [0,0,5,5])).volume).toMatchObject({ metric: null, status: 'unknown' })
 })
 it('treats alternating results without a new best as a plateau', () => {
@@ -123,7 +123,8 @@ it('treats alternating results without a new best as a plateau', () => {
 })
 it('uses equal disjoint windows and leaves small samples unclassified', () => {
   expect(exerciseProgress(history([8,9,10])).volume.status).toBe('unknown')
-  expect(exerciseProgress(history([8,8,20,10,10])).volume).toMatchObject({ from: 960, to: 1200, size: 2 })
+  expect(exerciseProgress(history([8,8,20,10,10])).volume.status).toBe('unknown')
+  expect(exerciseProgress(history([8,8,8,10,10,10])).volume).toMatchObject({ from: 960, to: 1200, size: 3 })
 })
 it('does not call opposed benchmarks progress while 80×12 still covers every new set', () => {
   const data = [0,1,2,3].map(i => row(new Date(Date.UTC(2026,6,1+i*7)).toISOString(), [60,80], [8+i,12-i]))
@@ -291,4 +292,28 @@ it('does not mix a historical top-of-range series with a different current bench
   expect(result.views.historyMain.anchor).toBe(result.charts[0].anchor)
   expect(result.views.historyMain.top).toBe(result.charts[0].top)
   expect(result.views.historyMain.line.every(p => p.time >= result.periodStart)).toBe(true)
+})
+
+it('ignores old higher volume when the latest six workouts are stable', () => {
+  const result = exerciseProgress(history([24,24,...Array(11).fill(20)], [22.5,22.5,...Array(11).fill(24)]))
+  expect(result.volume).toMatchObject({ status: 'same', percent: 0, size: 3 })
+  expect(result.views.volume.points).toHaveLength(13)
+})
+it('requires two recent confirmations of a volume decrease or increase', () => {
+  expect(exerciseProgress(history([10,10,10,10,10,5])).volume.status).toBe('same')
+  expect(exerciseProgress(history([10,10,10,10,5,5])).volume.status).toBe('down')
+  expect(exerciseProgress(history([10,10,10,10,10,15])).volume.status).toBe('same')
+  expect(exerciseProgress(history([10,10,10,10,15,15])).volume.status).toBe('up')
+})
+it('ignores old set counts and tracking changes for current volume, but preserves chart comparability', () => {
+  const data = history([10,10,10,10,10,10,10], [0,60,60,60,60,60,60])
+  data[0].sets.pop()
+  expect(exerciseProgress(data).volume).toMatchObject({ status: 'same', percent: 0 })
+  expect(exerciseProgress(data).views.volume).toBeNull()
+})
+
+it('reports added sets separately from volume direction in a full comparison window', () => {
+  const data = history([10,10,10,10,10,10])
+  data.slice(-3).forEach(w => w.sets.push({ weightKg: 60, reps: 10 }))
+  expect(exerciseProgress(data).volume).toMatchObject({ status: 'changed', from: 1200, to: 1800 })
 })
