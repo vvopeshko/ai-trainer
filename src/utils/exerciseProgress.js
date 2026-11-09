@@ -269,6 +269,7 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const latest = valid.at(-1)
   const overall = evaluate(points)
   const records = recordHistory(valid)
+  const allPoints = records.sessions.map(s => profile({ startedAt: s.time, sets: s.sets }))
   const ready = readyForWeight(points, plan)
   // Stall: sessions of this period after the last improvement (or after its
   // first session, which is only a baseline). Days compare by UTC day.
@@ -320,12 +321,34 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const next = candidates[0]
   const volume = volumeProgress(points)
   // Alternative views for the sheet; the card's sparkline stays on charts[0].
+  // The detail sheet keeps history visible; trend lines still describe only
+  // the current period. Never fit a line across a long training break.
+  const historyBenchmarks = evaluate(allPoints).benchmarks
+  const historySeries = series
+    ? series.top ? topOfRangeSeries(allPoints, series.anchor)
+      : historyBenchmarks.find(b => b.kind === series.kind && b.anchor === series.anchor)
+    : (capped && topOfRangeSeries(allPoints, plan.repsMax))
+      || choose(historyBenchmarks.filter(b => !capped || b.kind === 'weight'))
+  const historyChart = historySeries && progressChart(historySeries)
+  const withHistory = (current, historical) => historical ? {
+    ...historical, line: current?.line ?? [], trend: current?.trend ?? 'unknown',
+    periodStart: start > 0 ? points[0].time : null,
+  } : current
+  const historyMain = withHistory(charts[0], historyChart)
+  if (historyMain) historyMain.points = historyMain.points.map(p => ({ ...p,
+    record: (recordsByDay.get(dayOf(p.time)) ?? []).some(r => historyMain.kind === 'weight'
+      ? r.weightKg === p.value && (historyMain.top ? r.reps >= historyMain.anchor : r.reps === historyMain.anchor)
+      : r.weightKg === historyMain.anchor && r.reps === p.value),
+  }))
+  const historyVolume = volumeProgress(allPoints)
   const views = {
-    e1rm: e1rmSeries(points),
-    volume: volume.metric && points.length >= 2
-      ? { metric: volume.metric, points: points.map(p => ({ time: p.time, value: p[volume.metric], sets: p.count })) } : null,
+    historyMain,
+    e1rm: withHistory(e1rmSeries(points), e1rmSeries(allPoints)),
+    volume: historyVolume.metric && allPoints.length >= 2
+      ? { metric: historyVolume.metric, points: allPoints.map(p => ({ time: p.time, value: p[historyVolume.metric], sets: p.count })) } : null,
   }
   return { trend, band, charts, views, evidence, volume,
+    periodStart: points[0].time,
     days: daysBetween(points[0].time, points.at(-1).time), count: points.length, afterBreak: start > 0,
     // Subtype from the recent sessions (as in the logbook): an older full set
     // at the heavier weight does not mean it is held now.

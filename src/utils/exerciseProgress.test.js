@@ -266,3 +266,29 @@ it('does not chart a warm-up after a weight jump as a drop', () => {
     row('2026-07-15', [120,160,160,160], [10,8,8,8])]
   expect(exerciseProgress(data, { sets: 4, repsMin: 8, repsMax: 10 }).charts[0].points.map(p => p.value)).toEqual([140, 140])
 })
+
+it('keeps pre-break history visible without using it to establish the current trend', () => {
+  const data = [row('2026-05-06', [59,59,59], [12,12,12]),
+    ...['2026-07-15','2026-07-23','2026-08-07','2026-09-23'].map(d => row(d, [54.4,54.4,54.4], [12,12,12])),
+    row('2026-10-06', [54.4,54.4,54.4], [10,10,10]),
+    row('2026-10-22', [54.4,54.4,54.4], [10,10,12])]
+  const result = exerciseProgress(data, plan)
+  expect(result).toMatchObject({ count: 3, days: 29, afterBreak: true, periodStart: Date.parse('2026-09-23'), volume: { status: 'unknown' } })
+  expect(result.charts[0].points).toHaveLength(2)
+  expect(result.views.historyMain.points).toHaveLength(6)
+  expect(result.views.historyMain).toMatchObject({ trend: 'unknown', line: [], periodStart: Date.parse('2026-09-23') })
+  expect(result.views.e1rm.points).toHaveLength(7)
+  expect(result.views.e1rm.line).toEqual([])
+  expect(result.views.volume.points).toHaveLength(7)
+  expect(result.records.last).toBeNull()
+  expect(result.records.front).toEqual([{ weightKg: 59, reps: 12, time: Date.parse('2026-05-06') }])
+})
+
+it('does not mix a historical top-of-range series with a different current benchmark', () => {
+  const data = [row('2026-05-01', [60], [12]), row('2026-05-08', [60], [12]),
+    ...['2026-09-01','2026-09-08','2026-09-15','2026-09-22'].map(d => row(d, [65], [10]))]
+  const result = exerciseProgress(data, plan)
+  expect(result.views.historyMain.anchor).toBe(result.charts[0].anchor)
+  expect(result.views.historyMain.top).toBe(result.charts[0].top)
+  expect(result.views.historyMain.line.every(p => p.time >= result.periodStart)).toBe(true)
+})

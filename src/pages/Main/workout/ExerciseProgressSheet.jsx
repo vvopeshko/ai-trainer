@@ -13,7 +13,7 @@ const heading = { fontSize: 12.5, fontWeight: 600, color: 'var(--fg-primary)', m
 function Tile({ label, value, sub }) {
   return <div style={{ minWidth: 0, padding: '8px 10px', borderRadius: 10, background: 'rgba(236,234,239,0.05)' }}>
     <div style={{ ...muted, fontSize: 11 }}>{label}</div>
-    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-primary)', overflowWrap: 'anywhere' }}>{value}</div>
     {sub && <div style={{ ...muted, fontSize: 11 }}>{sub}</div>}
   </div>
 }
@@ -105,7 +105,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
   const workouts = data?.workouts ?? []
   const { records, volume } = progress
   const sessions = records.sessions
-  const best = records.last?.records.toSorted((a, b) => b.weightKg - a.weightKg || b.reps - a.reps)[0]
+  const best = records.front.toSorted((a, b) => b.weightKg - a.weightKg || b.reps - a.reps)[0]
   const volumeUnit = volume.metric === 'tonnage' ? text.unitLabel : t('units.reps')
   const number = value => Math.round(volume.metric === 'tonnage' && unit === 'lbs' ? value / 0.45359237 : value).toLocaleString('ru-RU')
   const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('ru-RU', { maximumFractionDigits: 1 })}`
@@ -134,8 +134,9 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
       {!timed && !assisted && <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusPill trend={progress.trend} />
-          <span style={muted}>{text.period} · {text.date(sessions[0].time)}–{text.date(sessions.at(-1).time)}</span>
+          <span style={muted}>{text.period} · {text.date(progress.periodStart)}–{text.date(sessions.at(-1).time)}</span>
         </div>
+        {progress.afterBreak && <div style={muted}>{t('exerciseProgress.sinceBreak')}</div>}
         <div style={{ marginTop: 6, fontSize: 14, color: 'var(--fg-primary)' }}>{text.reason}</div>
         {text.action && <div style={{ display: 'flex', gap: 6, marginTop: 8, color: 'var(--fg-primary)' }}>
           <Icon name="target" size={15} style={{ flexShrink: 0, marginTop: 2, color: progress.ready ? 'var(--success)' : progress.plateau ? 'var(--warning)' : 'var(--accent-color)' }} />
@@ -143,11 +144,11 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
         </div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginTop: 14 }}>
-          <Tile label={t('exerciseProgress.tile.record')} value={best ? text.set(best) : '—'} sub={records.last && text.date(records.last.time)} />
+          <Tile label={t('exerciseProgress.tile.record')} value={best ? text.set(best) : '—'} sub={best && text.date(best.time)} />
           <Tile label={t('exerciseProgress.tile.since')}
             value={progress.trend === 'first' ? '—' : t('exerciseProgress.sessions', { n: progress.stall.sessions })}
             sub={progress.stall.sessions > 0 ? text.span(progress.stall.days) : null} />
-          <Tile label={t('exerciseProgress.tile.volume')} value={t(`exerciseProgress.volumeShort.${volume.status}`)}
+          <Tile label={t('exerciseProgress.tile.volume')} value={volume.status === 'unknown' ? (volume.metric ? t('exerciseProgress.sampleCount', { n: progress.count }) : t('exerciseProgress.mixedVolume')) : t(`exerciseProgress.volumeShort.${volume.status}`)}
             sub={volume.size && volume.status !== 'changed' ? `${signed(volume.percent)}%` : null} />
         </div>
 
@@ -166,7 +167,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
 
         {progress.plateau?.kind === 'consolidate' && <HeavySets plateau={progress.plateau} text={text} t={t} />}
         {(() => {
-          const main = progress.charts[0]
+          const main = progress.views.historyMain ?? progress.charts[0]
           const options = [
             main && { id: 'main', label: main.top ? t('exerciseProgress.tab.top', { reps: main.anchor }) : t('exerciseProgress.tab.main') },
             progress.views.e1rm && { id: 'e1rm', label: t('exerciseProgress.tab.e1rm') },

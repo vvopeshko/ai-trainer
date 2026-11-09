@@ -33,6 +33,10 @@ export function ExerciseTrendChart({ chart, unit }) {
         <text x="35" y={y({ value }) + 3} textAnchor="end" fill="var(--fg-secondary)" fontSize="10">{format(value)}</text>
       </g>)}
       <text x="4" y="10" fill="var(--fg-tertiary)" fontSize="9">{axisUnit}</text>
+      {chart.periodStart && chart.periodStart > points[0].time && chart.periodStart <= points.at(-1).time && <g>
+        <line x1={x({ time: chart.periodStart })} x2={x({ time: chart.periodStart })} y1="14" y2="80" stroke="var(--fg-tertiary)" strokeDasharray="3 3" />
+        <text x={x({ time: chart.periodStart }) - 4} y="12" textAnchor="end" fill="var(--fg-tertiary)" fontSize="9">{t('exerciseProgress.break')}</text>
+      </g>}
       {line.length > 0 && <polyline points={line.map(p => `${x(p)},${y(p)}`).join(' ')} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />}
       {points.map(p => <circle key={p.time} cx={x(p)} cy={y(p)} r={p.record ? 4 : 3} fill={p.record ? 'var(--success)' : 'var(--fg-secondary)'} stroke="var(--bg-primary, #111)" strokeWidth="1">
         <title>{date(p.time)} · {format(p.value)} {axisUnit}{p.record ? ` · ${t('exerciseProgress.legendNew')}` : ''}</title>
