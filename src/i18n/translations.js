@@ -25,6 +25,8 @@ export const translations = {
     'annualGoal.baseline': '{{count}} на {{date}} включительно + {{added}} после',
     'annualGoal.incompleteMonth': 'Для темпа за 30 дней пока недостаточно подробной истории.',
     'common.loading': 'Загрузка…',
+    'exercise.catalogAlternativesHint': 'Похожие упражнения. Нажми, чтобы посмотреть технику.',
+    'exercise.alternativesError': 'Не удалось загрузить аналоги.',
     'common.retry': 'Повторить',
     'annualGoal.retry': 'Не удалось загрузить годовую цель. Повторить',
     'app.tagline': 'Твой AI-тренер в Telegram',

@@ -1,8 +1,8 @@
 /**
  * ExerciseDetailSheet — fullscreen overlay with tabbed exercise details.
  *
- * Tabs: Info (GIF/video, target and other muscles, description, technique),
- * optional Alternatives (workout only), Settings (unit, weight step, min/max, type).
+ * Tabs: Info (photos, target and other muscles, description, technique),
+ * Alternatives (catalog or workout swap panel), Settings (unit, weight step, min/max, type).
  * With `onSelect` it is a preview of an alternative: Info only and a «Выбрать» footer.
  *
  * Used on WorkoutPage, LibraryPage, ProgramEditPage.
@@ -12,7 +12,7 @@ import { useOverlayViewport } from '../../hooks/useOverlayViewport.js'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../TelegramProvider.jsx'
 import { openTrainerChat } from '../../utils/askTrainer.js'
-import { useExerciseDetail } from '../../hooks/queries.js'
+import { useExerciseDetail, useExerciseAlternatives } from '../../hooks/queries.js'
 import { getExerciseSettings, setExerciseSettings, saveSettingsToServer, PRESETS, getDefaultPreset, getPresetsForEquipment } from '../../utils/weightUnit.js'
 import { getMuscleName, getEquipmentName, MUSCLE_GROUP } from '../../utils/muscleMapping.js'
 import { MuscleTile } from './MuscleTile.jsx'
@@ -124,7 +124,7 @@ function Header({ exercise, onClose }) {
 
 // ─── SegTabs ─────────────────────────────────────────────────────────
 
-const TABS = ['info', 'settings']
+const TABS = ['info', 'alternatives', 'settings']
 
 function SegTabs({ tabs = TABS, active, onChange, t }) {
   return (
@@ -888,9 +888,30 @@ function DetailSkeleton() {
 
 // ─── ExerciseDetailSheet ─────────────────────────────────────────────
 
+function CatalogAlternatives({ exerciseId, onPreview, t }) {
+  const { data, isPending, isError, refetch } = useExerciseAlternatives(exerciseId)
+  if (isPending) return <Skeleton width="100%" height={120} radius={12} />
+  if (isError) return <div role="alert">
+    <p>{t('exercise.alternativesError')}</p>
+    <button onClick={() => refetch()}>{t('common.retry')}</button>
+  </div>
+  const rows = data?.alternatives ?? []
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <p style={{ color: 'var(--fg-secondary)', fontSize: 14 }}>{t('exercise.catalogAlternativesHint')}</p>
+    {!rows.length && <p>{t('workout.alternativesEmpty')}</p>}
+    {rows.map(row => <button key={row.exerciseId} onClick={() => onPreview(row.exerciseId)} style={{
+      display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', minHeight: 56,
+      padding: '12px 14px', borderRadius: 14, border: '1px solid var(--border)',
+      background: 'rgba(255,255,255,0.04)', color: 'var(--fg-primary)', fontSize: 15, cursor: 'pointer',
+    }}>
+      <span style={{ flex: 1 }}>{row.nameRu}</span><Icon name="chevronRight" size={18} />
+    </button>)}
+  </div>
+}
+
 /**
  * `alternatives` (optional node) adds an "Аналоги" tab — the workout passes its
- * swap panel for the current exercise; other screens don't. `initialTab` picks
+ * swap panel for the current exercise; other screens use catalog suggestions. `initialTab` picks
  * the tab on open. `onSelect` turns the sheet into a preview of an alternative:
  * only Info, and a «Выбрать» footer (plus «Сделать основным» with `onMakeMain`).
  */
@@ -903,6 +924,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
   const [tabKey, setTabKey] = useState(0)
   const [prevExerciseId, setPrevExerciseId] = useState(null)
   const [asking, setAsking] = useState(false)
+  const [previewId, setPreviewId] = useState(null)
 
   // Use TanStack Query — cached, placeholderData from catalog
   const { data: exercise = null, isLoading: loading } = useExerciseDetail(open ? exerciseId : null)
@@ -910,12 +932,14 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
   // Reset tab when opening a different exercise
   useEffect(() => {
     if (!open) {
+      setPreviewId(null)
       setPrevExerciseId(null)
       setActiveTab(initialTab)
       setSettings(null)
       return
     }
     if (exerciseId !== prevExerciseId) {
+      setPreviewId(null)
       setPrevExerciseId(exerciseId)
       setActiveTab(initialTab)
       setSettings(null)
@@ -1017,6 +1041,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
   if (!open) return null
 
   return (
+    <>
     <div style={{
       position: 'fixed', inset: 0, zIndex: 900,
       ...viewportStyle,
@@ -1030,7 +1055,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
       <Header exercise={exercise} onClose={onClose} />
 
       {/* Tabs */}
-      {!onSelect && <SegTabs tabs={alternatives ? ['info', 'alternatives', 'settings'] : TABS}
+      {!onSelect && <SegTabs tabs={TABS}
         active={activeTab} onChange={handleTabChange} t={t} />}
 
       {/* Content */}
@@ -1043,7 +1068,8 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
         ) : exercise ? (
           <div key={tabKey} style={{ animation: 'fadeUp .35s ease-out' }}>
             {(activeTab === 'info' || onSelect) && <InfoTab exercise={exercise} t={t} />}
-            {activeTab === 'alternatives' && alternatives}
+            {!onSelect && activeTab === 'alternatives' && (alternatives ??
+              <CatalogAlternatives exerciseId={exerciseId} onPreview={setPreviewId} t={t} />)}
             {!onSelect && activeTab === 'settings' && settings && (
               <SettingsTab
                 exercise={exercise}
@@ -1099,5 +1125,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
         </div>
       )}
     </div>
+    {previewId && <ExerciseDetailSheet exerciseId={previewId} open onClose={() => setPreviewId(null)} />}
+    </>
   )
 }
