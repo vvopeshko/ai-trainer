@@ -13,7 +13,7 @@ export function useProgressText(progress, { plan, unit, step, stepUnit }) {
   const date = time => new Date(time).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
   const set = s => (s.weightKg ?? 0) > 0 ? `${weight(s.weightKg)}×${s.reps}` : `${s.reps} ${t('units.reps')}`
   if (!progress) return { unitLabel, weight, span, date, set }
-  const { trend, evidence, band, records, ready, goal, stall, plateau } = progress
+  const { trend, evidence, band, records, ready, goal, stall, plateau, sessionGrowth } = progress
   const period = t('exerciseProgress.period', { n: progress.count, span: span(progress.days) })
   const stalled = t('exerciseProgress.noImprovement', { n: stall.sessions })
   let reason = period
@@ -22,6 +22,9 @@ export function useProgressText(progress, { plan, unit, step, stepUnit }) {
       ? band.low === band.high ? `${weight(band.low)} ${unitLabel}` : `${weight(band.low)}–${weight(band.high)} ${unitLabel}`
       : null
     reason = [stalled, range ? t('exerciseProgress.onRange', { range }) : span(stall.days)].join(' · ')
+  } else if (trend === 'up' && sessionGrowth?.sessionsAgo <= 1) {
+    reason = t('exerciseProgress.sessionGrowth', { from: sessionGrowth.from, to: sessionGrowth.to,
+      weight: weight(sessionGrowth.weightKg), unit: unitLabel, sets: sessionGrowth.sets })
   } else if (evidence) {
     reason = evidence.kind === 'weight'
       ? t('exerciseProgress.weightEvidence', { reps: evidence.anchor, from: weight(evidence.from), to: weight(evidence.to), unit: unitLabel })

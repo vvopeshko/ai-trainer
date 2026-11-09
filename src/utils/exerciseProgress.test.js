@@ -317,3 +317,36 @@ it('reports added sets separately from volume direction in a full comparison win
   data.slice(-3).forEach(w => w.sets.push({ weightKg: 60, reps: 10 }))
   expect(exerciseProgress(data).volume).toMatchObject({ status: 'changed', from: 1200, to: 1800 })
 })
+
+it('recognizes recent whole-session progress below an old single-set record', () => {
+  const data = [
+    row('2026-04-30', [64,64,64], [12,12,12]),
+    ...Array.from({ length: 5 }, (_, i) => row(new Date(Date.UTC(2026,4,20+i*28)).toISOString(), [64,64,64], [10,10,10])),
+    row('2026-10-13', [64,64,64], [12,10,10]),
+    row('2026-10-21', [64,64,64], [12,12,12]),
+  ]
+  const result = exerciseProgress(data, { sets: 3, repsMax: 15 })
+  expect(result).toMatchObject({ trend: 'up', plateau: null, stall: { sessions: 0, days: 0 },
+    sessionGrowth: { from: 32, to: 36, weightKg: 64, sets: 3 }, records: { latest: [] } })
+  expect(result.records.front[0].time).toBe(Date.parse('2026-04-30'))
+  expect(exerciseProgress(data.map(w => ({ ...w, sets: w.sets.toReversed() }))).sessionGrowth).toEqual(result.sessionGrowth)
+})
+it('uses four preceding workouts, not three or five, for session improvement', () => {
+  expect(exerciseProgress(history([20,10,10,10,12])).sessionGrowth).toBeNull()
+  expect(exerciseProgress(history([20,10,10,10,10,12])).sessionGrowth).toMatchObject({ from: 20, to: 24, sessionsAgo: 0 })
+  expect(exerciseProgress(history([10,10,10,12])).sessionGrowth).toBeNull()
+})
+it('does not treat changing weight, adding sets, or redistributing reps as session improvement', () => {
+  expect(exerciseProgress(history([10,10,10,10,12], [60,60,60,60,55])).sessionGrowth).toBeNull()
+  const added = history([10,10,10,10,10])
+  added.at(-1).sets.push({ weightKg: 60, reps: 10 })
+  expect(exerciseProgress(added).sessionGrowth).toBeNull()
+  const shuffled = history([10,10,10,10,10])
+  shuffled.at(-1).sets = [{ weightKg: 60, reps: 9 }, { weightKg: 60, reps: 13 }]
+  expect(exerciseProgress(shuffled).sessionGrowth).toBeNull()
+})
+it('does not compare whole-session progress across a training break', () => {
+  const data = history([10,10,10,10])
+  data.push(row('2026-10-21', [60,60], [12,12]))
+  expect(exerciseProgress(data)).toMatchObject({ trend: 'first', sessionGrowth: null })
+})

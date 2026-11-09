@@ -150,6 +150,7 @@ export const translations = {
     'exerciseProgress.sheetTitle': 'Прогресс',
     'exerciseProgress.sinceBreak': 'После перерыва',
     'exerciseProgress.break': 'Перерыв',
+    'exerciseProgress.sessionGrowth': 'Повторы: {{from}} → {{to}} · {{sets}} подх. × {{weight}} {{unit}}',
     'exerciseProgress.sampleCount': '{{n}}/6 трен.',
     'exerciseProgress.mixedVolume': 'Разный учёт',
     'exerciseProgress.tile.record': 'Лучший',

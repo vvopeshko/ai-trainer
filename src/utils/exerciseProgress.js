@@ -189,6 +189,28 @@ function recordHistory(valid) {
   }
 }
 
+// Recent session improvement is separate from a lifetime single-set record.
+// Compare four preceding sessions at the same load and set count. A recovered
+// low day or a reshuffle of reps between sets must not reset a plateau.
+function sessionImprovement(points) {
+  let last = null
+  for (let i = 4; i < points.length; i++) {
+    const current = points[i]
+    const weightKg = current.workout.sets[0].weightKg ?? 0
+    const prior = points.slice(i - 4, i)
+    const comparable = p => p.count === current.count
+      && p.workout.sets.every(s => (s.weightKg ?? 0) === weightKg)
+    if (!comparable(current) || !prior.every(comparable)) continue
+    const sorted = p => p.workout.sets.map(s => s.reps).sort((a, b) => b - a)
+    const now = sorted(current)
+    if (!prior.every(p => sorted(p).every((reps, index) => now[index] >= reps))) continue
+    if (current.reps <= Math.max(...prior.map(p => p.reps))) continue
+    last = { time: current.time, weightKg, from: prior.at(-1).reps, to: current.reps,
+      sets: current.count, sessionsAgo: points.length - 1 - i }
+  }
+  return last
+}
+
 // Double progression: every planned set reached the top of the rep range at
 // one weight. A cue to try the next step, not a plateau; weight is never
 // raised automatically. `sessions` counts consecutive such trainings.
@@ -279,10 +301,11 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const overall = evaluate(points)
   const records = recordHistory(valid)
   const allPoints = records.sessions.map(s => profile({ startedAt: s.time, sets: s.sets }))
+  const sessionGrowth = sessionImprovement(points)
   const ready = readyForWeight(points, plan)
   // Stall: sessions of this period after the last improvement (or after its
   // first session, which is only a baseline). Days compare by UTC day.
-  const anchor = Math.max(dayOf(records.lastImproved?.time ?? -Infinity), dayOf(points[0].time))
+  const anchor = Math.max(dayOf(records.lastImproved?.time ?? -Infinity), dayOf(sessionGrowth?.time ?? -Infinity), dayOf(points[0].time))
   const stallPoints = points.filter(p => dayOf(p.time) > anchor)
   const gaps = [anchor, ...stallPoints.map(p => dayOf(p.time))].slice(1).map((day, i, all) => day - (i ? all[i - 1] : anchor))
   // Rare training is not evidence of a plateau — rare for THIS exercise: twice
@@ -291,7 +314,8 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const stall = { sessions: stallPoints.length, days: dayOf(points.at(-1).time) - anchor,
     rare: gaps.length > 0 && median(gaps) > Math.max(14, 2 * (usual.length ? median(usual) : 0)) }
   const window = PLATEAU_WINDOW[experienceLevel] ?? PLATEAU_WINDOW.intermediate
-  const recentGrowth = records.sinceImproved != null && records.sinceImproved <= 1 && records.lastImproved.time >= points[0].time
+  const recentGrowth = (sessionGrowth != null && sessionGrowth.sessionsAgo <= 1)
+    || (records.sinceImproved != null && records.sinceImproved <= 1 && records.lastImproved.time >= points[0].time)
   // A recent stall outranks older growth. All planned sets at the top of the
   // range is not a plateau: the next weight step was simply not tried yet.
   const stalled = !ready && !stall.rare && stall.sessions >= window.sessions && stall.days >= window.days
@@ -356,7 +380,7 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
     volume: historyVolume.metric && allPoints.length >= 2
       ? { metric: historyVolume.metric, points: allPoints.map(p => ({ time: p.time, value: p[historyVolume.metric], sets: p.count })) } : null,
   }
-  return { trend, band, charts, views, evidence, volume,
+  return { trend, band, charts, views, evidence, volume, sessionGrowth,
     periodStart: points[0].time,
     days: daysBetween(points[0].time, points.at(-1).time), count: points.length, afterBreak: start > 0,
     // Subtype from the recent sessions (as in the logbook): an older full set
