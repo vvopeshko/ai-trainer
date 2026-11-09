@@ -8,6 +8,7 @@
  * Used on WorkoutPage, LibraryPage, ProgramEditPage.
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useOverlayViewport } from '../../hooks/useOverlayViewport.js'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useTelegram } from '../TelegramProvider.jsx'
 import { openTrainerChat } from '../../utils/askTrainer.js'
@@ -894,6 +895,7 @@ function DetailSkeleton() {
  * only Info, and a «Выбрать» footer (plus «Сделать основным» with `onMakeMain`).
  */
 export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange, alternatives, initialTab = 'info', onSelect, onMakeMain }) {
+  const viewportStyle = useOverlayViewport(open)
   const { t } = useTranslation()
   const { webApp } = useTelegram()
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -1017,6 +1019,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 900,
+      ...viewportStyle,
       background: 'var(--bg-app)',
       display: 'flex', flexDirection: 'column',
       animation: 'slideUp 0.25s ease-out',
@@ -1032,7 +1035,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
 
       {/* Content */}
       <div style={{
-        flex: 1, overflow: 'auto', padding: '0 16px 32px',
+        flex: 1, minHeight: 0, overflow: 'auto', overscrollBehaviorY: 'contain', padding: '0 16px 32px',
         WebkitOverflowScrolling: 'touch',
       }}>
         {loading ? (

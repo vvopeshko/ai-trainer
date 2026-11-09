@@ -1,4 +1,5 @@
 import { forwardRef } from 'react'
+import { useTranslation } from '../../i18n/useTranslation.js'
 import { Icon } from './Icon.jsx'
 
 /**
@@ -15,6 +16,7 @@ const TopBar = forwardRef(function TopBar(
   { title, onBack, rightIcon, rightLabel, onRight, style },
   ref,
 ) {
+  const { t } = useTranslation()
   return (
     <header
       ref={ref}
@@ -22,11 +24,15 @@ const TopBar = forwardRef(function TopBar(
         position: 'sticky',
         top: 0,
         zIndex: 'var(--z-nav)',
-        display: 'flex',
+        display: 'grid',
+        gridTemplateColumns: '44px minmax(0, 1fr) auto',
+        gap: 8,
         alignItems: 'center',
         justifyContent: 'space-between',
-        minHeight: 48,
-        padding: '0 var(--space-3)',
+        height: 'calc(56px + var(--safe-top, 0px))',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        padding: 'var(--safe-top, 0px) var(--space-3) 0',
         background: 'var(--bg-app)',
         borderBottom: '1px solid var(--border-subtle)',
         ...style,
@@ -37,11 +43,15 @@ const TopBar = forwardRef(function TopBar(
         {onBack && (
           <button
             onClick={onBack}
+            aria-label={t('a11y.back')}
             style={{
               background: 'none',
               border: 'none',
               color: 'var(--fg-secondary)',
               cursor: 'pointer',
+              minWidth: 44,
+              minHeight: 44,
+              justifyContent: 'center',
               padding: 4,
               display: 'flex',
               alignItems: 'center',
@@ -56,7 +66,7 @@ const TopBar = forwardRef(function TopBar(
       <span
         style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 'var(--text-sm)',
+          fontSize: 16,
           fontWeight: 'var(--weight-semi)',
           color: 'var(--fg-primary)',
           letterSpacing: 'var(--tracking-tight)',
@@ -69,7 +79,7 @@ const TopBar = forwardRef(function TopBar(
       </span>
 
       {/* Right: action */}
-      <div style={{ width: 40, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+      <div style={{ minWidth: 44, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         {(rightLabel || rightIcon) && onRight && (
           <button
             onClick={onRight}
@@ -78,11 +88,14 @@ const TopBar = forwardRef(function TopBar(
               border: 'none',
               color: 'var(--accent-color)',
               cursor: 'pointer',
+              minWidth: 44,
+              minHeight: 44,
+              justifyContent: 'center',
               padding: 4,
               display: 'flex',
               alignItems: 'center',
               fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-xs)',
+              fontSize: 14,
               fontWeight: 'var(--weight-semi)',
             }}
           >

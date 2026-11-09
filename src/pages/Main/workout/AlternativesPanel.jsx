@@ -4,6 +4,7 @@ import { useExerciseAlternatives, useExerciseCatalog } from '../../../hooks/quer
 import { Icon, Skeleton } from '../../../components/ui/index.js'
 import { kgToLbs } from '../../../utils/weightUnit.js'
 import { StatusPill } from './ProgressStatus.jsx'
+import { ExerciseSearchField } from '../../../components/ui/ExerciseSearchField.jsx'
 import { searchExercises } from '../../../utils/exerciseSearch.js'
 
 const MAX_ROWS = 8
@@ -56,7 +57,7 @@ export function AlternativesPanel({ current, slot, lastResults, onNeedLastResult
   }
   const row = alt => (
     <div key={alt.exerciseId} style={{ ...card, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <button onClick={() => onPreview(alt)} style={{
+      <button onClick={() => { document.activeElement?.blur?.(); onPreview(alt) }} style={{
         flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, padding: 0,
         background: 'none', border: 0, textAlign: 'left', cursor: 'pointer',
       }}>
@@ -90,11 +91,7 @@ export function AlternativesPanel({ current, slot, lastResults, onNeedLastResult
 
     {/* Any exercise from the catalog: picking it also remembers it in the slot */}
     <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--fg-primary)', margin: '18px 0 8px' }}>{t('workout.searchCatalogTitle')}</div>
-    <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('workout.searchCatalog')} style={{
-      width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10,
-      border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)',
-      color: 'var(--fg-primary)', fontSize: 13, outline: 'none',
-    }} />
+    <ExerciseSearchField value={query} onChange={setQuery} placeholder={t('workout.searchCatalog')} />
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
       {found.map(row)}
       {query.trim().length >= 2 && !found.length && <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{t('workout.searchCatalogEmpty')}</div>}

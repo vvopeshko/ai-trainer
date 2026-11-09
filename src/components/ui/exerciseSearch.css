@@ -1,0 +1,49 @@
+.exercise-search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  background: var(--surface-0);
+  box-sizing: border-box;
+}
+
+.exercise-search-field:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--border-subtle);
+}
+
+.exercise-search-field input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--fg-primary);
+  /* iOS zooms focused controls below 16px. Keep pinch-to-zoom available. */
+  font: 400 16px/1.4 var(--font-sans);
+  scroll-margin-top: calc(var(--safe-top, 0px) + 72px);
+}
+
+.exercise-search-field input::-webkit-search-cancel-button { display: none; }
+.exercise-search-field input::placeholder { color: var(--fg-tertiary); }
+.exercise-search-field button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-secondary);
+  cursor: pointer;
+}

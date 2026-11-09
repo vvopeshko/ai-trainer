@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { useExerciseAlternatives, useExerciseCatalog } from '../../../hooks/queries.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
+import { ExerciseSearchField } from '../../../components/ui/ExerciseSearchField.jsx'
 import { searchExercises } from '../../../utils/exerciseSearch.js'
 
 const MAX_ALTERNATIVES = 6
@@ -29,6 +30,7 @@ export function ProgramAlternatives({ exercise, onChange }) {
 
   const add = id => {
     if (full || taken.has(id)) return
+    document.activeElement?.blur?.()
     onChange({ alternatives: [...alternatives, id] })
     setQuery('')
   }
@@ -64,12 +66,7 @@ export function ProgramAlternatives({ exercise, onChange }) {
         {suggestions.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
           {suggestions.map(s => <button key={s.exerciseId} onClick={() => add(s.exerciseId)} style={chip}>+ {s.nameRu}</button>)}
         </div>}
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('program.searchAlternative')}
-          style={{
-            width: '100%', boxSizing: 'border-box', marginTop: 8, padding: '9px 12px', borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)',
-            color: 'var(--fg-primary)', fontSize: 'var(--text-sm)', outline: 'none',
-          }} />
+        <ExerciseSearchField value={query} onChange={setQuery} placeholder={t('program.searchAlternative')} />
         {results.map(e => (
           <button key={e.id} onClick={() => add(e.id)} style={{
             display: 'block', width: '100%', textAlign: 'left', padding: '8px 2px', border: 'none',

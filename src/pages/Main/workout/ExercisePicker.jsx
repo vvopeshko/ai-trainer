@@ -4,6 +4,7 @@ import { useExerciseCatalog } from '../../../hooks/queries.js'
 import { useCreateCustomExercise } from '../../../hooks/mutations.js'
 import { getMuscleName, getEquipmentName } from '../../../utils/muscleMapping.js'
 import { Icon } from '../../../components/ui/Icon.jsx'
+import { ExerciseSearchField } from '../../../components/ui/ExerciseSearchField.jsx'
 import { searchExercises, byPopularity, isStretchOrCardio, normalizeSearch } from '../../../utils/exerciseSearch.js'
 
 // ─── ExercisePicker ─────────────────────────────────────────────────────
@@ -24,6 +25,11 @@ export function ExercisePicker({ onSelect }) {
     return searchExercises(catalog, query).slice(0, MAX_RESULTS)
   }, [catalog, query])
 
+  const select = exercise => {
+    document.activeElement?.blur?.()
+    onSelect(exercise)
+  }
+
   const loading = isLoading && catalog.length === 0
 
   // Own exercise when the catalog has nothing that fits. The server first
@@ -37,7 +43,7 @@ export function ExercisePicker({ onSelect }) {
     createExercise.mutate({ nameRu: name, force }, {
       onSuccess: result => {
         if (result.suggestion) setSuggestion(result.suggestion)
-        else onSelect(result.exercise)
+        else select(result.exercise)
       },
     })
   }
@@ -48,20 +54,9 @@ export function ExercisePicker({ onSelect }) {
   }
 
   return (
-    <div style={{ padding: 'var(--space-4)' }}>
-      <div style={{ marginBottom: 'var(--space-4)' }}>
-        <input
-          type="text"
-          value={query}
-          onChange={e => changeQuery(e.target.value)}
-          placeholder={t('workout.search')}
-          style={{
-            width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-medium)', background: 'var(--surface-0)',
-            color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-sm)', outline: 'none', boxSizing: 'border-box',
-          }}
-        />
+    <div style={{ padding: '0 16px calc(24px + var(--safe-bottom, 0px))', maxWidth: 600, margin: '0 auto' }}>
+      <div style={{ position: 'sticky', top: 'calc(var(--safe-top, 0px) + 56px)', zIndex: 2, padding: '12px 0', background: 'var(--bg-app)' }}>
+        <ExerciseSearchField value={query} onChange={changeQuery} placeholder={t('workout.search')} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
         {loading && <div style={{ color: 'var(--fg-tertiary)', textAlign: 'center', padding: 20 }}>...</div>}
@@ -69,12 +64,12 @@ export function ExercisePicker({ onSelect }) {
           <div style={{ color: 'var(--fg-tertiary)', textAlign: 'center', padding: 20 }}>{t('workout.noExercises')}</div>
         )}
         {exercises.map(ex => (
-          <button key={ex.id} onClick={() => onSelect(ex)} style={{
+          <button key={ex.id} onClick={() => select(ex)} style={{
             display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
-            padding: '10px 12px', borderRadius: 'var(--radius-md)',
+            minHeight: 60, padding: '12px', borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-subtle)', background: 'var(--surface-0)',
             color: 'var(--fg-primary)', cursor: 'pointer', textAlign: 'left',
-            fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', width: '100%',
+            fontFamily: 'var(--font-sans)', fontSize: 15, width: '100%',
           }}>
             <Icon name="dumbbell" size={16} style={{ color: 'var(--fg-tertiary)', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -82,7 +77,7 @@ export function ExercisePicker({ onSelect }) {
                 {ex.nameRu}
                 {ex.own && <span style={{ marginLeft: 6, fontSize: 'var(--text-2xs)', color: 'var(--accent-color)' }}>{t('workout.ownExercise')}</span>}
               </div>
-              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--fg-tertiary)', marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 2 }}>
                 {(ex.primaryMuscles || []).map(getMuscleName).join(', ')}
                 {ex.equipment?.length > 0 ? ` · ${ex.equipment.map(getEquipmentName).join(', ')}` : ''}
               </div>
@@ -94,10 +89,10 @@ export function ExercisePicker({ onSelect }) {
         {canCreate && !suggestion && (
           <button onClick={() => create(false)} disabled={createExercise.isPending} style={{
             display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
-            padding: '10px 12px', borderRadius: 'var(--radius-md)',
+            minHeight: 60, padding: '12px', borderRadius: 'var(--radius-md)',
             border: '1px dashed var(--border-medium)', background: 'transparent',
             color: 'var(--accent-color)', cursor: createExercise.isPending ? 'default' : 'pointer', textAlign: 'left',
-            fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', width: '100%',
+            fontFamily: 'var(--font-sans)', fontSize: 15, width: '100%',
           }}>
             <Icon name="plus" size={16} style={{ flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0 }}>
@@ -114,7 +109,7 @@ export function ExercisePicker({ onSelect }) {
           }}>
             <span>{t('workout.similarFound', { name: suggestion.nameRu })}</span>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => onSelect(suggestion)} style={{
+              <button onClick={() => select(suggestion)} style={{
                 padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 background: 'hsl(var(--accent-h),55%,55%)', color: '#0a1815', fontWeight: 600, fontSize: 'var(--text-sm)',
               }}>{t('workout.useSuggestion')}</button>

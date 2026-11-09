@@ -924,7 +924,7 @@ export default function WorkoutPage() {
   // ── Render: ExercisePicker (full-screen) ──
   if (picking) {
     return (
-      <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
+      <div style={{ background: 'var(--bg-app)', minHeight: '100dvh' }}>
         <TopBar
           title={t('workout.selectExercise')}
           onBack={hasPlan ? () => setPicking(false) : handleBack}

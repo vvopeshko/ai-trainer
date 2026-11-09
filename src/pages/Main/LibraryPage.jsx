@@ -7,7 +7,7 @@
  * отдельным чипом (поиск по названию находит их и без чипа).
  * Детали — в BottomSheet по тапу (полный запрос GET /exercises/:id).
  */
-import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { memo, useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.js'
 import { useExerciseCatalog } from '../../hooks/queries.js'
 import { getMuscleName, getEquipmentName } from '../../utils/muscleMapping.js'
@@ -15,6 +15,7 @@ import { searchExercises, byPopularity, isStretchOrCardio } from '../../utils/ex
 import { Glass } from '../../components/ui/Glass.jsx'
 import { Icon } from '../../components/ui/Icon.jsx'
 import { MuscleIcon } from '../../components/ui/MuscleIcon.jsx'
+import { ExerciseSearchField } from '../../components/ui/ExerciseSearchField.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { ExerciseDetailSheet } from '../../components/ui/ExerciseDetailSheetLazy.jsx'
 
@@ -68,50 +69,6 @@ function Chip({ label, active, icon, onClick }) {
       {icon && <MuscleIcon name={icon} size={30} />}
       {label}
     </button>
-  )
-}
-
-// ─── Search Bar ───────────────────────────────────────────────────────
-
-function SearchBar({ value, onChange, placeholder }) {
-  const { t } = useTranslation()
-  const inputRef = useRef(null)
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-      padding: '10px var(--space-3)',
-      borderRadius: 12,
-      background: 'rgba(255,255,255,0.06)',
-      border: '1px solid rgba(255,255,255,0.08)',
-    }}>
-      <Icon name="search" size={18} strokeWidth={2} style={{ color: 'var(--fg-tertiary)', flexShrink: 0 }} />
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          flex: 1,
-          background: 'none',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--fg-primary)',
-          fontSize: 'var(--text-sm)',
-          lineHeight: 1.4,
-        }}
-      />
-      {value && (
-        <button
-          onClick={() => { onChange(''); inputRef.current?.focus() }}
-          aria-label={t('a11y.clearSearch')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--fg-tertiary)' }}
-        >
-          <Icon name="x" size={16} strokeWidth={2} />
-        </button>
-      )}
-    </div>
   )
 }
 
@@ -258,6 +215,7 @@ export default function LibraryPage() {
 
   // Open detail sheet
   const openDetail = useCallback((exerciseId) => {
+    document.activeElement?.blur?.()
     setDetailExerciseId(exerciseId)
     setDetailOpen(true)
   }, [])
@@ -290,11 +248,13 @@ export default function LibraryPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {/* Search */}
-          <SearchBar
-            value={query}
-            onChange={setQuery}
-            placeholder={t('library.search')}
-          />
+          <div style={{ position: 'sticky', top: 'var(--safe-top, 0px)', zIndex: 2, padding: '8px 0', background: 'var(--bg-app)' }}>
+            <ExerciseSearchField
+              value={query}
+              onChange={setQuery}
+              placeholder={t('library.search')}
+            />
+          </div>
 
           {/* Muscle group chips */}
           <ChipRow>
