@@ -189,6 +189,24 @@ function recordHistory(valid) {
   }
 }
 
+// A full session at a new working load starts a fresh observation window.
+// Require the same set count and keep the new load: a single heavy set or
+// a return to a previously used weight must not repeatedly erase a stall.
+function loadTransition(points) {
+  let transition = null
+  for (let i = 1; i < points.length; i++) {
+    const current = points[i]
+    const previous = points[i - 1]
+    const priorSets = points.slice(0, i).flatMap(p => p.workout.sets)
+    const weightKg = Math.min(...current.workout.sets.map(s => s.weightKg ?? 0))
+    if (current.count !== previous.count || weightKg <= Math.max(...priorSets.map(s => s.weightKg ?? 0))) continue
+    if (Math.max(...current.workout.sets.map(s => s.reps)) >= Math.max(...previous.workout.sets.map(s => s.reps))) continue
+    transition = { time: current.time, weightKg }
+  }
+  return transition && points.filter(p => p.time >= transition.time)
+    .every(p => p.workout.sets.every(s => (s.weightKg ?? 0) >= transition.weightKg)) ? transition : null
+}
+
 // Recent session improvement is separate from a lifetime single-set record.
 // Compare four preceding sessions at the same load and set count. A recovered
 // low day or a reshuffle of reps between sets must not reset a plateau.
@@ -303,9 +321,10 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
   const allPoints = records.sessions.map(s => profile({ startedAt: s.time, sets: s.sets }))
   const sessionGrowth = sessionImprovement(points)
   const ready = readyForWeight(points, plan)
+  const transition = loadTransition(points)
   // Stall: sessions of this period after the last improvement (or after its
   // first session, which is only a baseline). Days compare by UTC day.
-  const anchor = Math.max(dayOf(records.lastImproved?.time ?? -Infinity), dayOf(sessionGrowth?.time ?? -Infinity), dayOf(points[0].time))
+  const anchor = Math.max(dayOf(transition?.time ?? -Infinity), dayOf(records.lastImproved?.time ?? -Infinity), dayOf(sessionGrowth?.time ?? -Infinity), dayOf(points[0].time))
   const stallPoints = points.filter(p => dayOf(p.time) > anchor)
   const gaps = [anchor, ...stallPoints.map(p => dayOf(p.time))].slice(1).map((day, i, all) => day - (i ? all[i - 1] : anchor))
   // Rare training is not evidence of a plateau — rare for THIS exercise: twice
@@ -323,7 +342,7 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
     : overall.down && !overall.up ? 'down'
       : stalled ? 'plateau'
         : (overall.up && !overall.down) || recentGrowth ? 'up'
-          : 'steady'
+          : transition && !ready ? 'adapting' : 'steady'
   // A repeated recent load band, not the global min/max: sustained load growth
   // shortens this span. One unprecedented heavy/light day does not widen it.
   const recent = points.slice(-3).map(p => p.value)
@@ -380,7 +399,7 @@ export function exerciseProgress(workouts, plan, { experienceLevel } = {}) {
     volume: historyVolume.metric && allPoints.length >= 2
       ? { metric: historyVolume.metric, points: allPoints.map(p => ({ time: p.time, value: p[historyVolume.metric], sets: p.count })) } : null,
   }
-  return { trend, band, charts, views, evidence, volume, sessionGrowth,
+  return { trend, band, charts, views, evidence, volume, sessionGrowth, transition,
     periodStart: points[0].time,
     days: daysBetween(points[0].time, points.at(-1).time), count: points.length, afterBreak: start > 0,
     // Subtype from the recent sessions (as in the logbook): an older full set

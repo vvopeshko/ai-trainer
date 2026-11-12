@@ -9,7 +9,7 @@ import { ExerciseProgressSheet } from '../workout/ExerciseProgressSheet.jsx'
 import { useProgressText } from '../workout/useProgressText.js'
 
 // Exercises needing attention come first.
-const ORDER = ['plateau', 'down', 'up', 'steady', 'first']
+const ORDER = ['plateau', 'down', 'up', 'adapting', 'steady', 'first']
 const COLLAPSED = 6
 const caps = {
   fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: 'var(--tracking-caps)',

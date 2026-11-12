@@ -34,6 +34,8 @@ export function useProgressText(progress, { plan, unit, step, stepUnit }) {
   } else if (trend === 'first') {
     reason = progress.afterBreak ? t('exerciseProgress.afterBreak', { n: progress.count })
       : t('exerciseProgress.needMore', { n: 3 - progress.count })
+  } else if (trend === 'adapting') {
+    reason = t('exerciseProgress.adapting', { weight: weight(progress.transition.weightKg), unit: unitLabel, date: date(progress.transition.time) })
   } else if (trend === 'steady') {
     reason = stall.rare ? t('exerciseProgress.rare') : stall.sessions > 0 ? stalled : period
   }

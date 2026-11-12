@@ -54,7 +54,7 @@ it('detects sustained load growth and decline but not a weight/reps tradeoff', (
   expect(exerciseProgress(history([10,10,10,10], [60,62.5,65,67.5])).trend).toBe('up')
   expect(exerciseProgress(history([10,10,10,10], [67.5,65,62.5,60])).trend).toBe('down')
   // Each heavier set is a first-time record, but none covers an earlier set.
-  expect(exerciseProgress(history([12,10,8,6], [60,62.5,65,67.5]))).toMatchObject({ trend: 'steady', evidence: null, records: { since: 0, sinceImproved: null } })
+  expect(exerciseProgress(history([12,10,8,6], [60,62.5,65,67.5]))).toMatchObject({ trend: 'adapting', evidence: null, records: { since: 0, sinceImproved: null } })
   expect(exerciseProgress(history([12,11,10,9])).trend).toBe('down')
 })
 it('counts a fresh improvement as progress, but a single deload does not end a plateau', () => {
@@ -107,7 +107,7 @@ it('reports removed or added sets in the last session', () => {
 })
 it('does not turn missing exact benchmarks into zero performance', () => {
   const result = exerciseProgress(history([12,10,8,6], [60,65,70,75]))
-  expect(result.trend).toBe('steady')
+  expect(result.trend).toBe('adapting')
   expect(result.evidence).toBeNull()
 })
 it('keeps long term progress separate from a weaker last training', () => {
@@ -349,4 +349,31 @@ it('does not compare whole-session progress across a training break', () => {
   const data = history([10,10,10,10])
   data.push(row('2026-10-21', [60,60], [12,12]))
   expect(exerciseProgress(data)).toMatchObject({ trend: 'first', sessionGrowth: null })
+})
+
+const screenshotHistory = () => [
+  ['05-22', 12.5, 12], ['08-07', 20, 10], ['09-23', 20, 10],
+  ['10-06', 20, 10], ['10-22', 20, 10], ['10-30', 22.5, 8], ['11-05', 22.5, 8],
+].map(([date, weight, reps]) => row(`2026-${date}`, [weight, weight, weight], [reps, reps, reps]))
+it('starts a new stall window when all working sets move to a heavier load', () => {
+  const result = exerciseProgress(screenshotHistory(), { sets: 3, repsMax: 10 })
+  expect(result).toMatchObject({ trend: 'adapting', afterBreak: true,
+    transition: { time: Date.parse('2026-10-30'), weightKg: 22.5 }, stall: { sessions: 1, days: 6 }, plateau: null })
+  expect(result.records.front.map(s => [s.weightKg, s.reps])).toEqual([[12.5, 12], [20, 10], [22.5, 8]])
+})
+it('eventually calls unchanged performance at the new load a plateau', () => {
+  const data = screenshotHistory()
+  for (const date of ['11-12', '11-19', '11-26']) data.push(row(`2026-${date}`, [22.5,22.5,22.5], [8,8,8]))
+  expect(exerciseProgress(data)).toMatchObject({ trend: 'plateau', stall: { sessions: 4, days: 27 } })
+})
+it('recognizes rep growth after moving to a new load', () => {
+  const data = [...screenshotHistory(), row('2026-11-12', [22.5,22.5,22.5], [9,8,8])]
+  expect(exerciseProgress(data)).toMatchObject({ trend: 'up', stall: { sessions: 0 } })
+})
+it('does not reset the stall for one heavy set or returning to an old load', () => {
+  const data = screenshotHistory().slice(0, -2)
+  data.push(row('2026-10-30', [22.5,20,20], [8,10,10]), row('2026-11-05', [22.5,20,20], [8,10,10]))
+  expect(exerciseProgress(data)).toMatchObject({ trend: 'plateau', transition: null, stall: { sessions: 4 } })
+  const reverted = [...screenshotHistory(), row('2026-11-12', [20,20,20], [10,10,10]), row('2026-11-19', [22.5,22.5,22.5], [8,8,8])]
+  expect(exerciseProgress(reverted)).toMatchObject({ trend: 'plateau', transition: null })
 })

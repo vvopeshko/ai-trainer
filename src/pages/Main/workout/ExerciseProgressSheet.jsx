@@ -18,8 +18,8 @@ function Tile({ label, value, sub }) {
   </div>
 }
 
-// Sessions as columns, sets as rows: solid — a new record that day,
-// outline — a repeat of the current best level.
+// Neutral fill marks a historical record; green outline marks a current best.
+// A cell can carry both meanings.
 function Logbook({ sessions, front, text }) {
   const rows = Math.max(...sessions.map(s => s.sets.length))
   const same = s => r => r.weightKg === (s.weightKg ?? 0) && r.reps === s.reps
@@ -32,12 +32,12 @@ function Logbook({ sessions, front, text }) {
       ...sessions.map(session => {
         const s = session.sets[row]
         const record = s && isRecord(session, s)
-        const best = s && !record && front.some(same(s))
+        const best = s && front.some(same(s))
         return <span key={`${session.time}-${row}`} style={{
           textAlign: 'center', padding: '2px 0', borderRadius: 5, whiteSpace: 'nowrap',
-          background: record ? 'var(--success-soft)' : s ? 'rgba(236,234,239,0.05)' : 'transparent',
+          background: record ? 'rgba(236,234,239,0.12)' : s ? 'rgba(236,234,239,0.05)' : 'transparent',
           boxShadow: best ? 'inset 0 0 0 1px var(--success)' : 'none',
-          color: record || best ? 'var(--success)' : 'var(--fg-secondary)', fontWeight: record ? 600 : 400,
+          color: best ? 'var(--success)' : 'var(--fg-secondary)', fontWeight: record ? 600 : 400,
         }}>{s ? text.set(s) : ''}</span>
       }),
     ])}
@@ -132,7 +132,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
         </button>
       </div>
       {!timed && !assisted && <>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <StatusPill trend={progress.trend} />
           <span style={muted}>{text.period} · {text.date(progress.periodStart)}–{text.date(sessions.at(-1).time)}</span>
         </div>
@@ -156,7 +156,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
         <Logbook sessions={sessions.slice(-6)} front={records.front} text={text} />
         {records.front.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 6, fontSize: 11, ...muted }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--success-soft)' }} />{t('exerciseProgress.legendNew')}
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(236,234,239,0.12)' }} />{t('exerciseProgress.legendNew')}
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, boxShadow: 'inset 0 0 0 1px var(--success)' }} />
@@ -185,7 +185,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
           </>
         })()}
 
-        {['plateau', 'down', 'steady'].includes(progress.trend) && (
+        {['plateau', 'down', 'steady', 'adapting'].includes(progress.trend) && (
           <button onClick={askTrainer} disabled={asking} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', marginTop: 12,
             padding: '10px 12px', borderRadius: 12, border: 0, cursor: 'pointer',
