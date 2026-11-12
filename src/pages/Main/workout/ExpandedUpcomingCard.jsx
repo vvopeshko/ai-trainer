@@ -1,3 +1,4 @@
+import { getExerciseMuscle } from '../../../utils/exerciseMuscle.js'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 import { Glass } from '../../../components/ui/Glass.jsx'
 import { Icon } from '../../../components/ui/Icon.jsx'
@@ -17,7 +18,7 @@ export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partia
     <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
       {/* Header — like active card */}
       <div style={{ padding: '14px 14px 12px', cursor: 'pointer' }} onClick={onCollapse}>
-        <ExerciseMuscleHeader muscle={muscle ?? planExercise.primaryMuscles?.[0]} scheme={scheme}>
+        <ExerciseMuscleHeader muscle={muscle ?? getExerciseMuscle(planExercise)} scheme={scheme}>
           {onInfo && (
             <button
               type="button"

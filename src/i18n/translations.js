@@ -77,6 +77,10 @@ export const translations = {
 
     'workout.title': 'Тренировка',
     'workout.muscle.chest': 'Грудь',
+    'workout.muscle.upperChest': 'Верх груди',
+    'workout.muscle.midChest': 'Середина груди',
+    'workout.muscle.lowerChest': 'Низ груди',
+    'workout.muscle.middleBack': 'Середина спины',
     'workout.muscle.back': 'Спина',
     'workout.muscle.lowerBack': 'Поясница',
     'workout.muscle.lats': 'Широчайшие',

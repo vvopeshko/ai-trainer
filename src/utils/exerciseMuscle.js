@@ -3,8 +3,10 @@
 export function getExerciseMuscle(exercise, catalogById, fallback) {
   const id = exercise?.exerciseId ?? exercise?.id
   const catalogExercise = catalogById?.get(id)
+  if (catalogExercise?.targetMuscle) return catalogExercise.targetMuscle
   if (catalogExercise?.primaryMuscles?.length) return catalogExercise.primaryMuscles[0]
+  if (exercise?.targetMuscle) return exercise.targetMuscle
   if (exercise?.primaryMuscles?.length) return exercise.primaryMuscles[0]
   const fallbackId = fallback?.exerciseId ?? fallback?.id
-  return id != null && id === fallbackId ? fallback.primaryMuscles?.[0] : undefined
+  return id != null && id === fallbackId ? (fallback.targetMuscle || fallback.primaryMuscles?.[0]) : undefined
 }

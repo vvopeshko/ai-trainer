@@ -1,3 +1,4 @@
+import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
 /**
  * Library Page — каталог упражнений (BRD §12).
  *
@@ -95,7 +96,7 @@ function ChipRow({ children }) {
 // страницу, но не ~900 строк списка (до дебаунса список не меняется вовсе)
 const ExerciseRow = memo(function ExerciseRow({ exercise, isLast, onClick }) {
   // Same as the detail sheet header: target muscle (or main muscle) · equipment
-  const muscle = exercise.targetMuscle ?? exercise.primaryMuscles?.[0]
+  const muscle = getExerciseMuscle(exercise)
   const subtitle = [
     muscle && getMuscleName(muscle),
     exercise.equipment?.[0] && getEquipmentName(exercise.equipment[0]),

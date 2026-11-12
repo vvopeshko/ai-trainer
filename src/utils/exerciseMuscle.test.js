@@ -19,3 +19,15 @@ describe('getExerciseMuscle', () => {
     expect(getExerciseMuscle(null)).toBeUndefined()
   })
 })
+
+it('prefers the selected exercise target and never uses the old slot target for alternatives', () => {
+  const catalog = new Map([['alt', { targetMuscle: 'rear_delt', primaryMuscles: ['shoulders'] }]])
+  expect(getExerciseMuscle({ exerciseId: 'alt', targetMuscle: 'mid_chest' }, catalog)).toBe('rear_delt')
+  expect(getExerciseMuscle({ exerciseId: 'alt' }, new Map(), { exerciseId: 'main', targetMuscle: 'mid_chest' })).toBeUndefined()
+  expect(getExerciseMuscle({ id: 'a', targetMuscle: 'obliques', primaryMuscles: ['abdominals'] })).toBe('obliques')
+})
+
+it('keeps catalog primary authoritative over stale embedded targets', () => {
+  expect(getExerciseMuscle({ id: 'a', targetMuscle: 'front_delt' }, new Map([['a', { primaryMuscles: ['triceps'] }]]))).toBe('triceps')
+  expect(getExerciseMuscle({ id: 'a' }, new Map(), { exerciseId: 'a', targetMuscle: 'lower back' })).toBe('lower back')
+})

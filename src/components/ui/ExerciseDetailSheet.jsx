@@ -1,3 +1,4 @@
+import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
 /**
  * ExerciseDetailSheet — fullscreen overlay with tabbed exercise details.
  *
@@ -53,7 +54,7 @@ const KEYFRAMES = `
 function Header({ exercise, onClose }) {
   const { t } = useTranslation()
   // Target muscle ("верх груди") when known, else the first primary one.
-  const primaryMuscle = exercise?.targetMuscle ?? exercise?.primaryMuscles?.[0]
+  const primaryMuscle = getExerciseMuscle(exercise)
   const equipment = exercise?.equipment
   const subtitle = [
     primaryMuscle && getMuscleName(primaryMuscle),

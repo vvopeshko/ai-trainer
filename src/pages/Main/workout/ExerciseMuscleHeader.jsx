@@ -2,9 +2,9 @@ import { useTranslation } from '../../../i18n/useTranslation.js'
 import { MuscleIcon } from '../../../components/ui/MuscleIcon.jsx'
 
 const LABEL_KEYS = {
-  chest: 'chest', upper_chest: 'chest', mid_chest: 'chest', lower_chest: 'chest',
-  back: 'back', 'middle back': 'back', 'lower back': 'lowerBack', upper_back: 'back',
-  middle_back: 'back', lower_back: 'lowerBack', lats: 'lats', traps: 'traps',
+  chest: 'chest', upper_chest: 'upperChest', mid_chest: 'midChest', lower_chest: 'lowerChest',
+  back: 'back', 'middle back': 'middleBack', 'lower back': 'lowerBack', upper_back: 'back',
+  middle_back: 'middleBack', lower_back: 'lowerBack', lats: 'lats', traps: 'traps',
   shoulders: 'shoulders', front_delt: 'frontDelt', side_delt: 'sideDelt', rear_delt: 'rearDelt',
   front_delts: 'frontDelt', side_delts: 'sideDelt', rear_delts: 'rearDelt',
   biceps: 'biceps', triceps: 'triceps', forearms: 'forearms',
