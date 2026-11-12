@@ -112,3 +112,16 @@ describe('superset reload', () => {
     expect(result.resting).toBe(5000)
   })
 })
+
+it('refreshes linked and unlinked groups while preserving local sets, variants and recorded progress', () => {
+  const saved = { allExercises: [], currentExercise: exercise('alt'), planExercises: [
+    { exerciseId: 'alt', mainExerciseId: 'a', sets: 5 }, { exerciseId: 'b', sets: 4 },
+  ] }
+  const linked = { ...data([set('s', 'alt')]), planExercises: plan.map(pe => ({ ...pe, supersetId: 'new' })) }
+  const restored = restoreWorkoutSnapshot(linked, saved)
+  expect(restored.planExercises.map(pe => pe.supersetId)).toEqual(['new', 'new'])
+  expect(restored.planExercises[0]).toMatchObject({ exerciseId: 'alt', sets: 5 })
+  expect(restored.doneSets).toHaveLength(1)
+  const unlinked = restoreWorkoutSnapshot(data([]), { ...saved, planExercises: restored.planExercises })
+  expect(unlinked.planExercises.every(pe => !pe.supersetId)).toBe(true)
+})

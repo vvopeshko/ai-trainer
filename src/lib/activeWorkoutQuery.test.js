@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { QueryClient } from '@tanstack/react-query'
 import { apiGet } from '../utils/api.js'
-import { activeWorkoutQueryOptions, fetchActiveWorkout } from './activeWorkoutQuery.js'
+import { activeWorkoutQueryOptions, fetchActiveWorkout, activeWorkoutSignature } from './activeWorkoutQuery.js'
 import { queryKeys } from './queryKeys.js'
 
 vi.mock('../utils/api.js', () => ({ apiGet: vi.fn() }))
@@ -68,4 +68,10 @@ it('does not retry a cancelled query', async () => {
   await vi.advanceTimersByTimeAsync(2000)
   await result
   expect(apiGet).toHaveBeenCalledTimes(1)
+})
+
+it('detects a superset change even when exercise ids and recorded sets are unchanged', () => {
+  const data = { workout: { id: 'w', sets: [] }, planExercises: [{ exerciseId: 'a' }, { exerciseId: 'b' }] }
+  const linked = { ...data, planExercises: data.planExercises.map(pe => ({ ...pe, supersetId: 'pair' })) }
+  expect(activeWorkoutSignature(linked)).not.toBe(activeWorkoutSignature(data))
 })

@@ -200,6 +200,7 @@ export default function ProgramEditPage() {
       setEditedPlan(null)
       setEditedName(null)
       queryClient.invalidateQueries({ queryKey: ['programs'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
     } catch (err) {
       console.error('Failed to save program:', err)
@@ -238,6 +239,7 @@ export default function ProgramEditPage() {
       await apiPost('/api/v1/programs/' + id + '/activate')
       setProgram(prev => ({ ...prev, isActive: true }))
       queryClient.invalidateQueries({ queryKey: ['programs'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
       queryClient.invalidateQueries({ queryKey: queryKeys.progress })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.recent })
     } catch (err) {

@@ -50,6 +50,7 @@ import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
 import { ExerciseMuscleHeader } from './workout/ExerciseMuscleHeader.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 import { supersetPair, supersetTransition, movePlanExercise } from '../../utils/supersets.js'
+import { SupersetListItem } from './workout/SupersetListItem.jsx'
 import { SupersetSets } from './workout/SupersetSets.jsx'
 import { AlternativesPanel } from './workout/AlternativesPanel.jsx'
 
@@ -1386,6 +1387,7 @@ export default function WorkoutPage() {
                   : exerciseScheme(pe)
                 return (
                   <div key={pe.exerciseId} data-drag-item>
+                    <SupersetListItem pair={supersetPair(upcomingExercises, pe.exerciseId)} exerciseId={pe.exerciseId}>
                     {isExpanded && !draggingId ? (
                       <ExpandedUpcomingCard
                         planExercise={pe}
@@ -1409,7 +1411,7 @@ export default function WorkoutPage() {
                       <UpcomingExerciseItem
                         muscle={getExerciseMuscle(pe, catalogById)}
                         name={pe.nameRu}
-                        scheme={`${supersetPair(planExercises, pe.exerciseId) ? t('superset.title') + ' · ' + (supersetPair(planExercises, pe.exerciseId)[0].exerciseId === pe.exerciseId ? 'A' : 'B') + ' · ' : ''}${scheme}`}
+                        scheme={scheme}
                         weightRange={weightRange(pe)}
                         trend={trendById.get(pe.exerciseId)}
                         expanded={false}
@@ -1420,6 +1422,7 @@ export default function WorkoutPage() {
                         isDragging={isDragging}
                       />
                     )}
+                    </SupersetListItem>
                   </div>
                 )
               })}

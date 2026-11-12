@@ -24,7 +24,14 @@ export function clearWorkoutStateStorage() {
 
 export function restoreWorkoutSnapshot(data, saved) {
   const { workout } = data
-  const planExercises = saved?.planExercises ?? data.planExercises ?? null
+  const planExercises = saved?.planExercises && Array.isArray(data.planExercises)
+    ? saved.planExercises.map(pe => {
+      const canonical = data.planExercises.find(ex => ex.exerciseId === (pe.mainExerciseId ?? pe.exerciseId))
+      if (!canonical) return pe
+      const { supersetId: _oldGroup, ...local } = pe
+      return canonical.supersetId ? { ...local, supersetId: canonical.supersetId } : local
+    })
+    : saved?.planExercises ?? data.planExercises ?? null
   const grouped = new Map()
   for (const set of workout.sets ?? []) {
     if (!grouped.has(set.exerciseId)) grouped.set(set.exerciseId, { exercise: set.exercise, sets: [] })

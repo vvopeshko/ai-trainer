@@ -40,7 +40,7 @@ export function activeWorkoutSignature(data) {
   return JSON.stringify([
     w.id, w.pausedAt ?? null, w.totalPausedMs ?? 0, w.programDayIndex ?? null,
     (w.sets ?? []).map((s) => s.id),
-    (data.planExercises ?? []).map((pe) => pe.exerciseId),
+    (data.planExercises ?? []).map((pe) => [pe.exerciseId, pe.supersetId ?? null]),
   ])
 }
 

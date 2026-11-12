@@ -18,6 +18,7 @@ import { exerciseProgress } from '../../utils/exerciseProgress.js'
 import { UpcomingExerciseItem } from './workout/UpcomingExerciseItem.jsx'
 import { ExpandedUpcomingCard } from './workout/ExpandedUpcomingCard.jsx'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
+import { SupersetListItem } from './workout/SupersetListItem.jsx'
 import { supersetPair } from '../../utils/supersets.js'
 import { WorkoutSkeleton } from './workout/WorkoutSkeleton.jsx'
 
@@ -135,7 +136,7 @@ export default function WorkoutPreviewPage() {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 14 }}>
-            {exercises.map(pe => pe.exerciseId === expandedId ? (
+            {exercises.map(pe => <SupersetListItem key={pe.exerciseId} pair={supersetPair(exercises, pe.exerciseId)} exerciseId={pe.exerciseId}>{pe.exerciseId === expandedId ? (
               <ExpandedUpcomingCard
                 key={pe.exerciseId}
                 planExercise={pe}
@@ -155,14 +156,14 @@ export default function WorkoutPreviewPage() {
                 key={pe.exerciseId}
                 muscle={getExerciseMuscle(pe, catalogById)}
                 name={pe.nameRu}
-                scheme={`${supersetPair(exercises, pe.exerciseId) ? t('superset.title') + ' · ' + (supersetPair(exercises, pe.exerciseId)[0].exerciseId === pe.exerciseId ? 'A' : 'B') + ' · ' : ''}${scheme(pe)}`}
+                scheme={scheme(pe)}
                 weightRange={weightRange(pe)}
                 trend={trendById.get(pe.exerciseId)}
                 expanded={false}
                 hasAlternatives={pe.alternatives?.length > 0}
                 onClick={() => setExpandedId(pe.exerciseId)}
               />
-            ))}
+            )}</SupersetListItem>)}
           </div>
         </div>
       )}
