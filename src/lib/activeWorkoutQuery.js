@@ -38,7 +38,7 @@ export function activeWorkoutSignature(data) {
   const w = data?.workout
   if (!w) return 'none'
   return JSON.stringify([
-    w.id, w.pausedAt ?? null, w.totalPausedMs ?? 0, w.programDayIndex ?? null,
+    w.id, w.planSnapshot?.revision ?? null, w.pausedAt ?? null, w.totalPausedMs ?? 0, w.programDayIndex ?? null,
     (w.sets ?? []).map((s) => s.id),
     (data.planExercises ?? []).map((pe) => [pe.exerciseId, pe.supersetId ?? null]),
   ])

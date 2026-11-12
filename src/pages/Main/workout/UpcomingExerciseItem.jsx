@@ -5,7 +5,7 @@ import { StatusPill } from './ProgressStatus.jsx'
 
 // ─── UpcomingExerciseItem ───────────────────────────────────────────────
 
-export function UpcomingExerciseItem({ muscle, name, scheme, weightRange, trend, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging }) {
+export function UpcomingExerciseItem({ muscle, name, scheme, weightRange, trend, expanded, hasPartial, hasAlternatives, onClick, onDragStart, isDragging, editControl }) {
   // translateY во время драга применяется императивно к wrapper'у в WorkoutPage
   // (через ref, без ре-рендера). Здесь — только «поднятый» вид: scale/тень/opacity.
   return (
@@ -47,6 +47,7 @@ export function UpcomingExerciseItem({ muscle, name, scheme, weightRange, trend,
         </div>
       </div>
       {trend && trend !== 'first' && <StatusPill trend={trend} />}
+      {editControl}
       <Icon name={expanded ? 'chevronDown' : 'chevronRight'} size={14} style={{ color: 'rgba(236,234,239,0.35)' }} />
     </Glass>
   )

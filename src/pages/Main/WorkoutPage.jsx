@@ -45,29 +45,15 @@ import { changeWorkoutPause } from '../../utils/workoutPause.js'
 import { restoreWorkoutSnapshot } from '../../utils/workoutState.js'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
 import { newRecords, exerciseProgress } from '../../utils/exerciseProgress.js'
-import { useExerciseHistory, useExerciseOverview, useExerciseCatalog } from '../../hooks/queries.js'
+import { useExerciseHistory, useExerciseOverview, useExerciseCatalog, useProgramDetail } from '../../hooks/queries.js'
 import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
 import { ExerciseMuscleHeader } from './workout/ExerciseMuscleHeader.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
-import { supersetPair, supersetTransition, movePlanExercise } from '../../utils/supersets.js'
+import { supersetPair, supersetTransition } from '../../utils/supersets.js'
 import { SupersetListItem } from './workout/SupersetListItem.jsx'
+import { WorkoutPlanEditor, WorkoutChangeScope } from './workout/WorkoutPlanEditSheets.jsx'
 import { SupersetSets } from './workout/SupersetSets.jsx'
 import { AlternativesPanel } from './workout/AlternativesPanel.jsx'
-
-// A program slot keeps its main exercise while today's variant changes; the
-// previous variant stays selectable among the slot's alternatives.
-function swapSlot(pe, alt) {
-  const others = (pe.alternatives || []).filter(a => a.exerciseId !== alt.exerciseId)
-  return {
-    ...pe,
-    mainExerciseId: pe.mainExerciseId ?? pe.exerciseId,
-    mainNameRu: pe.mainNameRu ?? pe.nameRu,
-    mainSlug: pe.mainSlug ?? pe.slug,
-    exerciseId: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug,
-    alternatives: others.some(a => a.exerciseId === pe.exerciseId) ? others
-      : [...others, { exerciseId: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }],
-  }
-}
 
 // ─── Main WorkoutPage ───────────────────────────────────────────────────
 
@@ -93,6 +79,12 @@ export default function WorkoutPage() {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [programDayIndex, setProgramDayIndex] = useState(null)
+  const [programId, setProgramId] = useState(null)
+  const [planRevision, setPlanRevision] = useState(null)
+  const { data: workoutProgram } = useProgramDetail(programId)
+  const [editingExerciseId, setEditingExerciseId] = useState(null)
+  const [pendingPlanChange, setPendingPlanChange] = useState(null)
+  const [savingPlan, setSavingPlan] = useState(false)
   const [previewAlt, setPreviewAlt] = useState(null) // alternative opened from the info sheet
   const [dismissedHints, setDismissedHints] = useState(() => new Set())
   const [startedAt, setStartedAt] = useState(null)
@@ -136,6 +128,12 @@ export default function WorkoutPage() {
   const [planIndex, setPlanIndex] = useState(0)
 
   const hasPlan = planExercises && planExercises.length > 0
+
+  const requestPlanChange = (change, after) => {
+    if (operationRef.current || pendingPlanChange) return
+    setEditingExerciseId(null)
+    setPendingPlanChange({ change, after, key: crypto.randomUUID() })
+  }
 
   // ── Drag reorder state ──
   // Визуальное следование за пальцем пишется прямо в DOM (dragElRef), без
@@ -211,11 +209,8 @@ export default function WorkoutPage() {
         const swapIdx = direction === 'down' ? idx + 1 : idx - 1
 
         if (idx >= 0 && swapIdx >= 0 && swapIdx < upcoming.length) {
-          const idxA = plan.findIndex(pe => pe.exerciseId === upcoming[idx].exerciseId)
-          const idxB = plan.findIndex(pe => pe.exerciseId === upcoming[swapIdx].exerciseId)
-          const next = movePlanExercise(plan, idxA, idxB)
-          setPlanExercises(next)
-          planExRef.current = next
+          requestPlanChange({ type: 'move', exerciseId: upcoming[idx].exerciseId, targetId: upcoming[swapIdx].exerciseId })
+          setDraggingId(null)
           dragInfo.current.lastSwapDelta += direction === 'down' ? itemHeight : -itemHeight
           // После свапа сразу подгоняем offset под новый lastSwapDelta —
           // элемент остаётся под пальцем без прыжка (узел тот же, key стабилен).
@@ -242,6 +237,9 @@ export default function WorkoutPage() {
     return () => {
       document.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd)
+      const el = dragElRef.current
+      if (el) { el.style.transform = ''; el.style.zIndex = ''; el.style.position = ''; el.style.willChange = '' }
+      dragElRef.current = null
     }
   }, [draggingId])
 
@@ -254,6 +252,8 @@ export default function WorkoutPage() {
 
       const workout = data.workout
       setWorkoutId(workout.id)
+      setProgramId(workout.programId ?? null)
+      setPlanRevision(workout.planSnapshot?.revision ?? null)
       setStartedAt(new Date(workout.startedAt).getTime())
       setTotalPausedMs(workout.totalPausedMs || 0)
       if (workout.pausedAt) setPausedAt(new Date(workout.pausedAt).getTime())
@@ -345,6 +345,8 @@ export default function WorkoutPage() {
     if (workoutId) return workoutId
     const { workout, planExercises: plan, planDayTitle: title } = await apiPost('/api/v1/workouts', {})
     setWorkoutId(workout.id)
+      setProgramId(workout.programId ?? null)
+      setPlanRevision(workout.planSnapshot?.revision ?? null)
     setStartedAt(new Date(workout.startedAt).getTime())
     // Кэш активной тренировки устарел (там workout: null): ответ старта — та же
     // форма, что GET /active, кладём его вместо рефетча
@@ -359,7 +361,7 @@ export default function WorkoutPage() {
   const totalDoneSets = allExercises.reduce((s, e) => s + e.sets.length, 0) + doneSets.length + partialSetCount
   const totalPlannedSets = hasPlan ? planExercises.reduce((s, e) => s + e.sets, 0) : 0
   const currentExerciseNum = allExercises.length + (currentExercise ? 1 : 0)
-  const currentPlanExercise = hasPlan && planIndex < planExercises.length ? planExercises[planIndex] : null
+  const currentPlanExercise = planExercises?.find(pe => pe.exerciseId === currentExercise?.id) ?? null
   const currentPair = supersetPair(planExercises, currentExercise?.id)
   const setsById = { ...partialSets, ...Object.fromEntries(allExercises.map(ex => [ex.exercise.id, ex.sets])), ...(currentExercise ? { [currentExercise.id]: doneSets } : {}) }
   const pairCounts = Object.fromEntries((currentPair ?? []).map(ex => [ex.exerciseId, setsById[ex.exerciseId]?.length ?? 0]))
@@ -468,22 +470,19 @@ export default function WorkoutPage() {
     setPicking(false)
   }
 
-  const handleSelectExercise = async (exercise) => {
-    try { await ensureWorkout() } catch (err) {
-      console.error('Failed to create workout:', err); return
-    }
-    saveCurrentExercise()
-    setCurrentExercise(exercise)
-    setDoneSets([])
-    setResting(false)
-    setPicking(false)
-
-    // Fetch last results for this exercise (for weight pre-fill)
-    if (!lastResultsCache[exercise.id]) {
-      apiPost('/api/v1/exercises/batch-last-results', { exerciseIds: [exercise.id] })
-        .then(r => setLastResultsCache(prev => ({ ...prev, ...r.results })))
-        .catch(() => {})
-    }
+  const handleSelectExercise = (exercise) => {
+    const existing = planExercises?.find(pe => pe.exerciseId === exercise.id)
+    if (existing) { handleSelectFromPlan(existing); return }
+    requestPlanChange({ type: 'add', exerciseId: exercise.id }, () => {
+      saveCurrentExercise()
+      setCurrentExercise(exercise)
+      setDoneSets(setsById[exercise.id] ?? [])
+      setAllExercises(prev => prev.filter(ex => ex.exercise.id !== exercise.id))
+      setPartialSets(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
+      setResting(false)
+      setPicking(false)
+      loadLastResults([exercise.id])
+    })
   }
 
   const moveWithinSuperset = (next, currentSets = doneSets) => {
@@ -516,8 +515,12 @@ export default function WorkoutPage() {
     }
   }
 
-  const handlePairAdd = (ids) => setPlanExercises(prev => prev.map(ex => ids.includes(ex.exerciseId) ? { ...ex, sets: ex.sets + 1 } : ex))
-  const handlePairRemove = (id) => setPlanExercises(prev => prev.map(ex => ex.exerciseId === id && ex.sets > Math.max(1, (setsById[id]?.length ?? 0) + (id === currentExercise.id ? 1 : 0)) ? { ...ex, sets: ex.sets - 1 } : ex))
+  const handlePairAdd = ids => requestPlanChange({ type: 'sets', counts: ids.map(id => ({ exerciseId: id, sets: planExercises.find(pe => pe.exerciseId === id).sets + 1 })) })
+  const handlePairRemove = id => {
+    const pe = planExercises.find(ex => ex.exerciseId === id)
+    if (pe.sets <= Math.max(1, (setsById[id]?.length ?? 0) + (id === currentExercise.id ? 1 : 0))) return
+    requestPlanChange({ type: 'sets', counts: [{ exerciseId: id, sets: pe.sets - 1 }] })
+  }
 
   const handleSetDone = ({ weight, reps }) => {
     if (!workoutId || !currentExercise || pausedAt || operationRef.current) return
@@ -646,114 +649,24 @@ export default function WorkoutPage() {
 
   // ── Delete handlers ──
 
+  const requestDeleteSet = (exerciseId, set) => {
+    if (!set?.id) { toast.show(t('superset.saving')); return }
+    requestPlanChange({ type: 'deleteSet', exerciseId, setId: set.id })
+  }
   const handleDeleteDoneSet = (exerciseIndex, setIndex) => {
     const item = allExercises[exerciseIndex]
-    const set = item.sets[setIndex]
-    if (set?.id && workoutId) {
-      deleteSetOnServer(set.id)
-    } else if (set?.tempId && !set.id) {
-      pendingDeletionsRef.current.add(set.tempId)
-    }
-    // setExpandedDoneIndex — вне updater'а: сайд-эффекты в pure-функции
-    // в StrictMode выполняются дважды.
-    if (item.sets.length === 1) setExpandedDoneIndex(null)
-    setAllExercises(prev => {
-      const updated = [...prev]
-      const newSets = [...updated[exerciseIndex].sets]
-      newSets.splice(setIndex, 1)
-      if (newSets.length === 0) {
-        updated.splice(exerciseIndex, 1)
-      } else {
-        updated[exerciseIndex] = { ...updated[exerciseIndex], sets: newSets }
-      }
-      return updated
-    })
+    requestDeleteSet(item.exercise.id, item.sets[setIndex])
   }
-
-  const handleCancelExercise = (exerciseIndex) => {
+  const handleCancelExercise = exerciseIndex => {
     const item = allExercises[exerciseIndex]
-    // Delete all sets in background
-    if (workoutId) {
-      for (const set of item.sets) {
-        if (set?.id) {
-          deleteSetOnServer(set.id)
-        } else if (set?.tempId && !set.id) {
-          pendingDeletionsRef.current.add(set.tempId)
-        }
-      }
-    }
-    setAllExercises(prev => prev.filter((_, i) => i !== exerciseIndex))
-    setExpandedDoneIndex(null)
+    requestPlanChange({ type: 'remove', exerciseId: item.exercise.id })
   }
 
-  const handleAddSetToDone = (exerciseIndex) => {
-    const item = allExercises[exerciseIndex]
-    saveCurrentExercise()
-    setAllExercises(prev => prev.filter((_, i) => i !== exerciseIndex))
-    setCurrentExercise(item.exercise)
-    setDoneSets([...item.sets])
-    setResting(false)
-    setExpandedDoneIndex(null)
-    if (hasPlan) {
-      const idx = planExercises.findIndex(pe => pe.exerciseId === item.exercise.id)
-      if (idx >= 0) setPlanIndex(idx)
-    }
-  }
-
-  const handleUndoLastSet = () => {
-    const lastSet = doneSets[doneSets.length - 1]
-    if (lastSet?.id && workoutId) {
-      deleteSetOnServer(lastSet.id)
-    } else if (lastSet?.tempId && !lastSet.id) {
-      pendingDeletionsRef.current.add(lastSet.tempId)
-    }
-    setDoneSets(prev => prev.slice(0, -1))
-    setResting(false)
-  }
-
-  const handleDeleteCurrentSet = (setIndex) => {
-    const set = doneSets[setIndex]
-    if (set?.id && workoutId) {
-      deleteSetOnServer(set.id)
-    } else if (set?.tempId && !set.id) {
-      pendingDeletionsRef.current.add(set.tempId)
-    }
-    setDoneSets(prev => prev.filter((_, i) => i !== setIndex))
-  }
-
-  const handleAddPlannedSet = () => {
-    if (!currentPlanExercise) return
-    setPlanExercises(prev => prev.map(pe =>
-      pe.exerciseId === currentExercise.id ? { ...pe, sets: pe.sets + 1 } : pe
-    ))
-  }
-
-  const handleRemovePlannedSet = () => {
-    if (!currentPlanExercise || currentPlanExercise.sets <= doneSets.length + 1) return
-    setPlanExercises(prev => prev.map(pe =>
-      pe.exerciseId === currentExercise.id ? { ...pe, sets: pe.sets - 1 } : pe
-    ))
-  }
-
-  const handleDeletePartialSet = (exerciseId, setIndex) => {
-    const sets = partialSets[exerciseId]
-    if (!sets) return
-    const set = sets[setIndex]
-    if (set?.id && workoutId) {
-      deleteSetOnServer(set.id)
-    } else if (set?.tempId && !set.id) {
-      pendingDeletionsRef.current.add(set.tempId)
-    }
-    setPartialSets(prev => {
-      const newSets = prev[exerciseId].filter((_, i) => i !== setIndex)
-      if (newSets.length === 0) {
-        const next = { ...prev }
-        delete next[exerciseId]
-        return next
-      }
-      return { ...prev, [exerciseId]: newSets }
-    })
-  }
+  const handleUndoLastSet = () => requestDeleteSet(currentExercise.id, doneSets.at(-1))
+  const handleDeleteCurrentSet = index => requestDeleteSet(currentExercise.id, doneSets[index])
+  const handleAddPlannedSet = () => { if (currentPlanExercise) handlePairAdd([currentExercise.id]) }
+  const handleRemovePlannedSet = () => { if (currentPlanExercise) handlePairRemove(currentExercise.id) }
+  const handleDeletePartialSet = (id, index) => requestDeleteSet(id, partialSets[id]?.[index])
 
   const handleNextExercise = (setsOverride) => {
     const sets = setsOverride || doneSets
@@ -913,46 +826,101 @@ export default function WorkoutPage() {
       .catch(() => {})
   }
 
-  // Remember the chosen variant in the program slot, or make it the main one.
-  // Fire-and-forget: today's swap never waits for the network.
-  const rememberInProgram = (slot, alt, makeMain) => {
-    if (!slot || programDayIndex == null) return
-    const mainExerciseId = slot.mainExerciseId ?? slot.exerciseId
-    if (alt.exerciseId === mainExerciseId) return
-    apiPost('/api/v1/programs/active/slot', { dayIndex: programDayIndex, mainExerciseId, exerciseId: alt.exerciseId, makeMain })
-      .then(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.programs.active })
-        queryClient.invalidateQueries({ queryKey: queryKeys.programs.next })
-        if (makeMain) toast.show(t('workout.madeMain', { name: alt.nameRu }), 'success')
-      })
-      .catch(() => { if (makeMain) toast.show(t('errors.network')) })
+  const handleSwapAlternative = alt => {
+    if (!currentPlanExercise) return
+    requestPlanChange({ type: 'swap', exerciseId: currentExercise.id, partnerId: alt.exerciseId }, () => {
+      if (doneSets.length) setAllExercises(prev => [...prev.filter(ex => ex.exercise.id !== currentExercise.id), { exercise: currentExercise, sets: [...doneSets] }])
+      setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug })
+      setDoneSets([])
+      setResting(false)
+      loadLastResults([alt.exerciseId])
+    })
   }
 
-  const handleSwapAlternative = (alt, { makeMain = false } = {}) => {
-    rememberInProgram(currentPlanExercise, alt, makeMain)
-    executeSwap(alt, makeMain)
-  }
 
-  const executeSwap = (alt, makeMain = false) => {
-    // Logged sets are real work: keep them as their own exercise in this
-    // workout (and in its history); the alternative continues the slot.
-    if (currentExercise && doneSets.length > 0) {
-      setAllExercises(prev => [...prev, { exercise: currentExercise, sets: [...doneSets] }])
-    }
-    if (hasPlan && currentExercise) {
-      setPlanExercises(prev => prev.map(pe => {
-        if (pe.exerciseId !== currentExercise.id) return pe
-        const swapped = swapSlot(pe, alt)
-        // Made main: the slot's main is this exercise for the rest of the workout too.
-        return makeMain ? { ...swapped, mainExerciseId: alt.exerciseId, mainNameRu: alt.nameRu, mainSlug: alt.slug, suggestMain: undefined } : swapped
+
+
+  const confirmPlanChange = async scope => {
+    if (!pendingPlanChange || operationRef.current) return
+    operationRef.current = true
+    setSavingPlan(true)
+    try {
+      await Promise.all([...pendingSetPostsRef.current])
+      await Promise.all([...pendingDeletesRef.current])
+      const id = await ensureWorkout()
+      const basePlan = (planExercises ?? []).map(pe => ({ ...pe,
+        alternatives: (pe.alternatives ?? []).map(ex => typeof ex === 'string' ? ex : ex.exerciseId),
       }))
+      const { change, after } = pendingPlanChange
+      const result = await apiPost(`/api/v1/workouts/${id}/plan-changes`, { scope, change, expectedRevision: planRevision, basePlan })
+      const nextPlan = result.planExercises.map(pe => ({ ...pe, alternatives: (pe.alternatives ?? []).map(altId => {
+        const ex = catalogById.get(altId)
+        return { exerciseId: altId, nameRu: ex?.nameRu ?? altId, slug: ex?.slug }
+      }) }))
+      setPlanExercises(nextPlan)
+      setPlanRevision(result.planRevision)
+      if (change.type === 'sets') {
+        const reopened = allExercises.filter(ex => change.counts.some(entry => entry.exerciseId === ex.exercise.id && entry.sets > ex.sets.length))
+        if (reopened.length) {
+          setAllExercises(prev => prev.filter(ex => !reopened.some(item => item.exercise.id === ex.exercise.id)))
+          setPartialSets(prev => ({ ...prev, ...Object.fromEntries(reopened.map(ex => [ex.exercise.id, ex.sets])) }))
+        }
+      }
+      setPlanIndex(Math.max(0, nextPlan.findIndex(pe => pe.exerciseId === currentExercise?.id)))
+      if (change.type === 'deleteSet') {
+        setDoneSets(prev => prev.filter(set => set.id !== change.setId))
+        setPartialSets(prev => Object.fromEntries(Object.entries(prev).map(([key, sets]) => [key, sets.filter(set => set.id !== change.setId)]).filter(([, sets]) => sets.length)))
+        setAllExercises(prev => prev.map(ex => ({ ...ex, sets: ex.sets.filter(set => set.id !== change.setId) })).filter(ex => ex.sets.length))
+        setResting(false)
+      }
+      if (change.type === 'remove' && change.exerciseId === currentExercise?.id) {
+        if (doneSets.length) setAllExercises(prev => [...prev.filter(ex => ex.exercise.id !== currentExercise.id), { exercise: currentExercise, sets: [...doneSets] }])
+        setCurrentExercise(null)
+        setDoneSets([])
+        setResting(false)
+      }
+      if (change.type === 'remove' && partialSets[change.exerciseId]?.length) {
+        const pe = planExercises.find(ex => ex.exerciseId === change.exerciseId)
+        setAllExercises(prev => [...prev.filter(ex => ex.exercise.id !== change.exerciseId), { exercise: { id: pe.exerciseId, nameRu: pe.nameRu, slug: pe.slug }, sets: partialSets[change.exerciseId] }])
+        setPartialSets(prev => { const next = { ...prev }; delete next[change.exerciseId]; return next })
+      }
+      queryClient.setQueryData(queryKeys.workouts.active, old => old?.workout?.id === id ? {
+        ...old, planExercises: nextPlan, planRevision: result.planRevision,
+        workout: { ...old.workout, planSnapshot: { revision: result.planRevision, exercises: result.planExercises },
+          sets: (old.workout.sets ?? []).filter(set => set.id !== change.setId) },
+      } : old)
+      if (scope === 'program') {
+        queryClient.invalidateQueries({ queryKey: ['programs'] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.progress })
+      }
+      after?.()
+      setPendingPlanChange(null)
+      toast.show(t('workout.edit.saved'), 'success')
+    } catch (error) {
+      toast.show(t(error?.status === 409 ? 'workout.edit.conflict' : 'errors.network'))
+      if (error?.status === 409) { setPendingPlanChange(null); setLoadAttempt(n => n + 1) }
+    } finally {
+      operationRef.current = false
+      setSavingPlan(false)
     }
-
-    setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug })
-    setDoneSets([])
-    setResting(false)
-    loadLastResults([alt.exerciseId])
   }
+
+  const changedIds = pendingPlanChange ? [pendingPlanChange.change.exerciseId, ...(pendingPlanChange.change.counts ?? []).map(e => e.exerciseId), ...(pendingPlanChange.change.type === 'link' ? [pendingPlanChange.change.partnerId] : []), pendingPlanChange.change.targetId].filter(Boolean) : []
+  const templateIds = new Set((workoutProgram?.planJson?.days?.[programDayIndex]?.exercises ?? []).map(pe => pe.exerciseId))
+  const canUpdateProgram = !!programId && programDayIndex != null && (pendingPlanChange?.change.type === 'add' || changedIds.every(id => templateIds.has(planExercises?.find(pe => pe.exerciseId === id)?.mainExerciseId ?? id)))
+  const changeDetails = pendingPlanChange?.change.type === 'sets'
+    ? pendingPlanChange.change.counts.map(e => `${planExercises?.find(pe => pe.exerciseId === e.exerciseId)?.nameRu ?? ''}: ${planExercises?.find(pe => pe.exerciseId === e.exerciseId)?.sets} → ${e.sets}`).join(' · ')
+    : [...new Set([...changedIds, ...(pendingPlanChange?.change.partnerId ? [pendingPlanChange.change.partnerId] : [])])].map(id => catalogById.get(id)?.nameRu ?? planExercises?.find(pe => pe.exerciseId === id)?.nameRu).filter(Boolean).join(' + ')
+  const planSheets = <>
+    <WorkoutPlanEditor exercise={planExercises?.find(pe => pe.exerciseId === editingExerciseId)} exercises={planExercises ?? []}
+      counts={Object.fromEntries(Object.entries(setsById).map(([id, sets]) => [id, sets.length]))}
+      onClose={() => setEditingExerciseId(null)} onChange={requestPlanChange} />
+    <WorkoutChangeScope key={pendingPlanChange?.key ?? 'closed'} pending={pendingPlanChange}
+      canUpdateProgram={canUpdateProgram} details={changeDetails} busy={savingPlan}
+      onCancel={() => setPendingPlanChange(null)} onConfirm={confirmPlanChange} />
+  </>
+  const editButton = id => <button type="button" aria-label={t('workout.edit.exercise')} onClick={e => { e.stopPropagation(); setEditingExerciseId(id) }}
+    style={{ minWidth: 44, minHeight: 44, border: 0, borderRadius: 8, background: 'var(--surface-0)', color: 'var(--fg-secondary)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={18} /></button>
 
   // ── Helper ──
   function exerciseScheme(pe) {
@@ -982,13 +950,14 @@ export default function WorkoutPage() {
   if (picking) {
     return (
       <div style={{ background: 'var(--bg-app)', minHeight: '100dvh' }}>
-        <TopBar
+        <div inert={savingPlan || !!pendingPlanChange || undefined}><TopBar
           title={t('workout.selectExercise')}
           onBack={hasPlan ? () => setPicking(false) : handleBack}
           rightLabel={hasAnySets ? t('workout.finish') : workoutId ? t('workout.cancel') : undefined}
           onRight={hasAnySets ? handleFinish : workoutId ? handleCancelWorkout : undefined}
-        />
-        <div inert={finishing || changingPause || undefined}><ExercisePicker onSelect={handleSelectExercise} /></div>
+        /></div>
+        <div inert={finishing || changingPause || savingPlan || !!pendingPlanChange || undefined}><ExercisePicker onSelect={handleSelectExercise} /></div>
+        {planSheets}
       </div>
     )
   }
@@ -1116,7 +1085,7 @@ export default function WorkoutPage() {
     <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
       {/* WorkoutTopBar */}
       <WorkoutTopBar
-        busy={finishing || changingPause || savingSuperset}
+        busy={finishing || changingPause || savingSuperset || savingPlan || !!pendingPlanChange}
         startedAt={startedAt}
         pausedAt={pausedAt}
         totalPausedMs={totalPausedMs}
@@ -1132,7 +1101,7 @@ export default function WorkoutPage() {
         onResume={handleResume}
       />
 
-      <div inert={finishing || changingPause || undefined} style={{ position: 'relative', zIndex: 1, overflow: 'auto', padding: '4px 12px 22px' }}>
+      <div inert={finishing || changingPause || savingPlan || !!pendingPlanChange || undefined} style={{ position: 'relative', zIndex: 1, overflow: 'auto', padding: '4px 12px 22px' }}>
 
         {/* ── Collapsed done exercises ── */}
         {allExercises.some(item => !currentPair?.some(ex => ex.exerciseId === item.exercise.id)) && (
@@ -1152,6 +1121,7 @@ export default function WorkoutPage() {
                 return (
                   <div key={i}>
                     <CollapsedExercise
+                      editControl={planExercises?.some(pe => pe.exerciseId === item.exercise.id) ? editButton(item.exercise.id) : null}
                       muscle={getExerciseMuscle(item.exercise, catalogById)}
                       name={item.exercise.nameRu}
                       summary={exerciseSummary(item.sets)}
@@ -1172,13 +1142,13 @@ export default function WorkoutPage() {
                           ))}
                         </div>
                         <div style={{ padding: '6px 10px 10px' }}>
-                          <button onClick={() => handleCancelExercise(i)} style={{
+                          <button disabled={!planExercises?.some(pe => pe.exerciseId === item.exercise.id)} onClick={() => handleCancelExercise(i)} style={{
                             width: '100%', height: 34, borderRadius: 8, border: 'none',
                             background: 'rgba(255,80,80,0.08)',
                             color: 'var(--danger, #f87171)', fontSize: 11.5, fontWeight: 600,
                             cursor: 'pointer',
                           }}>
-                            {t('workout.cancelExercise')}
+                            {t('workout.edit.remove')}
                           </button>
                         </div>
                       </Glass>
@@ -1204,6 +1174,7 @@ export default function WorkoutPage() {
             {/* Header */}
             <div style={{ padding: '14px 14px 12px' }}>
               <ExerciseMuscleHeader muscle={currentMuscle} scheme={currentPlanExercise ? exerciseScheme(currentPlanExercise) : null} marker={t('workout.now')}>
+                {currentPlanExercise && editButton(currentExercise.id)}
                 <button
                   type="button"
                   onClick={() => setDetailExerciseId(currentExercise.id)}
@@ -1390,6 +1361,7 @@ export default function WorkoutPage() {
                     <SupersetListItem pair={supersetPair(upcomingExercises, pe.exerciseId)} exerciseId={pe.exerciseId}>
                     {isExpanded && !draggingId ? (
                       <ExpandedUpcomingCard
+                        editControl={editButton(pe.exerciseId)}
                         planExercise={pe}
                         muscle={getExerciseMuscle(pe, catalogById)}
                         lastResults={lastResultsCache[pe.exerciseId]}
@@ -1409,6 +1381,7 @@ export default function WorkoutPage() {
                       />
                     ) : (
                       <UpcomingExerciseItem
+                        editControl={editButton(pe.exerciseId)}
                         muscle={getExerciseMuscle(pe, catalogById)}
                         name={pe.nameRu}
                         scheme={scheme}
@@ -1431,7 +1404,7 @@ export default function WorkoutPage() {
         )}
 
         {/* ── Add other exercise button ── */}
-        {hasPlan && currentExercise && (
+        {workoutId && (
           <button onClick={() => setPicking(true)} style={{
             marginTop: 14, width: '100%', height: 36,
             background: 'none', border: 'none',
@@ -1467,6 +1440,8 @@ export default function WorkoutPage() {
       />
 
 
+
+      {planSheets}
 
       {/* Exercise Detail Sheet */}
       <ExerciseDetailSheet

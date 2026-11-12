@@ -125,3 +125,31 @@ it('refreshes linked and unlinked groups while preserving local sets, variants a
   const unlinked = restoreWorkoutSnapshot(data([]), { ...saved, planExercises: restored.planExercises })
   expect(unlinked.planExercises.every(pe => !pe.supersetId)).toBe(true)
 })
+
+it('restores the authoritative session plan instead of an obsolete local plan', () => {
+  const exercises = [{ exerciseId: 'b', sets: 5 }]
+  const result = restoreWorkoutSnapshot({ workout: { id: 'w', sets: [], planSnapshot: { revision: 'v2', exercises } }, planExercises: exercises }, {
+    allExercises: [], currentExercise: exercise('b'), planExercises: plan,
+  })
+  expect(result.planExercises).toEqual(exercises)
+})
+
+it('keeps recorded sets after removing the current exercise and selects the next planned one', () => {
+  const exercises = [{ exerciseId: 'b', sets: 3 }]
+  const result = restoreWorkoutSnapshot({ workout: { sets: [set('a1', 'a')], planSnapshot: { exercises } }, planExercises: exercises }, {
+    allExercises: [], currentExercise: exercise('a'), planExercises: plan, resting: 5000,
+  })
+  expect(result.currentExercise.id).toBe('b')
+  expect(result.allExercises[0].sets).toHaveLength(1)
+  expect(result.resting).toBe(false)
+})
+
+it('reopens a completed exercise when its planned count increased on another device', () => {
+  const exercises = [{ exerciseId: 'a', sets: 4 }, { exerciseId: 'b', sets: 3 }]
+  const sets = [set('a1', 'a'), set('a2', 'a'), set('a3', 'a')]
+  const result = restoreWorkoutSnapshot({ workout: { sets, planSnapshot: { exercises } }, planExercises: exercises }, {
+    allExercises: [{ exercise: exercise('a'), sets }], currentExercise: exercise('b'), planExercises: [{ exerciseId: 'a', sets: 3 }],
+  })
+  expect(result.partialSets.a).toHaveLength(3)
+  expect(result.allExercises).toEqual([])
+})

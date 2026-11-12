@@ -24,7 +24,9 @@ export function clearWorkoutStateStorage() {
 
 export function restoreWorkoutSnapshot(data, saved) {
   const { workout } = data
-  const planExercises = saved?.planExercises && Array.isArray(data.planExercises)
+  const planExercises = workout.planSnapshot
+    ? data.planExercises ?? workout.planSnapshot.exercises
+    : saved?.planExercises && Array.isArray(data.planExercises)
     ? saved.planExercises.map(pe => {
       const canonical = data.planExercises.find(ex => ex.exerciseId === (pe.mainExerciseId ?? pe.exerciseId))
       if (!canonical) return pe
@@ -41,17 +43,21 @@ export function restoreWorkoutSnapshot(data, saved) {
   const allExercises = []
   const partialSets = {}
   let currentExercise = saved?.currentExercise ?? null
+  const removedCurrent = !!(workout.planSnapshot && currentExercise && !planExercises?.some(pe => pe.exerciseId === currentExercise.id))
+  if (removedCurrent) currentExercise = null
   let doneSets = grouped.get(currentExercise?.id)?.sets ?? []
   for (const [id, entry] of grouped) {
     if (id === currentExercise?.id) continue
     const planned = planExercises?.find(pe => pe.exerciseId === id)
-    if (!completedIds.has(id) && planned && entry.sets.length < planned.sets) {
+    const previousCount = saved?.planExercises?.find(pe => pe.exerciseId === id)?.sets
+    const countIncreased = workout.planSnapshot && previousCount != null && planned?.sets > previousCount
+    if ((!completedIds.has(id) || countIncreased) && planned && entry.sets.length < planned.sets) {
       partialSets[id] = entry.sets
     } else {
       allExercises.push(entry)
     }
   }
-  if (!saved && planExercises?.length) {
+  if ((!saved || removedCurrent) && planExercises?.length) {
     const doneIds = new Set(allExercises.map(ex => ex.exercise.id))
     let next = planExercises.find(pe => !doneIds.has(pe.exerciseId) && !partialSets[pe.exerciseId])
       ?? planExercises.find(pe => partialSets[pe.exerciseId])
@@ -70,7 +76,7 @@ export function restoreWorkoutSnapshot(data, saved) {
   }
   // Rest starts on the workout's net-time axis so pauses (including ones made
   // from Home) are excluded without having to rewrite its timestamp on resume.
-  const resting = currentExercise && doneSets.length && typeof saved?.resting === 'number'
+  const resting = !removedCurrent && currentExercise && doneSets.length && typeof saved?.resting === 'number'
     ? saved.resting : false
   return {
     currentExercise, doneSets, allExercises, partialSets, planExercises, resting,

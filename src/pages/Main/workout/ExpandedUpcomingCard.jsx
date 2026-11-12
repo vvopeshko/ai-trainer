@@ -7,7 +7,7 @@ import { ExerciseMuscleHeader } from './ExerciseMuscleHeader.jsx'
 
 // ─── ExpandedUpcomingCard (active-card style with last results) ─────────
 
-export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onInfo }) {
+export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partialSets: partial, progress, onStart, onCollapse, onDeletePartialSet, onInfo, editControl }) {
   const { t } = useTranslation()
 
   const scheme = planExercise.repsMin === planExercise.repsMax
@@ -35,6 +35,7 @@ export function ExpandedUpcomingCard({ planExercise, muscle, lastResults, partia
               <Icon name="info" size={14} />
             </button>
           )}
+          {editControl}
           <Icon name="chevronDown" size={13} style={{ color: 'var(--fg-tertiary)' }} />
         </ExerciseMuscleHeader>
         <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.3, color: 'var(--fg-primary)', fontFamily: 'var(--font-display)', marginTop: 10, overflowWrap: 'anywhere' }}>

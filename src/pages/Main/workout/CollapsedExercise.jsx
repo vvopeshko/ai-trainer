@@ -4,7 +4,7 @@ import { MuscleIcon } from '../../../components/ui/MuscleIcon.jsx'
 
 // ─── CollapsedExercise (done exercise row) ──────────────────────────────
 
-export function CollapsedExercise({ muscle, name, summary, expanded, onClick }) {
+export function CollapsedExercise({ muscle, name, summary, expanded, onClick, editControl }) {
   return (
     <Glass flat padding="9px 12px" radius={expanded ? '10px 10px 0 0' : 10} style={{
       display: 'flex', alignItems: 'center', gap: 10,
@@ -31,6 +31,7 @@ export function CollapsedExercise({ muscle, name, summary, expanded, onClick }) 
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(236,234,239,0.55)' }}>
         {summary}
       </div>
+      {editControl}
       <Icon name={expanded ? 'chevronUp' : 'chevronDown'} size={13} style={{ color: 'rgba(236,234,239,0.35)' }} />
     </Glass>
   )

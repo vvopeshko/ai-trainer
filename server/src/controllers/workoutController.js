@@ -1,3 +1,4 @@
+import { changeWorkoutPlan } from '../services/workoutPlanChanges.js'
 import { z } from 'zod'
 import prisma from '../utils/prisma.js'
 import { track } from '../utils/analytics.js'
@@ -46,7 +47,7 @@ export async function create(req, res) {
       })
 
       if (existing) {
-        if (existing.sets.length === 0) {
+        if (existing.sets.length === 0 && !existing.planSnapshot) {
           await tx.workout.delete({ where: { id: existing.id } })
         } else {
           return { workout: existing, resumed: true }
@@ -147,7 +148,7 @@ async function activeWorkoutPayload(userId, workout) {
     ])
     const day = program?.planJson?.days?.[workout.programDayIndex]
     if (day) {
-      planExercises = (override ? override.exercises : day.exercises) ?? []
+      planExercises = structuredClone(workout.planSnapshot?.exercises ?? (override ? override.exercises : day.exercises) ?? [])
       planDayTitle = day.title
 
       // Slot identity survives a swap during the workout; "make it main?" hint
@@ -164,7 +165,7 @@ async function activeWorkoutPayload(userId, workout) {
           : [],
       ])
       for (const pe of planExercises) {
-        pe.mainExerciseId = pe.exerciseId
+        pe.mainExerciseId ??= pe.exerciseId
         if (hints.has(pe.exerciseId)) pe.suggestMain = hints.get(pe.exerciseId)
       }
 
@@ -186,7 +187,9 @@ async function activeWorkoutPayload(userId, workout) {
     }
   }
 
+  if (workout?.planSnapshot && !planExercises) planExercises = workout.planSnapshot.exercises
   return { workout, planExercises, planDayTitle }
+
 }
 
 /**
@@ -521,4 +524,8 @@ export async function destroy(req, res) {
 
   track(req.user.id, 'workout_deleted', { workoutId: id })
   res.json({ deleted: true })
+}
+
+export async function editPlan(req, res) {
+  res.json(await changeWorkoutPlan(prisma, req.user.id, req.params.id, req.body))
 }

@@ -368,6 +368,8 @@ model Workout {
   pausedAt        DateTime?                  // timestamp начала текущей паузы (null = не на паузе)
   totalPausedMs   Int          @default(0)   // суммарное время на паузе в мс
 
+  planSnapshot    Json? // per-session plan and revision; independent of the program template
+
   feltRating      Int? // 1..5 — как прошла тренировка
   notes           String?
 

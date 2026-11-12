@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/Button.jsx'
 import { supersetPair } from '../../../utils/supersets.js'
 
 // Lives inside the existing exercise-settings sheet, before alternatives.
-export function ProgramSuperset({ exercise, exercises, onChange }) {
+export function ProgramSuperset({ exercise, exercises, onChange, inWorkout = false }) {
   const { t } = useTranslation()
   const [choosing, setChoosing] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -18,7 +18,7 @@ export function ProgramSuperset({ exercise, exercises, onChange }) {
       </div>)}
       <div style={{ fontSize: 12, color: 'var(--fg-secondary)', marginBottom: 10 }}>{t('superset.rest', { seconds: pair[1].restSec ?? 90 })}</div>
       <Button block onClick={() => onChange(null)}>{t('superset.unlink')}</Button>
-      <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 8 }}>{t('superset.unlinkHint')}</div>
+      <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 8 }}>{t(inWorkout ? 'workout.edit.keepRecorded' : 'superset.unlinkHint')}</div>
     </> : choosing ? <>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>{t('superset.choose')}</div>
       {candidates.map(ex => <button key={ex.exerciseId} type="button" aria-pressed={selected === ex.exerciseId}
@@ -28,7 +28,7 @@ export function ProgramSuperset({ exercise, exercises, onChange }) {
           background: selected === ex.exerciseId ? 'var(--accent-color-soft)' : 'var(--surface-0)', color: 'var(--fg-primary)',
         }}>{ex.nameRu}</button>)}
       {!candidates.length && <p style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>{t('superset.empty')}</p>}
-      <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', margin: '10px 0' }}>{t('superset.hint')}</div>
+      <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', margin: '10px 0' }}>{t(inWorkout ? 'workout.edit.supersetHint' : 'superset.hint')}</div>
       <Button block disabled={!selected} onClick={() => { onChange(selected); setChoosing(false); setSelected(null) }}>{t('superset.join')}</Button>
     </> : <Button block onClick={() => setChoosing(true)}>{t('superset.join')}</Button>}
   </section>

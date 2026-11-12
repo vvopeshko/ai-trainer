@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { auth } from '../middleware/auth.js'
 import { requirePremium } from '../middleware/requirePremium.js'
-import { create, getActive, getRecent, getById, getResults, logSet, deleteSet, update, destroy } from '../controllers/workoutController.js'
+import { editPlan, create, getActive, getRecent, getById, getResults, logSet, deleteSet, update, destroy } from '../controllers/workoutController.js'
 
 const router = Router()
 
@@ -14,6 +14,7 @@ router.get('/recent', getRecent)
 router.get('/:id', getById)
 router.get('/:id/results', getResults)
 router.post('/:id/sets', logSet)
+router.post('/:id/plan-changes', editPlan)
 router.delete('/:id/sets/:setId', deleteSet)
 router.patch('/:id', update)
 router.delete('/:id', destroy)
