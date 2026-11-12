@@ -133,7 +133,7 @@ export function ExerciseProgressSheet({ open, onClose, exerciseId, title, progre
       </div>
       {!timed && !assisted && <>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-          <StatusPill trend={progress.trend} />
+          <StatusPill trend={progress.trend} compact={false} />
           <span style={muted}>{text.period} · {text.date(progress.periodStart)}–{text.date(sessions.at(-1).time)}</span>
         </div>
         {progress.afterBreak && <div style={muted}>{t('exerciseProgress.sinceBreak')}</div>}

@@ -146,6 +146,7 @@ export const translations = {
     'exerciseProgress.empty': 'Первая запись станет точкой отсчёта.',
     'exerciseProgress.status.up': 'Растёт',
     'exerciseProgress.status.adapting': 'Осваиваешь новый вес',
+    'exerciseProgress.status.adaptingShort': 'Новый вес',
     'exerciseProgress.adapting': '{{weight}} {{unit}} с {{date}} · набирай повторы',
     'exerciseProgress.status.steady': 'Держится',
     'exerciseProgress.status.plateau': 'Плато',
