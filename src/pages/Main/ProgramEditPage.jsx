@@ -26,6 +26,8 @@ import TopBar from '../../components/ui/TopBar.jsx'
 import { getMuscleName } from '../../utils/muscleMapping.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { computeMuscleVolume, computeSubMuscleVolume, estimateDayMin, clonePlan } from './program/programHelpers.js'
+import { linkSuperset, supersetPair, movePlanExercise } from '../../utils/supersets.js'
+import { ProgramSuperset } from './program/ProgramSuperset.jsx'
 import { Stepper } from './program/Stepper.jsx'
 import { ProgramAlternatives } from './program/ProgramAlternatives.jsx'
 
@@ -125,6 +127,7 @@ export default function ProgramEditPage() {
 
   const handleRemoveExercise = (dayIdx, exIdx) => {
     const p = ensureEditedPlan() || clonePlan(program.planJson)
+    p.days[dayIdx].exercises = linkSuperset(p.days[dayIdx].exercises, p.days[dayIdx].exercises[exIdx].exerciseId, null)
     p.days[dayIdx].exercises.splice(exIdx, 1)
     setEditedPlan({ ...p })
     setEditingExercise(null)
@@ -134,6 +137,15 @@ export default function ProgramEditPage() {
     const p = ensureEditedPlan() || clonePlan(program.planJson)
     p.days[dayIdx].exercises[exIdx] = { ...p.days[dayIdx].exercises[exIdx], ...updates }
     setEditedPlan({ ...p })
+  }
+
+  const handleSuperset = (partnerId) => {
+    const { dayIdx, exIdx } = editingExercise
+    const p = ensureEditedPlan() || clonePlan(program.planJson)
+    const exerciseId = p.days[dayIdx].exercises[exIdx].exerciseId
+    p.days[dayIdx].exercises = linkSuperset(p.days[dayIdx].exercises, exerciseId, partnerId, crypto.randomUUID())
+    setEditedPlan({ ...p })
+    setEditingExercise({ dayIdx, exIdx: p.days[dayIdx].exercises.findIndex(ex => ex.exerciseId === exerciseId) })
   }
 
   const handleRenameDayTitle = (dayIdx, title) => {
@@ -170,8 +182,7 @@ export default function ProgramEditPage() {
     }
     const p = ensureEditedPlan() || clonePlan(program.planJson)
     const exercises = p.days[dragState.dayIdx].exercises
-    const [moved] = exercises.splice(dragState.exIdx, 1)
-    exercises.splice(dragState.currentIdx, 0, moved)
+    p.days[dragState.dayIdx].exercises = movePlanExercise(exercises, dragState.exIdx, dragState.currentIdx)
     setEditedPlan({ ...p })
     setDragState(null)
   }
@@ -720,6 +731,8 @@ export default function ProgramEditPage() {
               {expanded && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                   {exercises.map((ex, exIdx) => {
+                    const pair = supersetPair(exercises, ex.exerciseId)
+                    const pairSide = pair?.findIndex(item => item.exerciseId === ex.exerciseId)
                     const isDragging = dragState?.dayIdx === dayIdx && dragState?.exIdx === exIdx
                     const isTarget = dragState?.dayIdx === dayIdx && dragState?.currentIdx === exIdx && dragState?.exIdx !== exIdx
 
@@ -732,7 +745,8 @@ export default function ProgramEditPage() {
                           gap: 'var(--space-3)',
                           borderTop: exIdx > 0 ? '1px solid rgba(255,255,255,0.03)' : 'none',
                           opacity: isDragging ? 0.4 : 1,
-                          background: isTarget ? 'rgba(255,255,255,0.03)' : 'transparent',
+                          background: isTarget ? 'rgba(255,255,255,0.03)' : pair ? 'var(--accent-color-soft)' : 'transparent',
+                          borderLeft: pair ? '2px solid var(--accent-color)' : undefined,
                           transition: 'background 0.15s',
                         }}
                       >
@@ -754,7 +768,7 @@ export default function ProgramEditPage() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 11, fontWeight: 600, color: 'var(--fg-tertiary)',
                         }}>
-                          {exIdx + 1}
+                          {pair ? (pairSide === 0 ? 'A' : 'B') : exIdx + 1}
                         </div>
 
                         {/* Exercise info (tappable for edit) */}
@@ -773,7 +787,7 @@ export default function ProgramEditPage() {
                           <div style={{
                             fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', marginTop: 1,
                           }}>
-                            {ex.sets}×{ex.repsMax || ex.repsMin}{ex.rir && ` RIR ${ex.rir}`}
+                            {pair && `${t('superset.title')} · `}{ex.sets}×{ex.repsMax || ex.repsMin}{ex.rir && ` RIR ${ex.rir}`}
                             {ex.alternatives?.length > 0 && ` · ${t('program.alternativesCount', { n: ex.alternatives.length })}`}
                             {(ex.primaryMuscles?.length > 0 || ex.secondaryMuscles?.length > 0) && (
                               <span style={{ opacity: 0.5 }}> · {
@@ -1002,6 +1016,12 @@ export default function ProgramEditPage() {
 
             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
 
+            <ProgramSuperset
+              key={editEx.exerciseId}
+              exercise={editEx}
+              exercises={plan.days[editingExercise.dayIdx].exercises}
+              onChange={handleSuperset}
+            />
             <ProgramAlternatives
               exercise={editEx}
               onChange={updates => handleUpdateExercise(editingExercise.dayIdx, editingExercise.exIdx, updates)}

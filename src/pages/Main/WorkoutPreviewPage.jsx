@@ -18,6 +18,7 @@ import { exerciseProgress } from '../../utils/exerciseProgress.js'
 import { UpcomingExerciseItem } from './workout/UpcomingExerciseItem.jsx'
 import { ExpandedUpcomingCard } from './workout/ExpandedUpcomingCard.jsx'
 import { ExerciseProgress } from './workout/ExerciseProgress.jsx'
+import { supersetPair } from '../../utils/supersets.js'
 import { WorkoutSkeleton } from './workout/WorkoutSkeleton.jsx'
 
 // Просмотр следующей тренировки без старта: упражнения дня, прошлые подходы,
@@ -154,7 +155,7 @@ export default function WorkoutPreviewPage() {
                 key={pe.exerciseId}
                 muscle={getExerciseMuscle(pe, catalogById)}
                 name={pe.nameRu}
-                scheme={scheme(pe)}
+                scheme={`${supersetPair(exercises, pe.exerciseId) ? t('superset.title') + ' · ' + (supersetPair(exercises, pe.exerciseId)[0].exerciseId === pe.exerciseId ? 'A' : 'B') + ' · ' : ''}${scheme(pe)}`}
                 weightRange={weightRange(pe)}
                 trend={trendById.get(pe.exerciseId)}
                 expanded={false}

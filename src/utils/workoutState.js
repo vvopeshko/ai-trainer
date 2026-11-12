@@ -1,3 +1,5 @@
+import { supersetPair } from './supersets.js'
+
 // UI state is device-local; recorded sets and pause state always come from the server.
 const STORAGE_KEY = 'active-workout-ui-v1'
 
@@ -44,8 +46,15 @@ export function restoreWorkoutSnapshot(data, saved) {
   }
   if (!saved && planExercises?.length) {
     const doneIds = new Set(allExercises.map(ex => ex.exercise.id))
-    const next = planExercises.find(pe => !doneIds.has(pe.exerciseId) && !partialSets[pe.exerciseId])
+    let next = planExercises.find(pe => !doneIds.has(pe.exerciseId) && !partialSets[pe.exerciseId])
       ?? planExercises.find(pe => partialSets[pe.exerciseId])
+    // Continue the earliest unfinished superset before unrelated exercises.
+    const firstPending = planExercises.find(pe => !doneIds.has(pe.exerciseId))
+    const pair = supersetPair(planExercises, firstPending?.exerciseId)
+    if (pair) {
+      const pending = pair.filter(pe => !doneIds.has(pe.exerciseId))
+      next = pending.reduce((best, pe) => !best || (partialSets[pe.exerciseId]?.length ?? 0) < (partialSets[best.exerciseId]?.length ?? 0) ? pe : best, null)
+    }
     if (next) {
       currentExercise = { id: next.exerciseId, nameRu: next.nameRu, slug: next.slug }
       doneSets = partialSets[next.exerciseId] ?? []

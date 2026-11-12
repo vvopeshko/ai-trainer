@@ -4,6 +4,21 @@
 
 export const translations = {
   ru: {
+    'superset.title': 'Суперсет',
+    'superset.join': 'Объединить в суперсет',
+    'superset.choose': 'Выберите второе упражнение',
+    'superset.empty': 'Нет свободных упражнений в этом дне',
+    'superset.hint': 'Подход A → подход B → отдых по настройке B. Изменения применятся после сохранения программы.',
+    'superset.unlink': 'Разъединить суперсет',
+    'superset.unlinkHint': 'Оба упражнения и их подходы останутся в программе. История сохранится.',
+    'superset.settings': 'Настройка суперсета',
+    'superset.pair': '{{a}} → {{b}}',
+    'superset.rest': 'Отдых после B · {{seconds}} с',
+    'superset.next': 'Далее: {{name}} · без отдыха',
+    'superset.add': 'Добавить подход',
+    'superset.addHint': 'Только в текущую тренировку',
+    'superset.both': 'Обоим упражнениям — ещё один круг',
+    'superset.saving': 'Сохраняем подход…',
     'app.title': 'AI Trainer',
     'annualGoal.title': 'Годовая цель',
     'annualGoal.deadline': 'До 31 декабря',

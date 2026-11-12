@@ -49,6 +49,8 @@ import { useExerciseHistory, useExerciseOverview, useExerciseCatalog } from '../
 import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
 import { ExerciseMuscleHeader } from './workout/ExerciseMuscleHeader.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
+import { supersetPair, supersetTransition, movePlanExercise } from '../../utils/supersets.js'
+import { SupersetSets } from './workout/SupersetSets.jsx'
 import { AlternativesPanel } from './workout/AlternativesPanel.jsx'
 
 // A program slot keeps its main exercise while today's variant changes; the
@@ -93,6 +95,7 @@ export default function WorkoutPage() {
   const [previewAlt, setPreviewAlt] = useState(null) // alternative opened from the info sheet
   const [dismissedHints, setDismissedHints] = useState(() => new Set())
   const [startedAt, setStartedAt] = useState(null)
+  const [savingSuperset, setSavingSuperset] = useState(false)
   const [resting, setResting] = useState(false)
   const [pausedAt, setPausedAt] = useState(null)
   const [totalPausedMs, setTotalPausedMs] = useState(0)
@@ -209,8 +212,7 @@ export default function WorkoutPage() {
         if (idx >= 0 && swapIdx >= 0 && swapIdx < upcoming.length) {
           const idxA = plan.findIndex(pe => pe.exerciseId === upcoming[idx].exerciseId)
           const idxB = plan.findIndex(pe => pe.exerciseId === upcoming[swapIdx].exerciseId)
-          const next = [...plan]
-          ;[next[idxA], next[idxB]] = [next[idxB], next[idxA]]
+          const next = movePlanExercise(plan, idxA, idxB)
           setPlanExercises(next)
           planExRef.current = next
           dragInfo.current.lastSwapDelta += direction === 'down' ? itemHeight : -itemHeight
@@ -357,6 +359,9 @@ export default function WorkoutPage() {
   const totalPlannedSets = hasPlan ? planExercises.reduce((s, e) => s + e.sets, 0) : 0
   const currentExerciseNum = allExercises.length + (currentExercise ? 1 : 0)
   const currentPlanExercise = hasPlan && planIndex < planExercises.length ? planExercises[planIndex] : null
+  const currentPair = supersetPair(planExercises, currentExercise?.id)
+  const setsById = { ...partialSets, ...Object.fromEntries(allExercises.map(ex => [ex.exercise.id, ex.sets])), ...(currentExercise ? { [currentExercise.id]: doneSets } : {}) }
+  const pairCounts = Object.fromEntries((currentPair ?? []).map(ex => [ex.exerciseId, setsById[ex.exerciseId]?.length ?? 0]))
   const currentMuscle = getExerciseMuscle(currentExercise, catalogById, currentPlanExercise)
 
   const suggestionFor = (setIndex) => getSetSuggestion({
@@ -480,9 +485,46 @@ export default function WorkoutPage() {
     }
   }
 
+  const moveWithinSuperset = (next, currentSets = doneSets) => {
+    const currentId = currentExercise.id
+    const complete = currentSets.length >= currentPlanExercise.sets
+    const targetSets = setsById[next.exerciseId] ?? []
+    setAllExercises(prev => [
+      ...prev.filter(ex => ex.exercise.id !== currentId && ex.exercise.id !== next.exerciseId),
+      ...(complete ? [{ exercise: currentExercise, sets: currentSets }] : []),
+    ])
+    setPartialSets(prev => {
+      const updated = { ...prev }
+      delete updated[currentId]
+      delete updated[next.exerciseId]
+      if (!complete && currentSets.length) updated[currentId] = currentSets
+      return updated
+    })
+    setCurrentExercise({ id: next.exerciseId, nameRu: next.nameRu, slug: next.slug })
+    setPlanIndex(planExercises.findIndex(ex => ex.exerciseId === next.exerciseId))
+    setDoneSets(targetSets)
+    setResting(false)
+  }
+
+  const handlePairDelete = (id, index) => {
+    if (id === currentExercise.id) handleDeleteCurrentSet(index)
+    else {
+      const completedIndex = allExercises.findIndex(ex => ex.exercise.id === id)
+      if (completedIndex >= 0) handleDeleteDoneSet(completedIndex, index)
+      else handleDeletePartialSet(id, index)
+    }
+  }
+
+  const handlePairAdd = (ids) => setPlanExercises(prev => prev.map(ex => ids.includes(ex.exerciseId) ? { ...ex, sets: ex.sets + 1 } : ex))
+  const handlePairRemove = (id) => setPlanExercises(prev => prev.map(ex => ex.exerciseId === id && ex.sets > Math.max(1, (setsById[id]?.length ?? 0) + (id === currentExercise.id ? 1 : 0)) ? { ...ex, sets: ex.sets - 1 } : ex))
+
   const handleSetDone = ({ weight, reps }) => {
     if (!workoutId || !currentExercise || pausedAt || operationRef.current) return
 
+    if (currentPair) {
+      operationRef.current = true
+      setSavingSuperset(true)
+    }
     const tempId = crypto.randomUUID()
     const newSet = { weightKg: weight, reps, exerciseId: currentExercise.id, tempId }
     setDoneSets(prev => [...prev, newSet])
@@ -505,13 +547,13 @@ export default function WorkoutPage() {
     try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success') } catch {}
     // Event handler only: capture the actual time the approach was recorded.
     // eslint-disable-next-line react-hooks/purity
-    setResting(Date.now() - totalPausedMs)
+    setResting(currentPair ? false : Date.now() - totalPausedMs)
 
     const postSet = async () => {
       try {
         const { set } = await apiPost(`/api/v1/workouts/${workoutId}/sets`, {
           exerciseId: currentExercise.id,
-          exerciseOrder: allExercises.length,
+          exerciseOrder: hasPlan ? planIndex : allExercises.length,
           setOrder: doneSets.length,
           weightKg: weight || null,
           reps,
@@ -545,6 +587,12 @@ export default function WorkoutPage() {
           }
           return changed ? result : prev
         })
+        if (currentPair && currentExRef.current?.id === currentExercise.id) {
+          const transition = supersetTransition(planExercises, currentExercise.id, { ...pairCounts, [currentExercise.id]: doneSets.length + 1 })
+          if (transition && !transition.rest && transition.next) {
+            moveWithinSuperset(transition.next, [...doneSets, { ...newSet, id: set.id }])
+          } else setResting(Date.now() - totalPausedMs)
+        }
       } catch (err) {
         console.error('Failed to log set:', err)
         // Откат оптимистичного сета: на сервере его нет — оставить в UI значит
@@ -568,6 +616,8 @@ export default function WorkoutPage() {
         })
         setResting(false)
         toast.show(t('errors.network'))
+      } finally {
+        if (currentPair) { operationRef.current = false; setSavingSuperset(false) }
       }
     }
 
@@ -579,7 +629,13 @@ export default function WorkoutPage() {
   }
 
   const handleRestComplete = () => {
+    if (savingSuperset) return
     setResting(false)
+    const transition = supersetTransition(planExercises, currentExercise?.id, pairCounts)
+    if (transition?.next && transition.next.exerciseId !== currentExercise.id) {
+      moveWithinSuperset(transition.next)
+      return
+    }
     // Auto-advance to next exercise if all planned sets done
     const plannedSets = currentPlanExercise?.sets
     if (plannedSets && doneSets.length >= plannedSets) {
@@ -938,14 +994,128 @@ export default function WorkoutPage() {
 
   // ── Render: Main workout screen ──
   const upcomingExercises = hasPlan
-    ? planExercises.filter((pe) => pe.exerciseId !== currentExercise?.id && !doneExerciseIds.has(pe.exerciseId))
+    ? planExercises.filter((pe) => pe.exerciseId !== currentExercise?.id && !doneExerciseIds.has(pe.exerciseId) && !currentPair?.some(ex => ex.exerciseId === pe.exerciseId))
     : []
+
+  const activeSetControls = currentExercise ? (
+    <div inert={pausedAt || savingSuperset || undefined} style={{ padding: currentPair ? '6px 0 10px' : '12px 12px 14px', ...((pausedAt || savingSuperset) && { opacity: 0.25, pointerEvents: 'none' }) }}>
+      {resting ? (
+        <>
+          <RestCard
+            startedAt={resting + totalPausedMs}
+            pausedAt={pausedAt}
+            seconds={currentPair?.[1].restSec ?? currentPlanExercise?.restSec ?? 90}
+            onSkip={handleRestComplete}
+          />
+          {/* Next set preview */}
+          {!currentPair && currentPlanExercise && doneSets.length < currentPlanExercise.sets && (
+            <div style={{
+              marginTop: 9, padding: '9px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{
+                fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.45)',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>
+                {t('workout.upcoming')} · {t('workout.set', { n: doneSets.length + 1 })}
+              </div>
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: 12, flex: 1,
+                fontWeight: 600, color: 'rgba(236,234,239,0.7)', textAlign: 'right',
+              }}>
+                {formatSuggestedSet(nextSet)}
+              </span>
+            </div>
+          )}
+        </>
+      ) : (
+        <ActiveSetInput
+          key={`${currentExercise.id}:${doneSets.length}`}
+          exercise={currentExercise}
+          unit={exerciseSettings.unit}
+          step={exerciseSettings.step}
+          stepUnit={exerciseSettings.stepUnit}
+          minWeight={exerciseSettings.minWeight}
+          maxWeight={exerciseSettings.maxWeight}
+          setOrder={doneSets.length}
+          plannedSets={currentPlanExercise?.sets || null}
+          lastWeight={nextSet.weightKg}
+          lastReps={nextSet.reps}
+          plannedReps={currentPlanExercise?.repsMin || null}
+          target={setTarget}
+          onDone={handleSetDone}
+          mode={exerciseSettings.type === 'timer' ? 'timer'
+            : assisted ? 'assisted'
+              : trackingTypeOf(currentExercise) === 'bodyweight_reps' ? 'bodyweight' : 'reps'}
+        />
+      )}
+
+      {/* Pending sets preview (swipe to remove) */}
+      {!currentPair && currentPlanExercise && doneSets.length + 1 < currentPlanExercise.sets && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+          {Array.from({ length: currentPlanExercise.sets - doneSets.length - 1 }, (_, i) => {
+            const setNum = doneSets.length + 2 + i
+            const setIdx = doneSets.length + 1 + i
+            const suggestion = suggestionFor(setIdx)
+            const repsLabel = currentPlanExercise.repsMin === currentPlanExercise.repsMax
+              ? `${currentPlanExercise.repsMin}`
+              : `${currentPlanExercise.repsMin}–${currentPlanExercise.repsMax}`
+            return (
+              <SwipeRow key={setNum} deleteWidth={56} onDelete={handleRemovePlannedSet}>
+                <div style={{
+                  padding: '9px 12px', borderRadius: 10,
+                  border: '1px dashed rgba(255,255,255,0.07)',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%',
+                    border: '1.5px dashed rgba(255,255,255,0.10)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
+                  }}>
+                    {setNum}
+                  </div>
+                  <div style={{
+                    fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
+                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                  }}>
+                    {t('workout.set', { n: setNum })}
+                  </div>
+                  <span style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 11, flex: 1,
+                    color: 'rgba(236,234,239,0.2)', textAlign: 'right',
+                  }}>
+                    {suggestion.source !== 'default'
+                      ? formatSuggestedSet(suggestion)
+                      : `${repsLabel} ${t('workout.reps').toLowerCase()}`
+                    }
+                  </span>
+                </div>
+              </SwipeRow>
+            )
+          })}
+        </div>
+      )}
+
+      {/* + добавить подход */}
+      {!currentPair && !resting && currentPlanExercise && (
+        <button onClick={handleAddPlannedSet} style={{
+          marginTop: 8, width: '100%', height: 36,
+          background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.10)',
+          borderRadius: 10, color: 'rgba(236,234,239,0.5)', fontSize: 11.5, cursor: 'pointer',
+        }}>
+          {t('workout.addSetExtra')}
+        </button>
+      )}
+    </div>
+  ) : null
 
   return (
     <div style={{ background: 'var(--bg-app)', minHeight: '100vh' }}>
       {/* WorkoutTopBar */}
       <WorkoutTopBar
-        busy={finishing || changingPause}
+        busy={finishing || changingPause || savingSuperset}
         startedAt={startedAt}
         pausedAt={pausedAt}
         totalPausedMs={totalPausedMs}
@@ -964,7 +1134,7 @@ export default function WorkoutPage() {
       <div inert={finishing || changingPause || undefined} style={{ position: 'relative', zIndex: 1, overflow: 'auto', padding: '4px 12px 22px' }}>
 
         {/* ── Collapsed done exercises ── */}
-        {allExercises.length > 0 && (
+        {allExercises.some(item => !currentPair?.some(ex => ex.exerciseId === item.exercise.id)) && (
           <>
             <div style={{ padding: '2px 4px 6px' }}>
               <div style={{
@@ -976,6 +1146,7 @@ export default function WorkoutPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
               {allExercises.map((item, i) => {
+                if (currentPair?.some(ex => ex.exerciseId === item.exercise.id)) return null
                 const isExpanded = expandedDoneIndex === i
                 return (
                   <div key={i}>
@@ -1021,6 +1192,14 @@ export default function WorkoutPage() {
         {/* ── Active exercise card ── */}
         {currentExercise && (
           <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
+            {currentPair && <div style={{ padding: '12px 14px', background: 'var(--accent-color-soft)', borderBottom: '1px solid var(--stroke-0)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-color)', marginBottom: 8 }}>{t('superset.title')}</div>
+              <div style={{ display: 'flex', gap: 12 }}>{currentPair.map((ex, side) => <div key={ex.exerciseId} style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
+                <span style={{ color: 'var(--accent-color)', marginRight: 4 }}>{side ? 'B' : 'A'}</span>{ex.nameRu}
+                <div style={{ color: 'var(--fg-secondary)', marginTop: 4 }}>{pairCounts[ex.exerciseId]}/{ex.sets}</div>
+              </div>)}</div>
+              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--fg-secondary)' }}>{savingSuperset ? t('superset.saving') : t('superset.rest', { seconds: currentPair[1].restSec ?? 90 })}</div>
+            </div>}
             {/* Header */}
             <div style={{ padding: '14px 14px 12px' }}>
               <ExerciseMuscleHeader muscle={currentMuscle} scheme={currentPlanExercise ? exerciseScheme(currentPlanExercise) : null} marker={t('workout.now')}>
@@ -1087,7 +1266,7 @@ export default function WorkoutPage() {
             />
 
             {/* Done sets inline */}
-            {doneSets.length > 0 && (
+            {!currentPair && doneSets.length > 0 && (
               <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {/* key по tempId/id: с key={i} swipe-открытая «корзина» после
                     удаления переезжала на соседний сет (React переиспользует DOM). */}
@@ -1134,121 +1313,16 @@ export default function WorkoutPage() {
               </div>
             )}
 
-            {/* Active set input OR rest timer */}
-            <div style={{ padding: '12px 12px 14px', ...(pausedAt && { opacity: 0.25, pointerEvents: 'none' }) }}>
-              {resting ? (
-                <>
-                  <RestCard
-                    startedAt={resting + totalPausedMs}
-                    pausedAt={pausedAt}
-                    seconds={currentPlanExercise?.restSec || 90}
-                    onSkip={handleRestComplete}
-                  />
-                  {/* Next set preview */}
-                  {currentPlanExercise && doneSets.length < currentPlanExercise.sets && (
-                    <div style={{
-                      marginTop: 9, padding: '9px 12px', borderRadius: 10,
-                      background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)',
-                      display: 'flex', alignItems: 'center', gap: 10,
-                    }}>
-                      <div style={{
-                        fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.45)',
-                        textTransform: 'uppercase', letterSpacing: '0.04em',
-                      }}>
-                        {t('workout.upcoming')} · {t('workout.set', { n: doneSets.length + 1 })}
-                      </div>
-                      <span style={{
-                        fontFamily: 'var(--font-mono)', fontSize: 12, flex: 1,
-                        fontWeight: 600, color: 'rgba(236,234,239,0.7)', textAlign: 'right',
-                      }}>
-                        {formatSuggestedSet(nextSet)}
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <ActiveSetInput
-                  key={`${currentExercise.id}:${doneSets.length}`}
-                  exercise={currentExercise}
-                  unit={exerciseSettings.unit}
-                  step={exerciseSettings.step}
-                  stepUnit={exerciseSettings.stepUnit}
-                  minWeight={exerciseSettings.minWeight}
-                  maxWeight={exerciseSettings.maxWeight}
-                  setOrder={doneSets.length}
-                  plannedSets={currentPlanExercise?.sets || null}
-                  lastWeight={nextSet.weightKg}
-                  lastReps={nextSet.reps}
-                  plannedReps={currentPlanExercise?.repsMin || null}
-                  target={setTarget}
-                  onDone={handleSetDone}
-                  mode={exerciseSettings.type === 'timer' ? 'timer'
-                    : assisted ? 'assisted'
-                      : trackingTypeOf(currentExercise) === 'bodyweight_reps' ? 'bodyweight' : 'reps'}
-                />
-              )}
-
-              {/* Pending sets preview (swipe to remove) */}
-              {currentPlanExercise && doneSets.length + 1 < currentPlanExercise.sets && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-                  {Array.from({ length: currentPlanExercise.sets - doneSets.length - 1 }, (_, i) => {
-                    const setNum = doneSets.length + 2 + i
-                    const setIdx = doneSets.length + 1 + i
-                    const suggestion = suggestionFor(setIdx)
-                    const repsLabel = currentPlanExercise.repsMin === currentPlanExercise.repsMax
-                      ? `${currentPlanExercise.repsMin}`
-                      : `${currentPlanExercise.repsMin}–${currentPlanExercise.repsMax}`
-                    return (
-                      <SwipeRow key={setNum} deleteWidth={56} onDelete={handleRemovePlannedSet}>
-                        <div style={{
-                          padding: '9px 12px', borderRadius: 10,
-                          border: '1px dashed rgba(255,255,255,0.07)',
-                          display: 'flex', alignItems: 'center', gap: 10,
-                        }}>
-                          <div style={{
-                            width: 20, height: 20, borderRadius: '50%',
-                            border: '1.5px dashed rgba(255,255,255,0.10)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 10, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
-                          }}>
-                            {setNum}
-                          </div>
-                          <div style={{
-                            fontSize: 9, fontWeight: 600, color: 'rgba(236,234,239,0.25)',
-                            textTransform: 'uppercase', letterSpacing: '0.04em',
-                          }}>
-                            {t('workout.set', { n: setNum })}
-                          </div>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)', fontSize: 11, flex: 1,
-                            color: 'rgba(236,234,239,0.2)', textAlign: 'right',
-                          }}>
-                            {suggestion.source !== 'default'
-                              ? formatSuggestedSet(suggestion)
-                              : `${repsLabel} ${t('workout.reps').toLowerCase()}`
-                            }
-                          </span>
-                        </div>
-                      </SwipeRow>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* + добавить подход */}
-              {!resting && currentPlanExercise && (
-                <button onClick={handleAddPlannedSet} style={{
-                  marginTop: 8, width: '100%', height: 36,
-                  background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.10)',
-                  borderRadius: 10, color: 'rgba(236,234,239,0.5)', fontSize: 11.5, cursor: 'pointer',
-                }}>
-                  {t('workout.addSetExtra')}
-                </button>
-              )}
-            </div>
+            {currentPair ? <SupersetSets
+              pair={currentPair} currentId={currentExercise.id} setsById={setsById}
+              lastResults={lastResultsCache} resting={resting} renderActive={() => activeSetControls}
+              onContinue={handleRestComplete}
+              onDelete={handlePairDelete} onRemovePlanned={handlePairRemove} onAdd={handlePairAdd}
+              disabled={!!pausedAt || savingSuperset}
+            /> : activeSetControls}
 
             {/* Next exercise button (when sets done but user hasn't auto-advanced) */}
-            {doneSets.length > 0 && !resting && (
+            {!currentPair && doneSets.length > 0 && !resting && (
               <div style={{ padding: '0 12px 14px' }}>
                 <button onClick={() => handleNextExercise()} style={{
                   width: '100%', height: 40, borderRadius: 10, border: 'none',
@@ -1335,7 +1409,7 @@ export default function WorkoutPage() {
                       <UpcomingExerciseItem
                         muscle={getExerciseMuscle(pe, catalogById)}
                         name={pe.nameRu}
-                        scheme={scheme}
+                        scheme={`${supersetPair(planExercises, pe.exerciseId) ? t('superset.title') + ' · ' + (supersetPair(planExercises, pe.exerciseId)[0].exerciseId === pe.exerciseId ? 'A' : 'B') + ' · ' : ''}${scheme}`}
                         weightRange={weightRange(pe)}
                         trend={trendById.get(pe.exerciseId)}
                         expanded={false}

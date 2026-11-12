@@ -90,3 +90,25 @@ describe('server summary', () => {
     expect(summarizeWorkout(workout)).toMatchObject({ totalSets: 3, totalExercises: 2, tonnageKg: 400, elapsedSec: 480 })
   })
 })
+
+
+describe('superset reload', () => {
+  const pairPlan = [{ exerciseId: 'a', sets: 3, supersetId: 'pair' }, { exerciseId: 'b', sets: 3, supersetId: 'pair' }, { exerciseId: 'c', sets: 3 }]
+  it('continues B after A and returns to A after a completed round, before unrelated exercises', () => {
+    const first = restoreWorkoutSnapshot({ workout: { sets: [set('a1', 'a')] }, planExercises: pairPlan }, null)
+    expect(first.currentExercise.id).toBe('b')
+    expect(first.partialSets.a).toHaveLength(1)
+    const next = restoreWorkoutSnapshot({ workout: { sets: [set('a1', 'a'), set('b1', 'b')] }, planExercises: pairPlan }, null)
+    expect(next.currentExercise.id).toBe('a')
+    expect(next.doneSets).toHaveLength(1)
+    expect(next.partialSets.b).toHaveLength(1)
+  })
+  it('retains pair metadata, per-exercise progress and rest when resuming on the same device', () => {
+    const saved = { currentExercise: exercise('b'), planExercises: pairPlan, allExercises: [], resting: 5000 }
+    const result = restoreWorkoutSnapshot({ workout: { sets: [set('a1', 'a'), set('b1', 'b')] }, planExercises: pairPlan }, saved)
+    expect(result.currentExercise.id).toBe('b')
+    expect(result.partialSets.a).toHaveLength(1)
+    expect(result.doneSets).toHaveLength(1)
+    expect(result.resting).toBe(5000)
+  })
+})

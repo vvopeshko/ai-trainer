@@ -377,3 +377,23 @@ describe('computeNextDayIndex', () => {
     expect(workoutFindFirst).not.toHaveBeenCalled()
   })
 })
+
+
+describe('superset metadata', () => {
+  it('survives schema parsing and replacement', async () => {
+    const { planExerciseSchema } = await import('../../controllers/programController.js')
+    const day = sampleDay().map(ex => ({ ...ex, supersetId: 'pair' }))
+    expect(planExerciseSchema.parse(day[0]).supersetId).toBe('pair')
+    findUnique.mockResolvedValue({ id: ID_CROSS, slug: 'cross', nameRu: 'Кроссовер стоя' })
+    const result = await editDayExercises(day, 'replace', { fromExercise: day[0].nameRu, toExerciseId: ID_CROSS })
+    expect(result.exercises.map(ex => ex.supersetId)).toEqual(['pair', 'pair'])
+  })
+  it('unlinks the surviving exercise when its partner is removed', async () => {
+    const day = sampleDay().map(ex => ({ ...ex, supersetId: 'pair' }))
+    const result = await editDayExercises(day, 'remove', { exercise: day[0].nameRu })
+    expect(result.exercises).toHaveLength(1)
+    expect(result.exercises[0].supersetId).toBeUndefined()
+    expect(result.exercises[0].sets).toBe(day[1].sets)
+    expect(day[1].supersetId).toBe('pair')
+  })
+})

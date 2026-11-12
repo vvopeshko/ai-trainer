@@ -181,6 +181,7 @@ export const planExerciseSchema = z.object({
   restSec: z.number().int().nonnegative().default(90),
   rir: z.string().optional(),
   notes: z.string().optional(),
+  supersetId: z.string().min(1).max(100).optional(),
   alternatives: z.array(z.string()).default([]),
 })
 

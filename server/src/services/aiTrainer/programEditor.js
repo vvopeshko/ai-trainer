@@ -114,6 +114,7 @@ export async function editDayExercises(dayExercises, op, params = {}) {
       })
       // Slot model: the replaced exercise stays selectable as an alternative,
       // and the slot keeps its other alternatives (and the history of each).
+      if (old.supersetId) replaced.supersetId = old.supersetId
       replaced.alternatives = [old.exerciseId, ...(old.alternatives ?? [])]
         .filter((id, i, all) => id && id !== ex.id && all.indexOf(id) === i).slice(0, MAX_ALTERNATIVES)
       list[idx] = replaced
@@ -217,6 +218,9 @@ export async function editDayExercises(dayExercises, op, params = {}) {
         throw new Error(`Упражнение "${params.exercise}" не найдено в этом дне.`)
       }
       const [removed] = list.splice(idx, 1)
+      if (removed.supersetId) for (const ex of list) {
+        if (ex.supersetId === removed.supersetId) delete ex.supersetId
+      }
       return { exercises: list, summary: `Убрал «${removed.nameRu}» из дня.` }
     }
 
