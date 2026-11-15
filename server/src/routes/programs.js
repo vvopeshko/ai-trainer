@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { auth } from '../middleware/auth.js'
 import { requirePremium } from '../middleware/requirePremium.js'
 import { llmLimiter } from '../middleware/rateLimiter.js'
-import { listPrograms, getActive, getNextWorkout, getProgram, updateProgram, activateProgram, importProgramHandler, updateActiveSlot, fillActiveAlternatives } from '../controllers/programController.js'
+import { listPrograms, getActive, getNextWorkout, getProgram, updateProgram, activateProgram, duplicateProgram, deleteProgram, importProgramHandler, updateActiveSlot, fillActiveAlternatives } from '../controllers/programController.js'
 
 const router = Router()
 
@@ -18,5 +18,7 @@ router.post('/import', llmLimiter, importProgramHandler)
 router.get('/:id', getProgram)
 router.patch('/:id', updateProgram)
 router.post('/:id/activate', activateProgram)
+router.post('/:id/duplicate', duplicateProgram)
+router.delete('/:id', deleteProgram)
 
 export default router

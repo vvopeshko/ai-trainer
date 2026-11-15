@@ -158,7 +158,7 @@ cd server && npx prisma generate       # регенерация клиента (
 Два типа экранов: **таб-экраны** (внутри `TabLayout` с `GlassNav`) и **полноэкранные flow** (без навигации):
 
 - Табы: `/` (Home), `/progress`, `/library`, `/me`
-- Flow: `/workout`, `/program/:id`, `/summary/:id`
+- Flow: `/workout`, `/program/:id`, `/programs` («Мои программы»: выбор активной, переименование, дублирование, удаление), `/summary/:id`
 - Dev: `/demo` (дизайн-система)
 
 Ленивая загрузка через `lazy()` для `ProgressPage`, `LibraryPage`, `ProgramEditPage`, `SummaryPage` и `DesignSystemDemo`.

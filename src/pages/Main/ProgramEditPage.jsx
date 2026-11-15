@@ -64,7 +64,6 @@ export default function ProgramEditPage() {
   const [activating, setActivating] = useState(false)
 
   // Other programs — derived from TanStack Query
-  const otherPrograms = allPrograms.filter(p => p.id !== id)
 
   // UI
   const [expandedDays, setExpandedDays] = useState(new Set([0]))
@@ -588,6 +587,25 @@ export default function ProgramEditPage() {
           </Glass>
         )}
 
+        {/* ── Все программы ── */}
+        {allPrograms.length > 1 && (
+          <button
+            type="button"
+            onClick={() => navigate('/programs')}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+              padding: '12px var(--space-4)', marginBottom: 'var(--space-4)',
+              background: 'rgba(255,255,255,0.04)', border: 'none', borderRadius: 'var(--radius-lg, 14px)',
+              font: 'inherit', fontSize: 'var(--text-sm)', color: 'var(--fg-secondary)', textAlign: 'left', cursor: 'pointer',
+            }}
+          >
+            <Icon name="list" size={16} />
+            <span style={{ flex: 1 }}>{t('program.otherPrograms')}</span>
+            <span style={{ color: 'var(--fg-tertiary)', fontVariantNumeric: 'tabular-nums' }}>{allPrograms.length}</span>
+            <Icon name="chevronRight" size={14} style={{ color: 'var(--fg-disabled)' }} />
+          </button>
+        )}
+
         {/* ── Activate Button ── */}
         {!program.isActive && (
           <button
@@ -869,79 +887,6 @@ export default function ProgramEditPage() {
           )
         })}
 
-        {/* ── Other Programs ── */}
-        {otherPrograms && otherPrograms.length > 0 && (
-          <div style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-            <div style={{
-              fontSize: 'var(--text-xs)',
-              fontWeight: 700,
-              letterSpacing: 'var(--tracking-caps)',
-              textTransform: 'uppercase',
-              color: 'var(--fg-tertiary)',
-              marginBottom: 'var(--space-3)',
-            }}>
-              {t('program.otherPrograms')}
-            </div>
-            <Glass flat padding={0} style={{ overflow: 'hidden' }}>
-              {otherPrograms.map((p, i) => (
-                <button
-                  key={p.id}
-                  onClick={() => navigate('/program/' + p.id)}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    background: 'none',
-                    border: 'none',
-                    padding: '12px var(--space-4)',
-                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-3)',
-                  }}
-                >
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    background: p.isActive
-                      ? 'hsla(var(--accent-h,158),40%,30%,0.4)'
-                      : 'rgba(255,255,255,0.06)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: p.isActive
-                      ? 'hsl(var(--accent-h,158),55%,72%)'
-                      : 'var(--fg-disabled)',
-                  }}>
-                    <Icon name="zap" size={14} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: 500,
-                      color: 'var(--fg-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      {p.name}
-                    </div>
-                    <div style={{
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--fg-tertiary)',
-                      marginTop: 1,
-                    }}>
-                      {p.durationWeeks ? t('program.daysShort', { n: p.durationWeeks * 7 }) : ''}
-                      {p.isActive && (
-                        <span style={{ color: 'hsl(var(--accent-h,158),55%,72%)' }}>
-                          {p.durationWeeks ? ' · ' : ''}{t('program.active').toLowerCase()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <Icon name="chevronRight" size={14} style={{ color: 'var(--fg-disabled)', flexShrink: 0 }} />
-                </button>
-              ))}
-            </Glass>
-          </div>
-        )}
       </div>
 
       {/* ── Exercise Edit BottomSheet ── */}

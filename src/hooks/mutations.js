@@ -201,3 +201,51 @@ export function useCreateCustomExercise() {
     },
   })
 }
+
+// ─── Programs: activate / rename / duplicate / delete ───────────────
+
+// Список, активная программа и «следующая тренировка» — все под префиксом ['programs'].
+function invalidatePrograms(queryClient) {
+  queryClient.invalidateQueries({ queryKey: ['programs'] })
+}
+
+export function useActivateProgram() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => apiPost(`/api/v1/programs/${id}/activate`),
+    onSuccess: () => {
+      invalidatePrograms(queryClient)
+      // План недели и активная тренировка считаются от активной программы
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.active })
+      queryClient.invalidateQueries({ queryKey: queryKeys.progress })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.recent })
+    },
+  })
+}
+
+export function useRenameProgram() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }) => apiPatch(`/api/v1/programs/${id}`, { name }),
+    onSuccess: () => invalidatePrograms(queryClient),
+  })
+}
+
+export function useDuplicateProgram() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }) => apiPost(`/api/v1/programs/${id}/duplicate`, { name }),
+    onSuccess: () => invalidatePrograms(queryClient),
+  })
+}
+
+export function useDeleteProgram() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => apiDelete(`/api/v1/programs/${id}`),
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: queryKeys.programs.detail(id) })
+      invalidatePrograms(queryClient)
+    },
+  })
+}

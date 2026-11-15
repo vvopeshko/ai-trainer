@@ -51,3 +51,20 @@ export function estimateDayMin(exercises) {
 export function clonePlan(plan) {
   return JSON.parse(JSON.stringify(plan))
 }
+
+/**
+ * Top muscle groups of a program for the «Мои программы» card.
+ * muscleSets — sets per primaryMuscles key (server summary); folded into the
+ * app's display groups. Returns [{ label, sets }], largest first.
+ */
+export function topMuscleGroups(muscleSets, limit = 3) {
+  const volume = {}
+  for (const [muscle, sets] of Object.entries(muscleSets ?? {})) {
+    const group = getMuscleGroup(muscle)
+    volume[group] = (volume[group] || 0) + sets
+  }
+  return Object.entries(volume)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([label, sets]) => ({ label, sets }))
+}

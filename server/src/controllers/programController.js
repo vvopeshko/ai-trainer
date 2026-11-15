@@ -5,6 +5,7 @@ import { computeNextDayIndex } from '../services/aiTrainer/programEditor.js'
 import { updateSlot, fillProgramAlternatives } from '../services/exerciseAlternatives.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { track } from '../utils/analytics.js'
+import { summarizePlan, planExerciseIds } from '../services/programSummary.js'
 
 /**
  * GET /api/v1/programs
@@ -21,11 +22,38 @@ export async function listPrograms(req, res) {
       durationWeeks: true,
       isActive: true,
       createdAt: true,
+      planJson: true,
     },
     orderBy: { createdAt: 'desc' },
   })
 
-  res.json({ programs })
+  // Сводка для экрана «Мои программы»: размер плана, объём по мышцам, история.
+  const ids = programs.map(p => p.id)
+  const exerciseIds = planExerciseIds(programs.map(p => p.planJson))
+  const [exercises, history] = await Promise.all([
+    exerciseIds.length
+      ? prisma.exercise.findMany({ where: { id: { in: exerciseIds } }, select: { id: true, primaryMuscles: true } })
+      : [],
+    ids.length
+      ? prisma.workout.groupBy({
+        by: ['programId'],
+        where: { userId: req.user.id, programId: { in: ids }, finishedAt: { not: null } },
+        _count: { _all: true },
+        _max: { startedAt: true },
+      })
+      : [],
+  ])
+  const musclesById = Object.fromEntries(exercises.map(e => [e.id, e.primaryMuscles]))
+  const historyById = Object.fromEntries(history.map(h => [h.programId, h]))
+
+  res.json({
+    programs: programs.map(({ planJson, ...program }) => ({
+      ...program,
+      ...summarizePlan(planJson, musclesById),
+      workoutsCount: historyById[program.id]?._count._all ?? 0,
+      lastWorkoutAt: historyById[program.id]?._max.startedAt ?? null,
+    })),
+  })
 }
 
 /**
@@ -257,6 +285,56 @@ export async function activateProgram(req, res) {
       data: { isActive: true },
     }),
   ])
+
+  res.json({ ok: true })
+}
+
+/**
+ * POST /api/v1/programs/:id/duplicate
+ *
+ * Копия программы (неактивная): план, указания и стартовые веса переносятся как есть.
+ * Body: { name? } — название копии; по умолчанию как у исходной.
+ */
+const duplicateBodySchema = z.object({ name: z.string().trim().min(1).max(100).optional() })
+
+export async function duplicateProgram(req, res) {
+  const { name } = duplicateBodySchema.parse(req.body ?? {})
+  const source = await prisma.program.findFirst({ where: { id: req.params.id, userId: req.user.id } })
+  if (!source) throw new AppError(404, 'PROGRAM_NOT_FOUND', 'Program not found')
+
+  const copy = await prisma.program.create({
+    data: {
+      userId: req.user.id,
+      name: name ?? source.name,
+      description: source.description,
+      durationWeeks: source.durationWeeks,
+      isActive: false,
+      planJson: source.planJson,
+      ...(source.guidelines != null && { guidelines: source.guidelines }),
+    },
+    select: { id: true, name: true },
+  })
+  track(req.user.id, 'program_duplicated', { programId: copy.id, sourceId: source.id })
+
+  res.status(201).json({ program: copy })
+}
+
+/**
+ * DELETE /api/v1/programs/:id
+ *
+ * Удалить неактивную программу. Тренировки по ней остаются в истории
+ * (Workout.programId → null), разовые правки плана удаляются каскадом.
+ */
+export async function deleteProgram(req, res) {
+  const program = await prisma.program.findFirst({
+    where: { id: req.params.id, userId: req.user.id },
+    select: { id: true, isActive: true },
+  })
+  if (!program) throw new AppError(404, 'PROGRAM_NOT_FOUND', 'Program not found')
+  if (program.isActive) throw new AppError(409, 'PROGRAM_ACTIVE', 'Active program cannot be deleted')
+
+  await prisma.program.delete({ where: { id: program.id } })
+  track(req.user.id, 'program_deleted', { programId: program.id })
 
   res.json({ ok: true })
 }

@@ -16,6 +16,7 @@ const ProgressPage = lazy(() => import('./pages/Main/ProgressPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/Main/SummaryPage.jsx'))
 const WorkoutPreviewPage = lazy(() => import('./pages/Main/WorkoutPreviewPage.jsx'))
 const ProgramEditPage = lazy(() => import('./pages/Main/ProgramEditPage.jsx'))
+const ProgramsPage = lazy(() => import('./pages/Main/ProgramsPage.jsx'))
 const LibraryPage = lazy(() => import('./pages/Main/LibraryPage.jsx'))
 const MePage = lazy(() => import('./pages/Main/MePage.jsx'))
 const DesignSystemDemo = lazy(() => import('./pages/Demo/DesignSystemDemo.jsx'))
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="/workout" element={<WorkoutPage />} />
         <Route path="/workout/preview" element={<Suspense fallback={<PageSkeleton />}><WorkoutPreviewPage /></Suspense>} />
         <Route path="/program/:id" element={<Suspense fallback={<PageSkeleton />}><ProgramEditPage /></Suspense>} />
+        <Route path="/programs" element={<Suspense fallback={<PageSkeleton />}><ProgramsPage /></Suspense>} />
         <Route path="/summary/:id" element={<Suspense fallback={<PageSkeleton />}><SummaryPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={null}><DesignSystemDemo /></Suspense>} />
 

@@ -172,6 +172,7 @@ export default function HomePage() {
           planAdherence={planAdherence}
           program={program}
           onProgramTap={() => navigate('/program/' + program.id)}
+          onAllPrograms={() => navigate('/programs')}
           // Палец коснулся — грузим чанк экрана и программу, пока он не отпущен
           onProgramIntent={() => {
             import('./ProgramEditPage.jsx')

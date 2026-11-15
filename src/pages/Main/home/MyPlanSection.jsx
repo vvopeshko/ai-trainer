@@ -6,7 +6,7 @@ import { Icon } from '../../../components/ui/Icon.jsx'
  * MyPlanSection — компактная карточка "Мой план": прогресс недели + статус.
  * Вся карточка — кнопка, ведёт в детали программы.
  */
-export function MyPlanSection({ planAdherence, program, onProgramTap, onProgramIntent }) {
+export function MyPlanSection({ planAdherence, program, onProgramTap, onProgramIntent, onAllPrograms }) {
   const { t } = useTranslation()
 
   const planned = planAdherence?.planned || program?.planJson?.days?.length || 0
@@ -33,15 +33,29 @@ export function MyPlanSection({ planAdherence, program, onProgramTap, onProgramI
 
   return (
     <div style={{ padding: '0 18px', marginTop: 22 }}>
-      <h2 style={{
-        fontSize: 11, fontWeight: 700,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'var(--gd-faint)',
-        margin: '0 0 10px 0',
-      }}>
-        {t('home.myPlan')}
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 0 10px 0' }}>
+        <h2 style={{
+          fontSize: 11, fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'var(--gd-faint)',
+          margin: 0,
+        }}>
+          {t('home.myPlan')}
+        </h2>
+        {onAllPrograms && (
+          <button
+            type="button"
+            onClick={onAllPrograms}
+            style={{
+              background: 'none', border: 'none', padding: '4px 0', font: 'inherit',
+              fontSize: 12, fontWeight: 600, color: 'var(--gd-accent-ink)', cursor: 'pointer',
+            }}
+          >
+            {t('home.allPrograms')}
+          </button>
+        )}
+      </div>
 
       <button
         type="button"
