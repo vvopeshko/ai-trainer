@@ -1170,9 +1170,10 @@ export default function WorkoutPage() {
           <Glass radius={16} style={{ overflow: 'hidden', padding: 0 }}>
             {currentPair && <div style={{ padding: '12px 14px', background: 'var(--accent-color-soft)', borderBottom: '1px solid var(--stroke-0)' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-color)', marginBottom: 8 }}>{t('superset.title')}</div>
-              <div style={{ display: 'flex', gap: 12 }}>{currentPair.map((ex, side) => <div key={ex.exerciseId} style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
-                <span style={{ color: 'var(--accent-color)', marginRight: 4 }}>{side ? 'B' : 'A'}</span>{ex.nameRu}
-                <div style={{ color: 'var(--fg-secondary)', marginTop: 4 }}>{pairCounts[ex.exerciseId]}/{ex.sets}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{currentPair.map((ex, side) => <div key={ex.exerciseId} style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0, fontSize: 12, lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--accent-color)', flexShrink: 0 }}>{side ? 'B' : 'A'}</span>
+                <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{ex.nameRu}</span>
+                <span style={{ color: 'var(--fg-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>{pairCounts[ex.exerciseId]}/{ex.sets}</span>
               </div>)}</div>
               <div style={{ marginTop: 8, fontSize: 11, color: 'var(--fg-secondary)' }}>{savingSuperset ? t('superset.saving') : t('superset.rest', { seconds: currentPair[1].restSec ?? 90 })}</div>
             </div>}
