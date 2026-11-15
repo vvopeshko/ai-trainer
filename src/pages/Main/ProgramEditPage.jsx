@@ -29,6 +29,8 @@ import { computeMuscleVolume, computeSubMuscleVolume, estimateDayMin, clonePlan 
 import { linkSuperset, supersetPair, movePlanExercise } from '../../utils/supersets.js'
 import { ProgramSuperset } from './program/ProgramSuperset.jsx'
 import { Stepper } from './program/Stepper.jsx'
+import { StartWeightField } from './program/StartWeightField.jsx'
+import { getExerciseSettings, kgToLbs } from '../../utils/weightUnit.js'
 import { ProgramAlternatives } from './program/ProgramAlternatives.jsx'
 
 // ─── Main component ────────────────────────────────────────────────────
@@ -131,6 +133,13 @@ export default function ProgramEditPage() {
     p.days[dayIdx].exercises.splice(exIdx, 1)
     setEditedPlan({ ...p })
     setEditingExercise(null)
+  }
+
+  // «· старт 95 кг» в строке упражнения, в единицах из его настроек
+  const startWeightLabel = (ex) => {
+    if (!ex.startWeightKg) return ''
+    const lbs = getExerciseSettings(ex.slug).unit === 'lbs'
+    return ` · ${t('program.startWeightShort', { weight: lbs ? kgToLbs(ex.startWeightKg) : ex.startWeightKg, unit: t(lbs ? 'units.lbs' : 'units.kg') })}`
   }
 
   const handleUpdateExercise = (dayIdx, exIdx, updates) => {
@@ -789,7 +798,7 @@ export default function ProgramEditPage() {
                           <div style={{
                             fontSize: 'var(--text-xs)', color: 'var(--fg-tertiary)', marginTop: 1,
                           }}>
-                            {pair && `${t('superset.title')} · `}{ex.sets}×{ex.repsMax || ex.repsMin}{ex.rir && ` RIR ${ex.rir}`}
+                            {pair && `${t('superset.title')} · `}{ex.sets}×{ex.repsMax || ex.repsMin}{ex.rir && ` RIR ${ex.rir}`}{startWeightLabel(ex)}
                             {ex.alternatives?.length > 0 && ` · ${t('program.alternativesCount', { n: ex.alternatives.length })}`}
                             {(ex.primaryMuscles?.length > 0 || ex.secondaryMuscles?.length > 0) && (
                               <span style={{ opacity: 0.5 }}> · {
@@ -975,6 +984,15 @@ export default function ProgramEditPage() {
               min={15}
               max={300}
               onChange={v => handleUpdateExercise(editingExercise.dayIdx, editingExercise.exIdx, { restSec: v })}
+            />
+
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+            <StartWeightField
+              key={`start-weight-${editEx.exerciseId}`}
+              slug={editEx.slug}
+              valueKg={editEx.startWeightKg}
+              onChange={v => handleUpdateExercise(editingExercise.dayIdx, editingExercise.exIdx, { startWeightKg: v })}
             />
 
             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
