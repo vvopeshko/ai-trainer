@@ -18,7 +18,7 @@ export function SupersetSets({ pair, currentId, setsById, lastResults, resting, 
       const set = setsById[id]?.[setIndex]
       const active = currentId === id && !resting && setIndex === counts[id]
       const restHere = currentId === id && resting && setIndex === counts[id] - 1
-      const suggestion = getSetSuggestion({ setIndex, lastSets: lastResults[id]?.lastSets, doneSets: setsById[id] ?? [], plannedReps: exercise.repsMin })
+      const suggestion = getSetSuggestion({ setIndex, lastSets: lastResults[id]?.lastSets, doneSets: setsById[id] ?? [], plannedReps: exercise.repsMin, startWeightKg: exercise.startWeightKg })
       const unit = getExerciseSettings(exercise.slug).unit
       const weight = unit === 'lbs' ? kgToLbs(suggestion.weightKg) : suggestion.weightKg
       const label = <span style={{ width: 14, flexShrink: 0, fontSize: 12, fontWeight: 600, color: 'var(--accent-color)' }}>{side ? 'B' : 'A'}</span>

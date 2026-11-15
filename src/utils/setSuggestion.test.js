@@ -36,6 +36,35 @@ describe('set suggestions', () => {
   })
 })
 
+describe('program start weight', () => {
+  it('replaces the weights of the last session in every set', () => {
+    for (let setIndex = 0; setIndex < historical.length; setIndex++) {
+      expect(getSetSuggestion({ setIndex, lastSets: historical, plannedReps: 6, startWeightKg: 65 }))
+        .toEqual({ weightKg: 65, reps: 6, source: 'start' })
+    }
+  })
+
+  it('keeps the reps of the last session when the weight is unchanged', () => {
+    expect(getSetSuggestion({ setIndex: 1, lastSets: historical, plannedReps: 6, startWeightKg: 60 }))
+      .toEqual({ weightKg: 60, reps: 8, source: 'start' })
+  })
+
+  it('stays on the start weight after a set done with it, despite unit rounding', () => {
+    expect(getSetSuggestion({ setIndex: 1, lastSets: historical, doneSets: [{ weightKg: 65.1, reps: 7 }], plannedReps: 6, startWeightKg: 65 }))
+      .toEqual({ weightKg: 65, reps: 6, source: 'start' })
+  })
+
+  it('follows the weight the user chose instead in this workout', () => {
+    expect(getSetSuggestion({ setIndex: 1, lastSets: historical, doneSets: [{ weightKg: 55, reps: 9 }], plannedReps: 6, startWeightKg: 65 }))
+      .toEqual({ weightKg: 55, reps: 9, source: 'previous' })
+  })
+
+  it('works without history', () => {
+    expect(getSetSuggestion({ setIndex: 0, plannedReps: 10, startWeightKg: 55 }))
+      .toEqual({ weightKg: 55, reps: 10, source: 'start' })
+  })
+})
+
 describe('set targets', () => {
   const plan = { sets: 4, repsMin: 8, repsMax: 10 }
   const lastSets = [{ weightKg: 80, reps: 10 }, { weightKg: 85, reps: 10 }, { weightKg: 85, reps: 10 }, { weightKg: 85, reps: 6 }]

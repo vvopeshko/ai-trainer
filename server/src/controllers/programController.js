@@ -182,6 +182,8 @@ export const planExerciseSchema = z.object({
   rir: z.string().optional(),
   notes: z.string().optional(),
   supersetId: z.string().min(1).max(100).optional(),
+  // Стартовый вес: подставляется в тренировке, пока упражнение не делалось в этой программе
+  startWeightKg: z.number().positive().max(1000).optional(),
   alternatives: z.array(z.string()).default([]),
 })
 

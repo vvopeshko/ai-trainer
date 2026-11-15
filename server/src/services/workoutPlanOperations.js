@@ -38,6 +38,7 @@ export function applyPlanChange(input, change, { addedExercise, groupId = crypto
     const original = pe.exerciseId
     pe.mainExerciseId ??= original
     Object.assign(pe, { exerciseId: addedExercise.id, nameRu: addedExercise.nameRu, slug: addedExercise.slug })
+    delete pe.startWeightKg // стартовый вес задан для прежнего упражнения, аналогу он не подходит
     pe.alternatives = [...new Set([...(pe.alternatives ?? []).filter(id => id !== addedExercise.id), original])]
   } else if (change.type === 'move') {
     const moved = slot(change.exerciseId), target = slot(change.targetId)

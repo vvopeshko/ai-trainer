@@ -121,6 +121,23 @@ export async function getActive(req, res) {
  * подсказками и аналогами). Общий для GET /active и POST / — фронт кладёт
  * ответ старта прямо в кэш и открывает тренировку без повторного запроса.
  */
+// Стартовый вес программы действует, пока упражнение не сделано в завершённой
+// тренировке этой программы: дальше подсказку веса даёт история.
+async function dropUsedStartWeights(userId, workout, planExercises) {
+  const ids = planExercises.filter(pe => pe.startWeightKg != null).map(pe => pe.exerciseId)
+  if (!ids.length) return
+  const used = await prisma.workoutSet.findMany({
+    where: {
+      exerciseId: { in: ids }, isWarmup: false,
+      workout: { userId, programId: workout.programId, finishedAt: { not: null } },
+    },
+    distinct: ['exerciseId'],
+    select: { exerciseId: true },
+  })
+  const usedIds = new Set(used.map(s => s.exerciseId))
+  for (const pe of planExercises) if (usedIds.has(pe.exerciseId)) delete pe.startWeightKg
+}
+
 async function activeWorkoutPayload(userId, workout) {
   // Если тренировка привязана к программе — вернуть план дня
   let planExercises = null
@@ -150,6 +167,7 @@ async function activeWorkoutPayload(userId, workout) {
     if (day) {
       planExercises = structuredClone(workout.planSnapshot?.exercises ?? (override ? override.exercises : day.exercises) ?? [])
       planDayTitle = day.title
+      await dropUsedStartWeights(userId, workout, planExercises)
 
       // Slot identity survives a swap during the workout; "make it main?" hint
       // after the same alternative was chosen in the last two workouts of this day.

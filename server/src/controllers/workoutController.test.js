@@ -40,7 +40,7 @@ vi.mock('../services/aiTrainer/postWorkoutSummary.js', () => ({
   sendPostWorkoutSummary: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { create, update, logSet, deleteSet, destroy, getResults } = await import('./workoutController.js')
+const { create, update, logSet, deleteSet, destroy, getResults, getActive } = await import('./workoutController.js')
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const USER_ID = 'user-1'
@@ -70,6 +70,27 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Default: $transaction just runs the callback with mockPrisma as `tx`
   mockPrisma.$transaction.mockImplementation(async (cb) => cb(mockPrisma))
+})
+
+describe('getActive — program start weights', () => {
+  it('keeps the start weight only for exercises not yet trained in this program', async () => {
+    const other = '44444444-4444-4444-4444-444444444444'
+    mockPrisma.workout.findFirst.mockResolvedValue({ id: WORKOUT_ID, programId: 'prog', programDayIndex: 0, sets: [] })
+    mockPrisma.workout.findMany.mockResolvedValue([])
+    mockPrisma.workoutPlanOverride.findUnique.mockResolvedValue(null)
+    mockPrisma.program.findFirst.mockResolvedValue({ planJson: { days: [{ title: 'A', exercises: [
+      { exerciseId: EXERCISE_ID, sets: 3, repsMin: 8, repsMax: 12, startWeightKg: 32 },
+      { exerciseId: other, sets: 3, repsMin: 8, repsMax: 12, startWeightKg: 68 },
+    ] }] } })
+    mockPrisma.workoutSet.findMany.mockResolvedValue([{ exerciseId: other }])
+    const res = mockRes()
+    await getActive(mockReq(), res)
+    expect(mockPrisma.workoutSet.findMany.mock.calls[0][0].where).toEqual({
+      exerciseId: { in: [EXERCISE_ID, other] }, isWarmup: false,
+      workout: { userId: USER_ID, programId: 'prog', finishedAt: { not: null } },
+    })
+    expect(res.body.planExercises.map(pe => pe.startWeightKg)).toEqual([32, undefined])
+  })
 })
 
 describe('getResults', () => {

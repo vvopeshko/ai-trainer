@@ -11,6 +11,7 @@ export const planSlotSchema = z.object({
   sets: count, repsMin: z.number().int().min(0).max(1000).default(10), repsMax: z.number().int().min(0).max(1000).default(12),
   restSec: z.number().int().min(0).max(3600).default(90), supersetId: z.string().max(100).optional(),
   alternatives: z.array(id).max(100).optional(), notes: z.string().max(2000).optional(),
+  startWeightKg: z.number().positive().max(1000).optional(),
 })
 export const planChangeSchema = z.object({
   scope: z.enum(['workout', 'program']), expectedRevision: z.string().nullable(),

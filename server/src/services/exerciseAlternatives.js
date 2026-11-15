@@ -148,6 +148,7 @@ export async function updateSlot(userId, { dayIndex, mainExerciseId, exerciseId,
     slot.exerciseId = next.id
     slot.nameRu = next.nameRu
     slot.slug = next.slug
+    delete slot.startWeightKg // задан для прежнего упражнения
     slot.alternatives = [mainExerciseId, ...alternatives].slice(0, MAX_ALTERNATIVES)
   } else if (exerciseId !== mainExerciseId) {
     slot.alternatives = [...alternatives, exerciseId].slice(-MAX_ALTERNATIVES)

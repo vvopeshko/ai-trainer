@@ -1,11 +1,21 @@
 // Match positions, not weights: a lighter set may be either a warm-up or a
 // back-off set. Never infer its role or propagate a change across the series.
-export function getSetSuggestion({ setIndex, lastSets, doneSets = [], plannedReps }) {
+//
+// startWeightKg — the program's start weight for an exercise not yet trained in
+// this program (the server drops it afterwards). It replaces the weights of the
+// last session; once the user picks another weight in this workout, follow that.
+export function getSetSuggestion({ setIndex, lastSets, doneSets = [], plannedReps, startWeightKg }) {
   const historical = lastSets?.[setIndex]
+  const previous = doneSets.at(-1)
+  if (startWeightKg > 0) {
+    const same = weightKg => Math.abs((weightKg ?? 0) - startWeightKg) < 0.25
+    if (previous && !same(previous.weightKg)) return { weightKg: previous.weightKg ?? 0, reps: previous.reps, source: 'previous' }
+    const reps = historical && same(historical.weightKg) ? historical.reps : plannedReps ?? historical?.reps ?? 10
+    return { weightKg: startWeightKg, reps, source: 'start' }
+  }
   if (historical) {
     return { weightKg: historical.weightKg ?? 0, reps: historical.reps, source: 'history' }
   }
-  const previous = doneSets.at(-1)
   if (previous) {
     return { weightKg: previous.weightKg ?? 0, reps: previous.reps, source: 'previous' }
   }

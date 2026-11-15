@@ -371,6 +371,7 @@ export default function WorkoutPage() {
     lastSets: lastResultsCache[currentExercise?.id]?.lastSets,
     doneSets,
     plannedReps: currentPlanExercise?.repsMin,
+    startWeightKg: currentPlanExercise?.startWeightKg,
   })
   const nextSet = suggestionFor(doneSets.length)
   // Same progress as the card (same history query) so the set target agrees with it.
