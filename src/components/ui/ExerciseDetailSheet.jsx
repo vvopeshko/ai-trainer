@@ -1,3 +1,4 @@
+import { lockBodyScroll } from '../../utils/bodyScrollLock.js'
 import { getExerciseMuscle } from '../../utils/exerciseMuscle.js'
 /**
  * ExerciseDetailSheet — fullscreen overlay with tabbed exercise details.
@@ -1028,15 +1029,9 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
     }
   }, [exercise?.id, asking, webApp])
 
-  // Prevent body scroll when overlay is open.
-  // Восстанавливаем предыдущее значение, а не '' — при вложенных оверлеях
-  // (BottomSheet под этим шитом) сброс в '' разлочивал бы скролл преждевременно.
+  // Share the lock with bottom sheets, including overlapping close animations.
   useEffect(() => {
-    if (open) {
-      const prev = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => { document.body.style.overflow = prev }
-    }
+    if (open) return lockBodyScroll()
   }, [open])
 
   if (!open) return null

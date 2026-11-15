@@ -1,3 +1,4 @@
+import { lockBodyScroll } from '../../utils/bodyScrollLock.js'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 /**
@@ -72,9 +73,7 @@ export function BottomSheet({ open, onClose, children, className, style, labelle
   // Lock body scroll
   useEffect(() => {
     if (!visible) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return lockBodyScroll()
   }, [visible])
 
   // Базовый focus trap: при открытии переводим фокус на первый интерактивный
