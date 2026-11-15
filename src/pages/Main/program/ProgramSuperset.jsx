@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/Button.jsx'
 import { supersetPair } from '../../../utils/supersets.js'
 
 // Lives inside the existing exercise-settings sheet, before alternatives.
-export function ProgramSuperset({ exercise, exercises, onChange, inWorkout = false }) {
+export function ProgramSuperset({ exercise, exercises, onChange, inWorkout = false, showTitle = true }) {
   const { t } = useTranslation()
   const [choosing, setChoosing] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -12,7 +12,7 @@ export function ProgramSuperset({ exercise, exercises, onChange, inWorkout = fal
   const candidates = exercises.filter(ex => ex.exerciseId !== exercise.exerciseId && !ex.supersetId)
   return <section style={{ padding: '14px 0' }}>
     {pair ? <>
-      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-color)' }}>{t('superset.title')}</div>
+      {showTitle && <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-color)' }}>{t('superset.title')}</div>}
       {pair.map((ex, i) => <div key={ex.exerciseId} style={{ padding: '8px 0', fontSize: 13 }}>
         <span style={{ color: 'var(--accent-color)', marginRight: 8 }}>{i ? 'B' : 'A'}</span>{ex.nameRu}
       </div>)}

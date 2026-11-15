@@ -4,21 +4,18 @@ import { Button } from '../../../components/ui/Button.jsx'
 import { ProgramSuperset } from '../program/ProgramSuperset.jsx'
 import { useTranslation } from '../../../i18n/useTranslation.js'
 
-export function WorkoutPlanEditor({ exercise, exercises, counts, onClose, onChange }) {
+export function WorkoutPlanActions({ exercise, onChange }) {
   const { t } = useTranslation()
-  return <BottomSheet open={!!exercise} onClose={onClose} trapFocus>
-    {exercise && <>
-      <h2 style={{ fontSize: 18, fontWeight: 600 }}>{exercise.nameRu}</h2>
-      <ProgramSuperset inWorkout key={exercise.exerciseId} exercise={exercise} exercises={exercises} onChange={partnerId => onChange(partnerId ? { type: 'link', exerciseId: exercise.exerciseId, partnerId } : { type: 'unlink', exerciseId: exercise.exerciseId })} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
-        <span style={{ flex: 1 }}>{t('workout.edit.setCount', { n: exercise.sets })}</span>
-        <Button aria-label={t('workout.edit.fewerSets')} disabled={exercise.sets <= Math.max(1, counts[exercise.exerciseId] ?? 0)} onClick={() => onChange({ type: 'sets', counts: [{ exerciseId: exercise.exerciseId, sets: exercise.sets - 1 }] })}>−</Button>
-        <Button aria-label={t('workout.addSetExtra')} disabled={exercise.sets >= 100} onClick={() => onChange({ type: 'sets', counts: [{ exerciseId: exercise.exerciseId, sets: exercise.sets + 1 }] })}>+</Button>
-      </div>
-      <Button block variant="danger" onClick={() => onChange({ type: 'remove', exerciseId: exercise.exerciseId })}>{t('workout.edit.remove')}</Button>
-      <p style={{ color: 'var(--fg-secondary)', fontSize: 12, marginTop: 10 }}>{t('workout.edit.keepRecorded')}</p>
-    </>}
-  </BottomSheet>
+  if (!exercise) return null
+  return <div style={{ margin: '20px 0' }}>
+    <Button block variant="danger" onClick={() => onChange({ type: 'remove', exerciseId: exercise.exerciseId })}>{t('workout.edit.remove')}</Button>
+  </div>
+}
+
+export function WorkoutSupersetSettings({ exercise, exercises, onChange }) {
+  if (!exercise) return null
+  return <ProgramSuperset inWorkout showTitle={false} key={exercise.exerciseId} exercise={exercise} exercises={exercises}
+    onChange={partnerId => onChange(partnerId ? { type: 'link', exerciseId: exercise.exerciseId, partnerId } : { type: 'unlink', exerciseId: exercise.exerciseId })} />
 }
 
 export function WorkoutChangeScope({ pending, canUpdateProgram, details, busy, onCancel, onConfirm }) {

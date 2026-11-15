@@ -105,21 +105,7 @@ function Header({ exercise, onClose }) {
         )}
       </div>
 
-      {/* Swap button (placeholder) */}
-      <button
-        aria-label={t('a11y.swapExercise')}
-        style={{
-          width: 38, height: 38, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.06)',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--fg-secondary)', flexShrink: 0,
-          opacity: 0.5,
-        }}
-        disabled
-      >
-        <Icon name="swap" size={15} />
-      </button>
+      <div aria-hidden="true" style={{ width: 38, flexShrink: 0 }} />
     </header>
   )
 }
@@ -659,7 +645,14 @@ function PresetChips({ presetIds, active, onChange, t }) {
   )
 }
 
-function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
+function SettingsGroup({ title, children }) {
+  return <section aria-label={title}>
+    <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', margin: '8px 0 12px' }}>{title}</h2>
+    <Glass flat padding="14px" radius={14} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>{children}</Glass>
+  </section>
+}
+
+function SettingsTab({ exercise, settings, onSettingsChange, onSave, t, settingsActions }) {
   const presetIds = getPresetsForEquipment(exercise?.equipment)
   const activePreset = settings.preset || 'custom'
   const isCustom = activePreset === 'custom'
@@ -711,6 +704,29 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <SettingsGroup title={t('exercise.settings.type')}>
+      {/* Exercise type toggle */}
+      <div>
+        <Toggle2
+          value={settings.type}
+          onChange={handleType}
+          options={[
+            { value: 'reps', label: t('exercise.settings.typeReps'), icon: 'list' },
+            { value: 'timer', label: t('exercise.settings.typeTimer'), icon: 'clock' },
+          ]}
+        />
+        <div style={{
+          fontSize: 10.5, color: 'rgba(236,234,239,0.4)',
+          marginTop: 6, padding: '0 2px',
+        }}>
+          {settings.type === 'reps'
+            ? t('exercise.settings.typeRepsHint')
+            : t('exercise.settings.typeTimerHint')}
+        </div>
+      </div>
+
+      </SettingsGroup>
+      <SettingsGroup title={t('exercise.settings.machineGroup')}>
       {/* Preset chips */}
       <div>
         <SectionLabel>{t('exercise.settings.preset')}</SectionLabel>
@@ -719,7 +735,7 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
 
       {/* Preset summary (when not custom) */}
       {!isCustom && (
-        <Glass radius={12} padding="12px 14px">
+        <Glass flat radius={12} padding="12px 14px">
           <div style={{
             fontSize: 12.5, color: 'rgba(236,234,239,0.75)', lineHeight: 1.6,
           }}>
@@ -808,30 +824,9 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
         </>
       )}
 
-      {/* Exercise type toggle */}
-      <div>
-        <SectionLabel>{t('exercise.settings.type')}</SectionLabel>
-        <Toggle2
-          value={settings.type}
-          onChange={handleType}
-          options={[
-            { value: 'reps', label: t('exercise.settings.typeReps'), icon: 'list' },
-            { value: 'timer', label: t('exercise.settings.typeTimer'), icon: 'clock' },
-          ]}
-        />
-        <div style={{
-          fontSize: 10.5, color: 'rgba(236,234,239,0.4)',
-          marginTop: 6, padding: '0 2px',
-        }}>
-          {settings.type === 'reps'
-            ? t('exercise.settings.typeRepsHint')
-            : t('exercise.settings.typeTimerHint')}
-        </div>
-      </div>
-
       {/* Machine setup: shown next to the exercise during a workout */}
       <div>
-        <SectionLabel>{t('exercise.settings.setupNote')}</SectionLabel>
+        <SectionLabel>{t('exercise.settings.setupPosition')}</SectionLabel>
         <textarea
           value={settings.setupNote ?? ''}
           onChange={e => onSettingsChange({ ...settings, setupNote: e.target.value })}
@@ -850,6 +845,9 @@ function SettingsTab({ exercise, settings, onSettingsChange, onSave, t }) {
           {t('exercise.settings.setupNoteHint')}
         </div>
       </div>
+
+      </SettingsGroup>
+      {settingsActions && <SettingsGroup title={t('superset.title')}>{settingsActions}</SettingsGroup>}
 
       {/* Save button */}
       {onSave && (
@@ -917,7 +915,7 @@ function CatalogAlternatives({ exerciseId, onPreview, t }) {
  * the tab on open. `onSelect` turns the sheet into a preview of an alternative:
  * only Info, and a «Выбрать» footer (plus «Сделать основным» with `onMakeMain`).
  */
-export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange, alternatives, initialTab = 'info', onSelect, onMakeMain }) {
+export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChange, alternatives, initialTab = 'info', onSelect, onMakeMain, infoActions, settingsActions }) {
   const viewportStyle = useOverlayViewport(open)
   const { t } = useTranslation()
   const { webApp } = useTelegram()
@@ -1063,7 +1061,10 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
           <DetailSkeleton />
         ) : exercise ? (
           <div key={tabKey} style={{ animation: 'fadeUp .35s ease-out' }}>
-            {(activeTab === 'info' || onSelect) && <InfoTab exercise={exercise} t={t} />}
+            {(activeTab === 'info' || onSelect) && <>
+              <InfoTab exercise={exercise} t={t} />
+              {!onSelect && infoActions}
+            </>}
             {!onSelect && activeTab === 'alternatives' && (alternatives ??
               <CatalogAlternatives exerciseId={exerciseId} onPreview={setPreviewId} t={t} />)}
             {!onSelect && activeTab === 'settings' && settings && (
@@ -1071,6 +1072,7 @@ export function ExerciseDetailSheet({ exerciseId, open, onClose, onSettingsChang
                 exercise={exercise}
                 settings={settings}
                 onSettingsChange={handleSettingsChange}
+                settingsActions={settingsActions}
                 onSave={onSettingsChange ? handleSave : null}
                 t={t}
               />

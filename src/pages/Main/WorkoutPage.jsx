@@ -51,7 +51,7 @@ import { ExerciseMuscleHeader } from './workout/ExerciseMuscleHeader.jsx'
 import { ExercisePicker } from './workout/ExercisePicker.jsx'
 import { supersetPair, supersetTransition } from '../../utils/supersets.js'
 import { SupersetListItem } from './workout/SupersetListItem.jsx'
-import { WorkoutPlanEditor, WorkoutChangeScope } from './workout/WorkoutPlanEditSheets.jsx'
+import { WorkoutPlanActions, WorkoutSupersetSettings, WorkoutChangeScope } from './workout/WorkoutPlanEditSheets.jsx'
 import { SupersetSets } from './workout/SupersetSets.jsx'
 import { AlternativesPanel } from './workout/AlternativesPanel.jsx'
 
@@ -82,7 +82,6 @@ export default function WorkoutPage() {
   const [programId, setProgramId] = useState(null)
   const [planRevision, setPlanRevision] = useState(null)
   const { data: workoutProgram } = useProgramDetail(programId)
-  const [editingExerciseId, setEditingExerciseId] = useState(null)
   const [pendingPlanChange, setPendingPlanChange] = useState(null)
   const [savingPlan, setSavingPlan] = useState(false)
   const [previewAlt, setPreviewAlt] = useState(null) // alternative opened from the info sheet
@@ -131,7 +130,7 @@ export default function WorkoutPage() {
 
   const requestPlanChange = (change, after) => {
     if (operationRef.current || pendingPlanChange) return
-    setEditingExerciseId(null)
+    setDetailExerciseId(null)
     setPendingPlanChange({ change, after, key: crypto.randomUUID() })
   }
 
@@ -160,7 +159,7 @@ export default function WorkoutPage() {
   }, [currentExercise?.id, catalogById]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleExerciseSettingsChange = (newSettings) => {
-    setExerciseSettingsState(newSettings)
+    if (detailExerciseId === currentExercise?.id) setExerciseSettingsState(newSettings)
   }
 
   const handleDragStart = (e, exerciseId) => {
@@ -826,9 +825,18 @@ export default function WorkoutPage() {
       .catch(() => {})
   }
 
-  const handleSwapAlternative = alt => {
-    if (!currentPlanExercise) return
-    requestPlanChange({ type: 'swap', exerciseId: currentExercise.id, partnerId: alt.exerciseId }, () => {
+  const handleSwapAlternative = (alt, sourceId = currentExercise?.id) => {
+    if (!planExercises?.some(pe => pe.exerciseId === sourceId)) return
+    requestPlanChange({ type: 'swap', exerciseId: sourceId, partnerId: alt.exerciseId }, () => {
+      if (sourceId !== currentExercise?.id) {
+        const old = planExercises.find(pe => pe.exerciseId === sourceId)
+        if (partialSets[sourceId]?.length) {
+          setAllExercises(prev => [...prev.filter(ex => ex.exercise.id !== sourceId), { exercise: { id: sourceId, nameRu: old.nameRu, slug: old.slug }, sets: partialSets[sourceId] }])
+          setPartialSets(prev => { const next = { ...prev }; delete next[sourceId]; return next })
+        }
+        loadLastResults([alt.exerciseId])
+        return
+      }
       if (doneSets.length) setAllExercises(prev => [...prev.filter(ex => ex.exercise.id !== currentExercise.id), { exercise: currentExercise, sets: [...doneSets] }])
       setCurrentExercise({ id: alt.exerciseId, nameRu: alt.nameRu, slug: alt.slug })
       setDoneSets([])
@@ -912,15 +920,12 @@ export default function WorkoutPage() {
     ? pendingPlanChange.change.counts.map(e => `${planExercises?.find(pe => pe.exerciseId === e.exerciseId)?.nameRu ?? ''}: ${planExercises?.find(pe => pe.exerciseId === e.exerciseId)?.sets} → ${e.sets}`).join(' · ')
     : [...new Set([...changedIds, ...(pendingPlanChange?.change.partnerId ? [pendingPlanChange.change.partnerId] : [])])].map(id => catalogById.get(id)?.nameRu ?? planExercises?.find(pe => pe.exerciseId === id)?.nameRu).filter(Boolean).join(' + ')
   const planSheets = <>
-    <WorkoutPlanEditor exercise={planExercises?.find(pe => pe.exerciseId === editingExerciseId)} exercises={planExercises ?? []}
-      counts={Object.fromEntries(Object.entries(setsById).map(([id, sets]) => [id, sets.length]))}
-      onClose={() => setEditingExerciseId(null)} onChange={requestPlanChange} />
     <WorkoutChangeScope key={pendingPlanChange?.key ?? 'closed'} pending={pendingPlanChange}
       canUpdateProgram={canUpdateProgram} details={changeDetails} busy={savingPlan}
       onCancel={() => setPendingPlanChange(null)} onConfirm={confirmPlanChange} />
   </>
-  const editButton = id => <button type="button" aria-label={t('workout.edit.exercise')} onClick={e => { e.stopPropagation(); setEditingExerciseId(id) }}
-    style={{ minWidth: 44, minHeight: 44, border: 0, borderRadius: 8, background: 'var(--surface-0)', color: 'var(--fg-secondary)', cursor: 'pointer' }}><Icon name="moreHorizontal" size={18} /></button>
+  const infoButton = id => <button type="button" aria-label={t('a11y.exerciseInfo')} onClick={e => { e.stopPropagation(); setDetailExerciseId(id) }}
+    style={{ minWidth: 44, minHeight: 44, border: 0, borderRadius: 8, background: 'var(--surface-0)', color: 'var(--fg-secondary)', cursor: 'pointer' }}><Icon name="info" size={18} /></button>
 
   // ── Helper ──
   function exerciseScheme(pe) {
@@ -1121,7 +1126,7 @@ export default function WorkoutPage() {
                 return (
                   <div key={i}>
                     <CollapsedExercise
-                      editControl={planExercises?.some(pe => pe.exerciseId === item.exercise.id) ? editButton(item.exercise.id) : null}
+                      editControl={planExercises?.some(pe => pe.exerciseId === item.exercise.id) ? infoButton(item.exercise.id) : null}
                       muscle={getExerciseMuscle(item.exercise, catalogById)}
                       name={item.exercise.nameRu}
                       summary={exerciseSummary(item.sets)}
@@ -1174,7 +1179,6 @@ export default function WorkoutPage() {
             {/* Header */}
             <div style={{ padding: '14px 14px 12px' }}>
               <ExerciseMuscleHeader muscle={currentMuscle} scheme={currentPlanExercise ? exerciseScheme(currentPlanExercise) : null} marker={t('workout.now')}>
-                {currentPlanExercise && editButton(currentExercise.id)}
                 <button
                   type="button"
                   onClick={() => setDetailExerciseId(currentExercise.id)}
@@ -1204,7 +1208,7 @@ export default function WorkoutPage() {
               }}>
                 {t('workout.suggestMain', { name: currentPlanExercise.suggestMain.nameRu })}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button onClick={() => handleSwapAlternative(currentPlanExercise.suggestMain, { makeMain: true })} style={{
+                  <button onClick={() => handleSwapAlternative(currentPlanExercise.suggestMain)} style={{
                     padding: '6px 10px', borderRadius: 8, border: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600,
                     background: 'var(--accent-color)', color: 'var(--fg-on-accent)',
                   }}>{t('workout.makeMain')}</button>
@@ -1361,7 +1365,6 @@ export default function WorkoutPage() {
                     <SupersetListItem pair={supersetPair(upcomingExercises, pe.exerciseId)} exerciseId={pe.exerciseId}>
                     {isExpanded && !draggingId ? (
                       <ExpandedUpcomingCard
-                        editControl={editButton(pe.exerciseId)}
                         planExercise={pe}
                         muscle={getExerciseMuscle(pe, catalogById)}
                         lastResults={lastResultsCache[pe.exerciseId]}
@@ -1381,7 +1384,7 @@ export default function WorkoutPage() {
                       />
                     ) : (
                       <UpcomingExerciseItem
-                        editControl={editButton(pe.exerciseId)}
+                        editControl={infoButton(pe.exerciseId)}
                         muscle={getExerciseMuscle(pe, catalogById)}
                         name={pe.nameRu}
                         scheme={scheme}
@@ -1449,15 +1452,21 @@ export default function WorkoutPage() {
         open={!!detailExerciseId}
         onClose={() => setDetailExerciseId(null)}
         onSettingsChange={handleExerciseSettingsChange}
-        alternatives={currentExercise && detailExerciseId === currentExercise.id ? (
+        infoActions={<WorkoutPlanActions
+          exercise={planExercises?.find(pe => pe.exerciseId === detailExerciseId)}
+          onChange={requestPlanChange} />}
+        settingsActions={planExercises?.some(pe => pe.exerciseId === detailExerciseId) ? <WorkoutSupersetSettings
+          exercise={planExercises.find(pe => pe.exerciseId === detailExerciseId)} exercises={planExercises}
+          onChange={requestPlanChange} /> : null}
+        alternatives={planExercises?.some(pe => pe.exerciseId === detailExerciseId) ? (
           <AlternativesPanel
-            current={currentExercise}
-            slot={currentPlanExercise}
+            current={{ id: detailExerciseId }}
+            slot={planExercises.find(pe => pe.exerciseId === detailExerciseId)}
             lastResults={lastResultsCache}
             onNeedLastResults={loadLastResults}
             trendById={trendById}
-            unit={exerciseSettings.unit}
-            onPreview={setPreviewAlt}
+            unit={getExerciseSettings(planExercises.find(pe => pe.exerciseId === detailExerciseId)?.slug).unit}
+            onPreview={alt => setPreviewAlt({ ...alt, sourceId: detailExerciseId })}
           />
         ) : null}
       />
@@ -1467,10 +1476,8 @@ export default function WorkoutPage() {
         exerciseId={previewAlt?.exerciseId}
         open={!!previewAlt}
         onClose={() => setPreviewAlt(null)}
-        onSelect={() => { const alt = previewAlt; setPreviewAlt(null); setDetailExerciseId(null); handleSwapAlternative(alt) }}
-        onMakeMain={currentPlanExercise && programDayIndex != null && !previewAlt?.isMain
-          ? () => { const alt = previewAlt; setPreviewAlt(null); setDetailExerciseId(null); handleSwapAlternative(alt, { makeMain: true }) }
-          : undefined}
+        onSelect={() => { const alt = previewAlt; setPreviewAlt(null); setDetailExerciseId(null); handleSwapAlternative(alt, alt.sourceId) }}
+
       />
     </div>
   )
