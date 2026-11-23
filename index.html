@@ -27,7 +27,9 @@
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
     </noscript>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- SDK с нашего origin: недоступность telegram.org не блокирует запуск web.
+         Синхронный порядок нужен Mini App: initData читается до рендера React. -->
+    <script src="/vendor/telegram-web-app.baa788a6.js"></script>
     <style>
       html,
       body {
